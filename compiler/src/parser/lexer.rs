@@ -46,6 +46,7 @@ pub enum Token {
     String(String),
     Number(f64),
     Boolean(bool),
+    Null,
     Identifier(String),
     
     // Operators
@@ -283,6 +284,7 @@ impl<'a> Lexer<'a> {
             "in" => Token::In,
             "true" => Token::Boolean(true),
             "false" => Token::Boolean(false),
+            "null" => Token::Null,
             "GET" => Token::Get,
             "POST" => Token::Post,
             "PUT" => Token::Put,

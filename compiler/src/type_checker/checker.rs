@@ -511,6 +511,28 @@ impl TypeChecker {
             Expression::Block(block) => {
                 Ok(self.check_block(block, None)?)
             }
+            Expression::StructLiteral { name, fields } => {
+                // Check that the struct type exists
+                let struct_type = Type::Named(name.clone());
+                
+                // Verify struct exists in environment
+                if let Some(_struct_def) = self.environment.get_type(name) {
+                    // For now, we just return the struct type
+                    // In future, could validate that all required fields are present
+                    // and that field types match
+                    for (_field_name, field_expr) in fields {
+                        let _field_type = self.check_expression(field_expr)?;
+                        // Could validate field types here
+                    }
+                    Ok(struct_type)
+                } else {
+                    self.errors.push(TypeError::new(
+                        TypeErrorKind::UndefinedType(name.clone()),
+                        format!("Struct '{}' not found", name),
+                    ));
+                    Ok(Type::Void)
+                }
+            }
         }
     }
     

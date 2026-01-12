@@ -162,6 +162,10 @@ pub enum Expression {
     Await {
         expr: Box<Expression>,
     },
+    StructLiteral {
+        name: String,
+        fields: Vec<(String, Expression)>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -198,6 +202,7 @@ pub enum UnaryOperator {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Struct {
     pub name: String,
+    pub type_params: Vec<String>,
     pub fields: Vec<StructField>,
     pub visibility: Visibility,
     pub decorators: Vec<Decorator>,

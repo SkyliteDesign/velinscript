@@ -877,6 +877,25 @@ impl RustCodeGenerator {
                 self.generate_expression(expr);
                 self.write(".await");
             }
+            Expression::StructLiteral { name, fields } => {
+                self.write(&self.to_pascal_case(name));
+                self.write(" {");
+                self.writeln("");
+                self.indent();
+                
+                for (i, (field_name, field_expr)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        self.writeln(",");
+                    }
+                    self.write(&self.to_snake_case(field_name));
+                    self.write(": ");
+                    self.generate_expression(field_expr);
+                }
+                
+                self.writeln("");
+                self.unindent();
+                self.write("}");
+            }
         }
     }
     

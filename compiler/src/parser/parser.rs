@@ -400,6 +400,12 @@ impl Parser {
         
         self.consume(&Token::LParen, "Expected '('")?;
         let params = self.parse_parameters()?;
+        
+        // Skip newlines before closing paren
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         self.consume(&Token::RParen, "Expected ')'")?;
         
         // Skip newlines before return type
@@ -440,18 +446,48 @@ impl Parser {
     fn parse_parameters(&mut self) -> Result<Vec<Parameter>, ParseError> {
         let mut params = Vec::new();
         
+        // Skip newlines before parameters
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         if !self.check(&Token::RParen) {
             loop {
+                // Skip newlines before parameter name
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                
                 let name = match self.consume_identifier()? {
                     Token::Identifier(name) => name,
                     _ => unreachable!(),
                 };
                 
+                // Skip newlines before colon
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                
                 self.consume(&Token::Colon, "Expected ':'")?;
+                
+                // Skip newlines after colon
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                
                 let param_type = self.parse_type()?;
+                
+                // Skip newlines after type
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
                 
                 let default = if self.check(&Token::Eq) {
                     self.advance();
+                    // Skip newlines after equals
+                    while matches!(self.peek(), Some(Token::Newline)) {
+                        self.advance();
+                    }
                     Some(self.parse_expression()?)
                 } else {
                     None
@@ -463,10 +499,20 @@ impl Parser {
                     default,
                 });
                 
+                // Skip newlines before comma or closing paren
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                
                 if !self.check(&Token::Comma) {
                     break;
                 }
                 self.advance();
+                
+                // Skip newlines after comma
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
             }
         }
         
@@ -987,6 +1033,10 @@ impl Parser {
                 self.advance();
                 Ok(Expression::Literal(Literal::Boolean(b_clone)))
             }
+            Some(Token::Null) => {
+                self.advance();
+                Ok(Expression::Literal(Literal::Null))
+            }
             Some(Token::Identifier(name)) => {
                 let name_clone = name.clone();
                 self.advance();
@@ -1081,7 +1131,79 @@ impl Parser {
                         Ok(Expression::Identifier(name_clone))
                     }
                 } else {
-                    Ok(Expression::Identifier(name_clone))
+                    // Check if followed by struct literal: StructName { ... }
+                    if self.check(&Token::LBrace) {
+                        // Parse struct literal
+                        let struct_name = name_clone;
+                        self.advance(); // consume '{'
+                        
+                        let mut fields = Vec::new();
+                        
+                        // Skip newlines after '{'
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
+                        }
+                        
+                        while !self.check(&Token::RBrace) {
+                            // Skip newlines before field
+                            while matches!(self.peek(), Some(Token::Newline)) {
+                                self.advance();
+                            }
+                            
+                            if self.check(&Token::RBrace) {
+                                break;
+                            }
+                            
+                            let field_name = match self.consume_identifier()? {
+                                Token::Identifier(name) => name,
+                                _ => unreachable!(),
+                            };
+                            
+                            // Skip newlines before ':'
+                            while matches!(self.peek(), Some(Token::Newline)) {
+                                self.advance();
+                            }
+                            
+                            self.consume(&Token::Colon, "Expected ':'")?;
+                            
+                            // Skip newlines after ':'
+                            while matches!(self.peek(), Some(Token::Newline)) {
+                                self.advance();
+                            }
+                            
+                            let field_value = self.parse_expression()?;
+                            
+                            fields.push((field_name, field_value));
+                            
+                            // Skip newlines before comma or closing brace
+                            while matches!(self.peek(), Some(Token::Newline)) {
+                                self.advance();
+                            }
+                            
+                            if self.check(&Token::Comma) {
+                                self.advance();
+                            }
+                            
+                            // Skip newlines after comma
+                            while matches!(self.peek(), Some(Token::Newline)) {
+                                self.advance();
+                            }
+                        }
+                        
+                        // Skip newlines before closing brace
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
+                        }
+                        
+                        self.consume(&Token::RBrace, "Expected '}'")?;
+                        
+                        Ok(Expression::StructLiteral {
+                            name: struct_name,
+                            fields,
+                        })
+                    } else {
+                        Ok(Expression::Identifier(name_clone))
+                    }
                 }
             }
             Some(Token::LParen) => {
@@ -1211,6 +1333,52 @@ impl Parser {
             _ => unreachable!(),
         };
         
+        // Parse generic type parameters if present
+        let mut type_params = Vec::new();
+        if self.check(&Token::Lt) {
+            self.advance(); // consume '<'
+            
+            // Skip newlines after '<'
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            loop {
+                let param_name = match self.consume_identifier()? {
+                    Token::Identifier(name) => name,
+                    _ => unreachable!(),
+                };
+                type_params.push(param_name);
+                
+                // Skip newlines before comma or closing '>'
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                
+                if !self.check(&Token::Comma) {
+                    break;
+                }
+                self.advance();
+                
+                // Skip newlines after comma
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+            }
+            
+            // Skip newlines before closing '>'
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            self.consume(&Token::Gt, "Expected '>'")?;
+            
+            // Skip newlines after '>'
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+        }
+        
         // Skip newlines before '{'
         while matches!(self.peek(), Some(Token::Newline)) {
             self.advance();
@@ -1280,6 +1448,7 @@ impl Parser {
         
         Ok(Struct {
             name,
+            type_params,
             fields,
             visibility,
             decorators,
@@ -1552,8 +1721,15 @@ impl Parser {
             .map(|t| format!("{:?}", t))
             .unwrap_or_else(|| "EOF".to_string());
         
-        // Calculate position from current token
-        let position = self.current;
+        // Calculate position from current token index
+        // Since we don't have token positions, we approximate by using a fraction of source length
+        // This is a workaround - ideally tokens should store their source positions
+        let position = if self.current < self.tokens.len() {
+            // Approximate: assume tokens are evenly distributed
+            (self.current * self.source.len()) / self.tokens.len().max(1)
+        } else {
+            self.source.len()
+        };
         let (line, column) = self.get_line_column(position);
         let source_context = self.get_source_context(line, column);
         

@@ -453,6 +453,27 @@ impl Formatter {
                 self.write("await ");
                 self.format_expression(expr);
             }
+            Expression::StructLiteral { name, fields } => {
+                self.write(name);
+                self.write(" {");
+                self.writeln("");
+                self.indent_level += 1;
+                
+                for (i, (field_name, field_expr)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        self.writeln(",");
+                    }
+                    self.indent();
+                    self.write(field_name);
+                    self.write(": ");
+                    self.format_expression(field_expr);
+                }
+                
+                self.writeln("");
+                self.indent_level -= 1;
+                self.indent();
+                self.write("}");
+            }
         }
     }
     

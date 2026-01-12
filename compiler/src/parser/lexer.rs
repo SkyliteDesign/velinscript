@@ -150,15 +150,16 @@ impl<'a> Lexer<'a> {
             self.advance();
             if let Some('/') = self.current {
                 // Single-line comment
+                self.advance(); // consume second '/'
                 while let Some(ch) = self.current {
-                    if ch == '\n' {
+                    if ch == '\n' || ch == '\r' {
                         break;
                     }
                     self.advance();
                 }
             } else if let Some('*') = self.current {
                 // Multi-line comment
-                self.advance();
+                self.advance(); // consume '*'
                 while let Some(ch) = self.current {
                     if ch == '*' {
                         self.advance();

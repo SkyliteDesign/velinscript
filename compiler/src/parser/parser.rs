@@ -67,6 +67,11 @@ impl Parser {
     fn parse_program(&mut self) -> Result<Program, ParseError> {
         let mut items = Vec::new();
         
+        // Skip leading newlines (comments are already skipped by lexer)
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         while !self.is_at_end() {
             // Skip newlines and whitespace between items
             while matches!(self.peek(), Some(Token::Newline) | None) {
@@ -116,7 +121,7 @@ impl Parser {
     }
     
     fn parse_item(&mut self) -> Result<Item, ParseError> {
-        // Skip leading newlines
+        // Skip leading newlines and comments
         while matches!(self.peek(), Some(Token::Newline)) {
             self.advance();
         }
@@ -985,7 +990,59 @@ impl Parser {
             Some(Token::Identifier(name)) => {
                 let name_clone = name.clone();
                 self.advance();
-                Ok(Expression::Identifier(name_clone))
+                
+                // Check for generic type constructor: List<string>()
+                if self.check(&Token::Lt) {
+                    // Parse generic type parameters
+                    self.advance(); // consume '<'
+                    let mut type_params = Vec::new();
+                    
+                    loop {
+                        type_params.push(self.parse_type()?);
+                        
+                        if !self.check(&Token::Comma) {
+                            break;
+                        }
+                        self.advance();
+                    }
+                    
+                    self.consume(&Token::Gt, "Expected '>'")?;
+                    
+                    // Check if followed by function call: List<string>()
+                    if self.check(&Token::LParen) {
+                        // Parse function call arguments
+                        self.advance(); // consume '('
+                        let mut args = Vec::new();
+                        
+                        if !self.check(&Token::RParen) {
+                            loop {
+                                args.push(self.parse_expression()?);
+                                
+                                if !self.check(&Token::Comma) {
+                                    break;
+                                }
+                                self.advance();
+                            }
+                        }
+                        
+                        self.consume(&Token::RParen, "Expected ')'")?;
+                        
+                        // Create a generic type constructor call
+                        // For now, we'll treat it as a regular function call
+                        // The type parameters will be handled by the code generator
+                        Ok(Expression::Call {
+                            callee: Box::new(Expression::Identifier(name_clone)),
+                            args,
+                        })
+                    } else {
+                        // Just a generic type reference, not a constructor call
+                        // This is a type expression, which we'll handle differently
+                        // For now, return as identifier (will be handled by type checker)
+                        Ok(Expression::Identifier(name_clone))
+                    }
+                } else {
+                    Ok(Expression::Identifier(name_clone))
+                }
             }
             Some(Token::LParen) => {
                 self.advance();

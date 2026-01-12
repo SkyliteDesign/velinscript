@@ -806,6 +806,14 @@ impl TypeChecker {
             (Type::Map { key: k1, value: v1 }, Type::Map { key: k2, value: v2 }) => {
                 self.types_compatible(k1, k2) && self.types_compatible(v1, v2)
             }
+            (Type::Map { key: k1, value: v1 }, Type::Generic { name: n2, params: p2 }) if n2 == "Map" && p2.len() == 2 => {
+                // Map<K, V> (concrete) vs Map<K, V> (generic type annotation)
+                self.types_compatible(k1, &p2[0]) && self.types_compatible(v1, &p2[1])
+            }
+            (Type::Generic { name: n1, params: p1 }, Type::Map { key: k2, value: v2 }) if n1 == "Map" && p1.len() == 2 => {
+                // Map<K, V> (generic type annotation) vs Map<K, V> (concrete)
+                self.types_compatible(&p1[0], k2) && self.types_compatible(&p1[1], v2)
+            }
             (Type::Optional(o1), Type::Optional(o2)) => self.types_compatible(o1, o2),
             _ => false,
         }

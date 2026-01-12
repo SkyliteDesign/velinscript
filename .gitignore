@@ -1,0 +1,84 @@
+# Build artifacts
+target/
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-*
+*.code-workspace
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Dependencies
+# Cargo.lock - Normalerweise sollte dies committed werden für Binaries
+# node_modules/ - Sollte ignoriert werden
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Rust
+**/*.rs.bk
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# Compiled files
+*.o
+*.a
+*.out
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+*.gcda
+*.gcno
+*.gcov
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.cache
+.cache/
+
+# Output files
+*.rs
+!compiler/src/**/*.rs
+!tools/**/src/**/*.rs
+
+# Config files with secrets
+**/velin.config.json
+!**/velin.config.example.json
+
+# Internal/Development files
+bauplan/
+DOKUMENTATION.md
+GITHUB_SETUP.md
+PRE_COMMIT_CHECKLIST.md
+GIT_COMMIT_MESSAGE.txt

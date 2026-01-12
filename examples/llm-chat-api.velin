@@ -1,0 +1,87 @@
+// LLM Chat API Beispiel
+// Verwendet LLM für Chat-Funktionalität
+
+struct ChatMessage {
+    id: string,
+    role: string,
+    content: string,
+    timestamp: string,
+}
+
+struct ChatRequest {
+    message: string,
+    context: List<ChatMessage>,
+}
+
+struct ChatResponse {
+    message: string,
+    tokens: number,
+    model: string,
+}
+
+// LLM Client initialisieren
+let llmClient = LLMClient::new(LLMProvider::OpenAI, getApiKey());
+
+@POST("/api/chat")
+fn chat(request: ChatRequest): ChatResponse {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("message", &request.message)
+        .max_length("message", &request.message, 1000);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid message");
+    }
+    
+    // Context aufbauen
+    let mut prompt = "";
+    for (msg in request.context) {
+        prompt = prompt + msg.role + ": " + msg.content + "\n";
+    }
+    prompt = prompt + "user: " + request.message;
+    
+    // LLM aufrufen
+    let response = llmClient.generate(prompt);
+    
+    return ChatResponse {
+        message: response,
+        tokens: 100, // In Production: vom LLM
+        model: "gpt-4",
+    };
+}
+
+@POST("/api/chat/embed")
+fn embedMessage(text: string): List<number> {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("text", &text)
+        .max_length("text", &text, 8000);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid text");
+    }
+    
+    // Embedding generieren
+    let embedding = llmClient.embed(text);
+    return embedding;
+}
+
+@POST("/api/chat/save")
+fn saveMessage(role: string, content: string): ChatMessage {
+    let message = ChatMessage {
+        id: generateId(),
+        role: role,
+        content: content,
+        timestamp: getCurrentTimestamp(),
+    };
+    
+    return db.save(message);
+}
+
+@GET("/api/chat/history")
+fn getChatHistory(limit: number): List<ChatMessage> {
+    let messages = db.findAll(ChatMessage);
+    return messages.take(limit);
+}

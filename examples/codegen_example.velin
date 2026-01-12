@@ -1,0 +1,33 @@
+// Code Generator Beispiel
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+}
+
+@GET("/api/users")
+fn getUsers(): List<User> {
+    let users = db.findAll(User);
+    return users;
+}
+
+@GET("/api/users/:id")
+fn getUser(id: string): User {
+    let user = db.find(User, id);
+    return user;
+}
+
+@POST("/api/users")
+fn createUser(name: string, email: string): User {
+    let user = User {
+        id: generateId(),
+        name: name,
+        email: email,
+    };
+    return user;
+}
+
+fn add(a: number, b: number): number {
+    return a + b;
+}

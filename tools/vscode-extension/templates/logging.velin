@@ -1,0 +1,79 @@
+// Strukturiertes Logging
+// Umfassendes Logging-System mit Performance Metrics
+
+// Log-Level
+enum LogLevel {
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Fatal,
+}
+
+// Logger initialisieren
+fn initLogger(): Logger {
+    let config = getConfig();
+    
+    return Logger {
+        config: LoggerConfig {
+            level: parseLogLevel(config.logging.level),
+            format: config.logging.format,
+            output: config.logging.output,
+            enableRequestLogging: true,
+            enableResponseLogging: true,
+            enablePerformanceLogging: true,
+        },
+        requestCount: 0,
+        errorCount: 0,
+        performanceMetrics: List<PerformanceLogEntry>(),
+    };
+}
+
+// logRequest - Loggt HTTP Request
+fn logRequest(request: HttpRequest, endpoint: string, requestId: string) {
+    if (!logger.config.enableRequestLogging) {
+        return;
+    }
+    
+    logger.requestCount = logger.requestCount + 1;
+    logInfo(format("Request: {} {}", request.method, request.path), requestId, Map<string, string>());
+}
+
+// logResponse - Loggt HTTP Response
+fn logResponse(response: HttpResponse, duration: number, requestId: string) {
+    if (!logger.config.enableResponseLogging) {
+        return;
+    }
+    
+    if (response.statusCode >= 400) {
+        logWarning(format("Response: {} ({}ms)", response.statusCode, duration), requestId, Map<string, string>());
+    } else {
+        logInfo(format("Response: {} ({}ms)", response.statusCode, duration), requestId, Map<string, string>());
+    }
+}
+
+// logError - Error-Logging
+fn logError(message: string, requestId: string, error: AppError, metadata: Map<string, string>) {
+    let errorMetadata = metadata;
+    errorMetadata["errorCode"] = errorCodeToString(error.code);
+    errorMetadata["errorMessage"] = error.message;
+    
+    logger.errorCount = logger.errorCount + 1;
+    log(LogLevel::Error, message, requestId, errorMetadata);
+}
+
+// logPerformance - Loggt Performance-Metriken
+fn logPerformance(operation: string, duration: number, metadata: Map<string, string>) {
+    if (!logger.config.enablePerformanceLogging) {
+        return;
+    }
+    
+    if (duration > 1000) {
+        logWarning(format("Slow operation: {} ({}ms)", operation, duration), "", metadata);
+    } else {
+        logDebug(format("Performance: {} ({}ms)", operation, duration), "", metadata);
+    }
+}
+
+// Initialisiere Logger beim Start
+logger = initLogger();

@@ -1,0 +1,56 @@
+// Serialization-System
+// JSON, YAML und Binary Serialization
+
+// JSON Serialization
+fn toJSON<T>(value: T): string {
+    return serialize.toJSON(value);
+}
+
+fn fromJSON<T>(json: string): T {
+    return serialize.fromJSON<T>(json);
+}
+
+// YAML Serialization
+fn toYAML<T>(value: T): string {
+    return serialize.toYAML(value);
+}
+
+fn fromYAML<T>(yaml: string): T {
+    return serialize.fromYAML<T>(yaml);
+}
+
+// Binary Serialization
+fn serialize<T>(value: T): List<number> {
+    return serialize.serialize(value);
+}
+
+fn deserialize<T>(data: List<number>): T {
+    return serialize.deserialize<T>(data);
+}
+
+// Beispiel: JSON Serialization
+fn saveUserAsJSON(user: User): string {
+    return toJSON(user);
+}
+
+fn loadUserFromJSON(json: string): User {
+    return fromJSON<User>(json);
+}
+
+// Beispiel: YAML Serialization
+fn saveConfigAsYAML(config: Config): string {
+    return toYAML(config);
+}
+
+fn loadConfigFromYAML(yaml: string): Config {
+    return fromYAML<Config>(yaml);
+}
+
+// Beispiel: Binary Serialization
+fn saveBinary(data: Data): List<number> {
+    return serialize(data);
+}
+
+fn loadBinary(bytes: List<number>): Data {
+    return deserialize<Data>(bytes);
+}

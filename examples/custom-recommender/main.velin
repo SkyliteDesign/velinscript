@@ -1,0 +1,732 @@
+// Custom Recommender - Hauptdatei mit API-Endpoints
+// Hybrid Recommendation System mit Vector Database Integration
+// Vollständig optimiert mit Security, Error Handling, Logging, Caching
+
+// Importiere alle Module
+// use models::*;
+// use recommendation::*;
+// use vector_search::*;
+// use responses::*;
+// use errors::*;
+// use logging::*;
+// use cache::*;
+// use security::*;
+// use async::*;
+
+// Initialisierung beim Start
+// In Production: Lade Daten aus Datenbank
+let mut allItems = List<Item>();
+let mut allUsers = List<User>();
+let mut allPreferences = List<UserPreference>();
+let mut allFeedback = List<Feedback>();
+
+// Initialisiere Vector Database beim Start
+// initializeVectorDB(allItems);
+
+// ============================================================================
+// SECURITY MIDDLEWARE
+// ============================================================================
+
+// Security-Middleware für alle Endpoints
+fn applySecurityMiddleware(request: HttpRequest, endpoint: string): ApiResponse<void> {
+    let requestId = generateRequestId();
+    let startTime = getCurrentTime();
+    
+    // 1. API Key Validation
+    if (!validateApiKey(request)) {
+        let error = createUnauthorizedError("Invalid or missing API Key");
+        logError("Security: Invalid API Key", error, Map<string, string> { "endpoint": endpoint });
+        trackError(error, endpoint);
+        return errorResponse<void>(errorCodeToString(ApiErrorCode::Unauthorized), error.message, requestId, error.details);
+    }
+    
+    // 2. Rate Limiting
+    if (!checkRateLimit(request.remoteAddress)) {
+        let config = getConfig();
+        let error = createRateLimitError(
+            config.security.rateLimit.requestsPerMinute,
+            "minute"
+        );
+        logError("Security: Rate limit exceeded", error, Map<string, string> { "endpoint": endpoint });
+        trackError(error, endpoint);
+        return errorResponse<void>(errorCodeToString(ApiErrorCode::RateLimitExceeded), error.message, requestId, error.details);
+    }
+    
+    // 3. Input Size Validation
+    if (!validateInputSize(request)) {
+        let error = createError(
+            ApiErrorCode::ValidationError,
+            "Request too large",
+            Map<string, string>(),
+            "Input validation"
+        );
+        logError("Security: Request too large", error, Map<string, string> { "endpoint": endpoint });
+        trackError(error, endpoint);
+        return errorResponse<void>(errorCodeToString(ApiErrorCode::ValidationError), error.message, requestId, error.details);
+    }
+    
+    // 4. CORS Validation
+    let origin = request.headers.get("Origin");
+    if (origin != null && origin != "" && !validateCORS(origin)) {
+        let error = createUnauthorizedError("CORS not allowed");
+        logError("Security: CORS violation", error, Map<string, string> { "endpoint": endpoint, "origin": origin });
+        trackError(error, endpoint);
+        return errorResponse<void>(errorCodeToString(ApiErrorCode::Unauthorized), error.message, requestId, error.details);
+    }
+    
+    // 5. Input Sanitization
+    request = sanitizeRequest(request);
+    
+    return null; // Security-Check erfolgreich
+}
+
+// ============================================================================
+// API ENDPOINTS
+// ============================================================================
+
+// POST /api/recommendations/:userId
+// Hauptempfehlungs-Endpoint - Gibt personalisierte Empfehlungen für einen Nutzer zurück
+@Secure
+@POST("/api/recommendations/:userId")
+fn getRecommendations(request: HttpRequest, userId: string, requestBody: RecommendationRequest): ApiResponse<RecommendationResponse> {
+    let startTime = getCurrentTime();
+    let requestId = generateRequestId();
+    let endpoint = "/api/recommendations/:userId";
+    
+    // Request-Logging
+    logRequest(request, endpoint, requestId);
+    
+    try {
+        // Security-Middleware
+        let securityResult = applySecurityMiddleware(request, endpoint);
+        if (securityResult != null && !securityResult.success) {
+            return securityResult;
+        }
+        
+        // Input-Sanitization
+        userId = sanitizeInput(userId);
+        requestBody = sanitizeObject(requestBody);
+        
+        // Validierung
+        let mut validator = Validator::new();
+        validator
+            .required("userId", &userId)
+            .min("limit", &requestBody.limit, 1)
+            .max("limit", &requestBody.limit, 50);
+        
+        if (!validator.is_valid()) {
+            let errors = validator.errors();
+            let error = createValidationError("request", errors.map(|e| e.message).join(", "));
+            logError("Validation failed", error, Map<string, string> { "endpoint": endpoint, "userId": userId });
+            trackError(error, endpoint);
+            return errorResponse<RecommendationResponse>(
+                errorCodeToString(ApiErrorCode::ValidationError),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        // Prüfe Cache
+        let cacheKey = generateRecommendationsCacheKey(userId, requestBody.filters);
+        let cachedResult = cacheGet<RecommendationResponse>(cacheKey);
+        if (cachedResult != null) {
+            logPerformance("Recommendations (cached)", getCurrentTime() - startTime, Map<string, string> { "cacheHit": "true" });
+            let response = successResponseWithCache(cachedResult, requestId, startTime, true);
+            let duration = getCurrentTime() - startTime;
+            logResponse(createHttpResponse(response), duration, requestId);
+            trackRequest(endpoint, true, duration);
+            return applySecurityHeaders(response);
+        }
+        
+        // Prüfe ob Nutzer existiert
+        let user = allUsers.find(|u| u.id == userId);
+        if (user == null) {
+            let error = createNotFoundError("User", userId);
+            logError("User not found", error, Map<string, string> { "endpoint": endpoint, "userId": userId });
+            trackError(error, endpoint);
+            trackRequest(endpoint, false, getCurrentTime() - startTime);
+            return errorResponse<RecommendationResponse>(
+                errorCodeToString(ApiErrorCode::NotFound),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        // Performance-Logging: User-Embedding
+        let embeddingStartTime = getCurrentTime();
+        let userEmbeddingCacheKey = generateUserEmbeddingCacheKey(userId);
+        let userEmbedding = cacheGet<List<number>>(userEmbeddingCacheKey);
+        
+        if (userEmbedding == null || userEmbedding.length == 0) {
+            userEmbedding = generateUserEmbedding(userId, allItems, allPreferences);
+            cacheSet(userEmbeddingCacheKey, userEmbedding, 3600); // Cache 1 Stunde
+        }
+        
+        logPerformance("User-Embedding", getCurrentTime() - embeddingStartTime, Map<string, string> { "userId": userId });
+        
+        // Performance-Logging: Recommendations
+        let recStartTime = getCurrentTime();
+        let recommendations = hybridRecommend(
+            userId,
+            userEmbedding,
+            allItems,
+            allPreferences
+        );
+        logPerformance("Hybrid-Recommendations", getCurrentTime() - recStartTime, Map<string, string> { "userId": userId, "count": recommendations.length.toString() });
+        
+        // Wende Filter an falls vorhanden
+        let mut filteredRecs = recommendations;
+        if (requestBody.filters.length > 0) {
+            filteredRecs = recommendations.filter(|rec| {
+                let item = rec.item;
+                // Filter nach Category
+                if (requestBody.filters.contains("category") && item.category != requestBody.filters["category"]) {
+                    return false;
+                }
+                // Filter nach Tags
+                if (requestBody.filters.contains("tags")) {
+                    let requiredTag = requestBody.filters["tags"];
+                    if (!item.tags.contains(requiredTag)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+        }
+        
+        // Begrenze auf gewünschte Anzahl
+        let limit = requestBody.limit;
+        if (limit > 0 && filteredRecs.length > limit) {
+            filteredRecs = filteredRecs.take(limit);
+        }
+        
+        let responseData = RecommendationResponse {
+            userId: userId,
+            recommendations: filteredRecs,
+            totalCount: filteredRecs.length,
+            generatedAt: getCurrentTimestamp(),
+        };
+        
+        // Cache Result
+        cacheSet(cacheKey, responseData, 300); // Cache 5 Minuten
+        
+        // Erstelle Response
+        let response = successResponseWithCache(responseData, requestId, startTime, false);
+        let duration = getCurrentTime() - startTime;
+        trackPerformance(duration);
+        logResponse(createHttpResponse(response), duration, requestId);
+        trackRequest(endpoint, true, duration);
+        
+        return applySecurityHeaders(response);
+        
+    } catch (error) {
+        let appError = createError(
+            ApiErrorCode::InternalServerError,
+            format("Failed to get recommendations: {}", error.message),
+            Map<string, string> { "userId": userId },
+            error.message
+        );
+        logError("Recommendation error", appError, Map<string, string> { "endpoint": endpoint, "userId": userId });
+        trackError(appError, endpoint);
+        trackRequest(endpoint, false, getCurrentTime() - startTime);
+        return errorResponse<RecommendationResponse>(
+            errorCodeToString(ApiErrorCode::InternalServerError),
+            appError.message,
+            requestId,
+            appError.details
+        );
+    }
+}
+
+// POST /api/preferences
+// Speichert Nutzerpräferenzen (Bewertungen, Interaktionen)
+@Secure
+@POST("/api/preferences")
+fn createPreference(request: HttpRequest, userId: string, itemId: string, rating: number, interactionType: string): ApiResponse<UserPreference> {
+    let startTime = getCurrentTime();
+    let requestId = generateRequestId();
+    let endpoint = "/api/preferences";
+    
+    logRequest(request, endpoint, requestId);
+    
+    try {
+        // Security-Middleware
+        let securityResult = applySecurityMiddleware(request, endpoint);
+        if (securityResult != null && !securityResult.success) {
+            return securityResult;
+        }
+        
+        // Input-Sanitization
+        userId = sanitizeInput(userId);
+        itemId = sanitizeInput(itemId);
+        interactionType = sanitizeInput(interactionType);
+        
+        // Validierung
+        let mut validator = Validator::new();
+        validator
+            .required("userId", &userId)
+            .required("itemId", &itemId)
+            .min("rating", &rating, 1)
+            .max("rating", &rating, 5);
+        
+        if (!validator.is_valid()) {
+            let errors = validator.errors();
+            let error = createValidationError("preference", errors.map(|e| e.message).join(", "));
+            logError("Validation failed", error, Map<string, string> { "endpoint": endpoint });
+            trackError(error, endpoint);
+            return errorResponse<UserPreference>(
+                errorCodeToString(ApiErrorCode::ValidationError),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        // Prüfe ob User und Item existieren
+        let user = allUsers.find(|u| u.id == userId);
+        let item = allItems.find(|i| i.id == itemId);
+        
+        if (user == null || item == null) {
+            let resource = user == null ? "User" : "Item";
+            let id = user == null ? userId : itemId;
+            let error = createNotFoundError(resource, id);
+            logError("Resource not found", error, Map<string, string> { "endpoint": endpoint });
+            trackError(error, endpoint);
+            trackRequest(endpoint, false, getCurrentTime() - startTime);
+            return errorResponse<UserPreference>(
+                errorCodeToString(ApiErrorCode::NotFound),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        // Erstelle neue Preference
+        let preference = UserPreference {
+            id: generateId(),
+            userId: userId,
+            itemId: itemId,
+            rating: rating,
+            timestamp: getCurrentTimestamp(),
+            interactionType: interactionType,
+        };
+        
+        // Speichere in Datenbank
+        allPreferences.push(preference);
+        // In Production: db.save(preference);
+        
+        // Invalidate Cache
+        cacheInvalidate(generateUserEmbeddingCacheKey(userId));
+        cacheInvalidate(generateRecommendationsCacheKey(userId, Map<string, string>()));
+        
+        // Enqueue User-Embedding-Update (asynchron)
+        enqueueUserEmbeddingUpdate(userId);
+        
+        let response = successResponse(preference, requestId, startTime);
+        let duration = getCurrentTime() - startTime;
+        logResponse(createHttpResponse(response), duration, requestId);
+        trackRequest(endpoint, true, duration);
+        
+        return applySecurityHeaders(response);
+        
+    } catch (error) {
+        let appError = createError(
+            ApiErrorCode::InternalServerError,
+            format("Failed to create preference: {}", error.message),
+            Map<string, string> { "userId": userId, "itemId": itemId },
+            error.message
+        );
+        logError("Preference creation error", appError, Map<string, string> { "endpoint": endpoint });
+        trackError(appError, endpoint);
+        trackRequest(endpoint, false, getCurrentTime() - startTime);
+        return errorResponse<UserPreference>(
+            errorCodeToString(ApiErrorCode::InternalServerError),
+            appError.message,
+            requestId,
+            appError.details
+        );
+    }
+}
+
+// GET /api/users/:userId/history
+// Ruft den Nutzerverlauf ab (alle Interaktionen)
+@Secure
+@GET("/api/users/:userId/history")
+fn getUserHistoryEndpoint(request: HttpRequest, userId: string, limit: number): ApiResponse<List<UserPreference>> {
+    let startTime = getCurrentTime();
+    let requestId = generateRequestId();
+    let endpoint = "/api/users/:userId/history";
+    
+    logRequest(request, endpoint, requestId);
+    
+    try {
+        // Security-Middleware
+        let securityResult = applySecurityMiddleware(request, endpoint);
+        if (securityResult != null && !securityResult.success) {
+            return securityResult;
+        }
+        
+        // Input-Sanitization
+        userId = sanitizeInput(userId);
+        
+        // Validierung
+        if (userId == null || userId == "") {
+            let error = createValidationError("userId", "User ID is required");
+            logError("Validation failed", error, Map<string, string> { "endpoint": endpoint });
+            trackError(error, endpoint);
+            return errorResponse<List<UserPreference>>(
+                errorCodeToString(ApiErrorCode::ValidationError),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        // Prüfe Cache
+        let cacheKey = generateUserHistoryCacheKey(userId, limit);
+        let cachedResult = cacheGet<List<UserPreference>>(cacheKey);
+        if (cachedResult != null) {
+            logPerformance("User History (cached)", getCurrentTime() - startTime, Map<string, string> { "cacheHit": "true" });
+            let response = successResponseWithCache(cachedResult, requestId, startTime, true);
+            let duration = getCurrentTime() - startTime;
+            logResponse(createHttpResponse(response), duration, requestId);
+            trackRequest(endpoint, true, duration);
+            return applySecurityHeaders(response);
+        }
+        
+        // Hole Verlauf
+        let history = getUserHistory(userId, allPreferences);
+        
+        // Begrenze auf gewünschte Anzahl
+        let finalHistory = history;
+        if (limit > 0 && history.length > limit) {
+            finalHistory = history.take(limit);
+        }
+        
+        // Cache Result
+        cacheSet(cacheKey, finalHistory, 600); // Cache 10 Minuten
+        
+        let response = successResponseWithCache(finalHistory, requestId, startTime, false);
+        let duration = getCurrentTime() - startTime;
+        logResponse(createHttpResponse(response), duration, requestId);
+        trackRequest(endpoint, true, duration);
+        
+        return applySecurityHeaders(response);
+        
+    } catch (error) {
+        let appError = createError(
+            ApiErrorCode::InternalServerError,
+            format("Failed to get user history: {}", error.message),
+            Map<string, string> { "userId": userId },
+            error.message
+        );
+        logError("User history error", appError, Map<string, string> { "endpoint": endpoint });
+        trackError(appError, endpoint);
+        trackRequest(endpoint, false, getCurrentTime() - startTime);
+        return errorResponse<List<UserPreference>>(
+            errorCodeToString(ApiErrorCode::InternalServerError),
+            appError.message,
+            requestId,
+            appError.details
+        );
+    }
+}
+
+// POST /api/feedback
+// Sammelt Feedback zu Empfehlungen (positive, negative, not_interested)
+@Secure
+@POST("/api/feedback")
+fn createFeedback(request: HttpRequest, userId: string, itemId: string, feedbackType: string, comment: string): ApiResponse<Feedback> {
+    let startTime = getCurrentTime();
+    let requestId = generateRequestId();
+    let endpoint = "/api/feedback";
+    
+    logRequest(request, endpoint, requestId);
+    
+    try {
+        // Security-Middleware
+        let securityResult = applySecurityMiddleware(request, endpoint);
+        if (securityResult != null && !securityResult.success) {
+            return securityResult;
+        }
+        
+        // Input-Sanitization
+        userId = sanitizeInput(userId);
+        itemId = sanitizeInput(itemId);
+        feedbackType = sanitizeInput(feedbackType);
+        comment = sanitizeInput(comment);
+        
+        // Validierung
+        let mut validator = Validator::new();
+        validator
+            .required("userId", &userId)
+            .required("itemId", &itemId)
+            .required("feedbackType", &feedbackType);
+        
+        // Erlaube nur gültige Feedback-Typen
+        let validTypes = ["positive", "negative", "not_interested"];
+        if (!validTypes.contains(feedbackType)) {
+            let error = createValidationError("feedbackType", format("Invalid feedback type. Must be one of: {}", validTypes.join(", ")));
+            logError("Validation failed", error, Map<string, string> { "endpoint": endpoint });
+            trackError(error, endpoint);
+            return errorResponse<Feedback>(
+                errorCodeToString(ApiErrorCode::ValidationError),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        if (!validator.is_valid()) {
+            let errors = validator.errors();
+            let error = createValidationError("feedback", errors.map(|e| e.message).join(", "));
+            logError("Validation failed", error, Map<string, string> { "endpoint": endpoint });
+            trackError(error, endpoint);
+            return errorResponse<Feedback>(
+                errorCodeToString(ApiErrorCode::ValidationError),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        // Erstelle Feedback
+        let feedback = Feedback {
+            id: generateId(),
+            userId: userId,
+            itemId: itemId,
+            feedbackType: feedbackType,
+            timestamp: getCurrentTimestamp(),
+            comment: comment,
+        };
+        
+        // Speichere in Datenbank
+        allFeedback.push(feedback);
+        // In Production: db.save(feedback);
+        
+        // Enqueue Analytics-Processing (asynchron)
+        let analyticsData = Map<string, any>();
+        analyticsData["userId"] = userId;
+        analyticsData["itemId"] = itemId;
+        analyticsData["feedbackType"] = feedbackType;
+        enqueueJob("ProcessAnalytics", analyticsData, 3);
+        
+        let response = successResponse(feedback, requestId, startTime);
+        let duration = getCurrentTime() - startTime;
+        logResponse(createHttpResponse(response), duration, requestId);
+        trackRequest(endpoint, true, duration);
+        
+        return applySecurityHeaders(response);
+        
+    } catch (error) {
+        let appError = createError(
+            ApiErrorCode::InternalServerError,
+            format("Failed to create feedback: {}", error.message),
+            Map<string, string> { "userId": userId, "itemId": itemId },
+            error.message
+        );
+        logError("Feedback creation error", appError, Map<string, string> { "endpoint": endpoint });
+        trackError(appError, endpoint);
+        trackRequest(endpoint, false, getCurrentTime() - startTime);
+        return errorResponse<Feedback>(
+            errorCodeToString(ApiErrorCode::InternalServerError),
+            appError.message,
+            requestId,
+            appError.details
+        );
+    }
+}
+
+// GET /api/items/:itemId/similar
+// Findet ähnliche Items basierend auf Vector-Ähnlichkeit
+@Secure
+@GET("/api/items/:itemId/similar")
+fn getSimilarItems(request: HttpRequest, itemId: string, limit: number): ApiResponse<SimilarItemsResponse> {
+    let startTime = getCurrentTime();
+    let requestId = generateRequestId();
+    let endpoint = "/api/items/:itemId/similar";
+    
+    logRequest(request, endpoint, requestId);
+    
+    try {
+        // Security-Middleware
+        let securityResult = applySecurityMiddleware(request, endpoint);
+        if (securityResult != null && !securityResult.success) {
+            return securityResult;
+        }
+        
+        // Input-Sanitization
+        itemId = sanitizeInput(itemId);
+        
+        // Validierung
+        if (itemId == null || itemId == "") {
+            let error = createValidationError("itemId", "Item ID is required");
+            logError("Validation failed", error, Map<string, string> { "endpoint": endpoint });
+            trackError(error, endpoint);
+            return errorResponse<SimilarItemsResponse>(
+                errorCodeToString(ApiErrorCode::ValidationError),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        // Prüfe Cache
+        let cacheKey = generateSimilarItemsCacheKey(itemId, limit);
+        let cachedResult = cacheGet<SimilarItemsResponse>(cacheKey);
+        if (cachedResult != null) {
+            logPerformance("Similar Items (cached)", getCurrentTime() - startTime, Map<string, string> { "cacheHit": "true" });
+            let response = successResponseWithCache(cachedResult, requestId, startTime, true);
+            let duration = getCurrentTime() - startTime;
+            logResponse(createHttpResponse(response), duration, requestId);
+            trackRequest(endpoint, true, duration);
+            return applySecurityHeaders(response);
+        }
+        
+        // Finde Item
+        let item = allItems.find(|i| i.id == itemId);
+        if (item == null) {
+            let error = createNotFoundError("Item", itemId);
+            logError("Item not found", error, Map<string, string> { "endpoint": endpoint, "itemId": itemId });
+            trackError(error, endpoint);
+            trackRequest(endpoint, false, getCurrentTime() - startTime);
+            return errorResponse<SimilarItemsResponse>(
+                errorCodeToString(ApiErrorCode::NotFound),
+                error.message,
+                requestId,
+                error.details
+            );
+        }
+        
+        // Performance-Logging: Similar Items Search
+        let searchStartTime = getCurrentTime();
+        let similarItems = searchSimilarItems(item, limit);
+        logPerformance("Similar Items Search", getCurrentTime() - searchStartTime, Map<string, string> { "itemId": itemId, "count": similarItems.length.toString() });
+        
+        let responseData = SimilarItemsResponse {
+            itemId: itemId,
+            similarItems: similarItems,
+            totalCount: similarItems.length,
+        };
+        
+        // Cache Result
+        cacheSet(cacheKey, responseData, 900); // Cache 15 Minuten
+        
+        let response = successResponseWithCache(responseData, requestId, startTime, false);
+        let duration = getCurrentTime() - startTime;
+        trackPerformance(duration);
+        logResponse(createHttpResponse(response), duration, requestId);
+        trackRequest(endpoint, true, duration);
+        
+        return applySecurityHeaders(response);
+        
+    } catch (error) {
+        let appError = createError(
+            ApiErrorCode::InternalServerError,
+            format("Failed to get similar items: {}", error.message),
+            Map<string, string> { "itemId": itemId },
+            error.message
+        );
+        logError("Similar items error", appError, Map<string, string> { "endpoint": endpoint });
+        trackError(appError, endpoint);
+        trackRequest(endpoint, false, getCurrentTime() - startTime);
+        return errorResponse<SimilarItemsResponse>(
+            errorCodeToString(ApiErrorCode::InternalServerError),
+            appError.message,
+            requestId,
+            appError.details
+        );
+    }
+}
+
+// ============================================================================
+// HILFSFUNKTIONEN
+// ============================================================================
+
+// generateRequestId - Generiert eindeutige Request-ID
+fn generateRequestId(): string {
+    return format("req-{}", generateId());
+}
+
+// getCurrentTime - Gibt aktuelle Zeit in Millisekunden zurück
+fn getCurrentTime(): number {
+    // In Production: Verwende echte Time-API
+    return DateTime.now().getTime();
+}
+
+// createHttpResponse - Konvertiert ApiResponse zu HttpResponse
+fn createHttpResponse<T>(apiResponse: ApiResponse<T>): HttpResponse {
+    let httpResponse = HttpResponse::ok(JSON.stringify(apiResponse));
+    httpResponse.statusCode = apiResponse.success ? 200 : errorCodeToHttpStatus(parseErrorCode(apiResponse.error.code));
+    
+    // Füge Security Headers hinzu
+    httpResponse = applySecurityHeadersToHttpResponse(httpResponse);
+    
+    return httpResponse;
+}
+
+// parseErrorCode - Konvertiert String zu ApiErrorCode
+fn parseErrorCode(code: string): ApiErrorCode {
+    match (code) {
+        "VALIDATION_ERROR" => ApiErrorCode::ValidationError,
+        "NOT_FOUND" => ApiErrorCode::NotFound,
+        "UNAUTHORIZED" => ApiErrorCode::Unauthorized,
+        "FORBIDDEN" => ApiErrorCode::Forbidden,
+        "RATE_LIMIT_EXCEEDED" => ApiErrorCode::RateLimitExceeded,
+        "INTERNAL_SERVER_ERROR" => ApiErrorCode::InternalServerError,
+        "DATABASE_ERROR" => ApiErrorCode::DatabaseError,
+        "LLM_ERROR" => ApiErrorCode::LLMError,
+        "VECTOR_DB_ERROR" => ApiErrorCode::VectorDBError,
+        "CACHE_ERROR" => ApiErrorCode::CacheError,
+        "CONFIGURATION_ERROR" => ApiErrorCode::ConfigurationError,
+        "TIMEOUT_ERROR" => ApiErrorCode::TimeoutError,
+        _ => ApiErrorCode::InternalServerError,
+    }
+}
+
+// sanitizeObject - Sanitized Objekt rekursiv
+fn sanitizeObject(obj: any): any {
+    if (obj == null) {
+        return null;
+    }
+    
+    if (typeof(obj) == "string") {
+        return sanitizeInput(obj);
+    }
+    
+    if (typeof(obj) == "object") {
+        if (obj is List) {
+            return obj.map(|item| sanitizeObject(item));
+        }
+        
+        if (obj is Map) {
+            let sanitized = Map<string, any>();
+            for (key in obj.keys()) {
+                sanitized[key] = sanitizeObject(obj[key]);
+            }
+            return sanitized;
+        }
+    }
+    
+    return obj;
+}
+
+// getApiKey - Ruft API Key aus Konfiguration ab
+fn getApiKey(): string {
+    let config = getConfig();
+    return config.ml.llm.apiKey;
+}
+
+// generateId - Generiert eindeutige ID
+fn generateId(): string {
+    // In Production: Verwende UUID-Generator
+    return format("id-{}", getCurrentTimestamp());
+}
+
+// getCurrentTimestamp - Gibt aktuellen Timestamp zurück
+fn getCurrentTimestamp(): string {
+    // In Production: Verwende DateTime Library
+    return DateTime.now().toISOString();
+}

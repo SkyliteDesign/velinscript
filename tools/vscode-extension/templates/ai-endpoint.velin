@@ -1,0 +1,68 @@
+// AI API Endpoint Template
+// Generiert mit VelinScript VS Code Extension
+
+// Request-Struktur (anpassen nach Bedarf)
+struct AIRequest {
+    prompt: string,
+    maxTokens: number,
+    temperature: number,
+}
+
+// Response-Struktur (anpassen nach Bedarf)
+struct AIResponse {
+    result: string,
+    tokens: number,
+    model: string,
+}
+
+// LLM Client initialisieren
+// Ersetze LLMProvider::OpenAI mit dem passenden Provider:
+//   - LLMProvider::OpenAI - Für OpenAI API (GPT-4, GPT-3.5)
+//   - LLMProvider::Anthropic - Für Anthropic Claude (Claude 3 Opus, Sonnet, Haiku)
+//   - LLMProvider::GoogleGemini - Für Google Gemini API (Gemini Pro, Gemini Ultra)
+//   - LLMProvider::Local - Für lokale Models
+// Ersetze getApiKey() mit deiner API Key Funktion
+let llmClient = LLMClient::new(LLMProvider::OpenAI, getApiKey());
+
+// AI API Endpoint
+// Ersetze "/api/ai/endpoint" mit deinem gewünschten Endpoint-Pfad
+@POST("/api/ai/endpoint")
+fn aiEndpoint(request: AIRequest): AIResponse {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("prompt", &request.prompt)
+        .max_length("prompt", &request.prompt, 4000);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid request");
+    }
+    
+    // LLM aufrufen
+    let response = llmClient.generate(request.prompt);
+    
+    // Response zurückgeben
+    return AIResponse {
+        result: response,
+        tokens: 100, // In Production: Vom LLM Client
+        model: "gpt-4",
+    };
+}
+
+// Alternative: Embedding-Endpoint
+@POST("/api/ai/embed")
+fn embedText(text: string): List<number> {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("text", &text)
+        .max_length("text", &text, 8000);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid text");
+    }
+    
+    // Embedding generieren
+    let embedding = llmClient.embed(text);
+    return embedding;
+}

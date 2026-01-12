@@ -1,0 +1,81 @@
+// Standardisierte API Responses
+// Einheitliches Response-Format für alle Endpoints
+
+// Standard API Response mit generischem Typ
+struct ApiResponse<T> {
+    success: boolean,
+    data: T,
+    error: ApiError,
+    metadata: ResponseMetadata,
+}
+
+// API Error-Struktur
+struct ApiError {
+    code: string,
+    message: string,
+    details: Map<string, string>,
+    timestamp: string,
+}
+
+// Response Metadata
+struct ResponseMetadata {
+    requestId: string,
+    timestamp: string,
+    processingTime: number,
+    version: string,
+    cacheHit: boolean,
+}
+
+// Helper-Funktionen für Response-Erstellung
+
+// successResponse - Erstellt erfolgreiche Response
+fn successResponse<T>(data: T, requestId: string, startTime: number): ApiResponse<T> {
+    let processingTime = getCurrentTime() - startTime;
+    let config = getConfig();
+    
+    return ApiResponse {
+        success: true,
+        data: data,
+        error: ApiError {
+            code: "",
+            message: "",
+            details: Map<string, string>(),
+            timestamp: "",
+        },
+        metadata: ResponseMetadata {
+            requestId: requestId,
+            timestamp: getCurrentTimestamp(),
+            processingTime: processingTime,
+            version: config.version ?? "1.0.0",
+            cacheHit: false,
+        },
+    };
+}
+
+// successResponseWithCache - Erstellt erfolgreiche Response mit Cache-Info
+fn successResponseWithCache<T>(data: T, requestId: string, startTime: number, cacheHit: boolean): ApiResponse<T> {
+    let response = successResponse(data, requestId, startTime);
+    response.metadata.cacheHit = cacheHit;
+    return response;
+}
+
+// errorResponse - Erstellt Fehler-Response
+fn errorResponse<T>(errorCode: string, message: string, requestId: string, details: Map<string, string>): ApiResponse<T> {
+    return ApiResponse {
+        success: false,
+        data: null,
+        error: ApiError {
+            code: errorCode,
+            message: message,
+            details: details,
+            timestamp: getCurrentTimestamp(),
+        },
+        metadata: ResponseMetadata {
+            requestId: requestId,
+            timestamp: getCurrentTimestamp(),
+            processingTime: 0,
+            version: "1.0.0",
+            cacheHit: false,
+        },
+    };
+}

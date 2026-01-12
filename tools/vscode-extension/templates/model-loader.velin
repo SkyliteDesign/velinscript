@@ -1,0 +1,22 @@
+// Model Loader Boilerplate
+// Generiert mit VelinScript VS Code Extension
+
+// Model Loader initialisieren
+let mut modelLoader = ModelLoader::new();
+
+// Model laden
+// Ersetze "modelName" mit deinem Model-Namen
+// Ersetze ModelType::Sentiment mit dem passenden Typ:
+//   - ModelType::Sentiment - Für Sentiment Analysis
+//   - ModelType::Classification - Für Klassifikation
+//   - ModelType::Regression - Für Regression
+//   - ModelType::Embedding - Für Embedding-Generierung
+//   - ModelType::LLM - Für Large Language Models
+// Ersetze "models/model.onnx" mit dem Pfad zu deinem Model
+modelLoader.load_model("modelName", ModelType::Sentiment, "models/model.onnx");
+
+// Weitere Models können hinzugefügt werden:
+// modelLoader.load_model("anotherModel", ModelType::Classification, "models/another.onnx");
+
+// Prediction durchführen:
+// let prediction = modelLoader.predict("modelName", "input text");

@@ -1,0 +1,71 @@
+// Asynchrone Operationen
+// Background Jobs für teure Operationen
+
+// Job Queue initialisieren
+fn initJobQueue(): JobQueue {
+    return JobQueue {
+        jobs: List<BackgroundJob>(),
+        processing: List<string>(),
+        maxConcurrent: 5,
+    };
+}
+
+// enqueueJob - Fügt Job zur Queue hinzu
+fn enqueueJob(jobType: string, data: Map<string, any>, maxRetries: number): string {
+    let job = BackgroundJob {
+        id: generateJobId(),
+        type: jobType,
+        data: data,
+        status: JobStatus::Pending,
+        createdAt: getCurrentTimestamp(),
+        startedAt: "",
+        completedAt: "",
+        result: null,
+        error: "",
+        retries: 0,
+        maxRetries: maxRetries,
+    };
+    
+    jobQueue.jobs.push(job);
+    processNextJob();
+    
+    return job.id;
+}
+
+// processJob - Verarbeitet Job
+fn processJob(jobId: string) {
+    let job = jobQueue.jobs.find(|j| j.id == jobId);
+    if (job == null) {
+        return;
+    }
+    
+    job.status = JobStatus::Processing;
+    job.startedAt = getCurrentTimestamp();
+    
+    try {
+        let result = executeJob(job);
+        job.status = JobStatus::Completed;
+        job.completedAt = getCurrentTimestamp();
+        job.result = result;
+    } catch (error) {
+        job.retries = job.retries + 1;
+        if (job.retries < job.maxRetries) {
+            job.status = JobStatus::Pending;
+        } else {
+            job.status = JobStatus::Failed;
+            job.error = error.message;
+        }
+    }
+}
+
+// getJobStatus - Gibt Job-Status zurück
+fn getJobStatus(jobId: string): BackgroundJob {
+    let job = jobQueue.jobs.find(|j| j.id == jobId);
+    if (job == null) {
+        throw new Error(format("Job not found: {}", jobId));
+    }
+    return job;
+}
+
+// Initialisiere Job Queue beim Start
+jobQueue = initJobQueue();

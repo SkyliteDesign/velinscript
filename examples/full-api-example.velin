@@ -1,0 +1,135 @@
+// Vollständiges API Beispiel mit CRUD, Security und Database
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+    role: string,
+    createdAt: string,
+}
+
+struct Post {
+    id: string,
+    title: string,
+    content: string,
+    authorId: string,
+    createdAt: string,
+}
+
+// Public Endpoints
+
+@GET("/api/public/health")
+fn healthCheck(): string {
+    return "OK";
+}
+
+// User Management
+
+@GET("/api/users")
+fn getUsers(): List<User> {
+    return db.findAll(User);
+}
+
+@GET("/api/users/:id")
+fn getUser(id: string): User {
+    return db.find(User, id);
+}
+
+@POST("/api/users")
+fn createUser(name: string, email: string): User {
+    let user = User {
+        id: generateId(),
+        name: name,
+        email: email,
+        role: "user",
+        createdAt: getCurrentTimestamp(),
+    };
+    return db.save(user);
+}
+
+@PUT("/api/users/:id")
+fn updateUser(id: string, name: string, email: string): User {
+    let user = db.find(User, id);
+    user.name = name;
+    user.email = email;
+    return db.save(user);
+}
+
+@DELETE("/api/users/:id")
+fn deleteUser(id: string): void {
+    db.delete(User, id);
+}
+
+// Authenticated Endpoints
+
+@Auth
+@GET("/api/profile")
+fn getProfile(): User {
+    return currentUser();
+}
+
+@Auth
+@PUT("/api/profile")
+fn updateProfile(name: string, email: string): User {
+    let user = currentUser();
+    user.name = name;
+    user.email = email;
+    return db.save(user);
+}
+
+// Admin Endpoints
+
+@Auth
+@Role("admin")
+@GET("/api/admin/users")
+fn getAdminUsers(): List<User> {
+    return db.findAll(User);
+}
+
+@Auth
+@Role("admin")
+@DELETE("/api/admin/users/:id")
+fn adminDeleteUser(id: string): void {
+    db.delete(User, id);
+}
+
+// Posts
+
+@GET("/api/posts")
+fn getPosts(): List<Post> {
+    return db.findAll(Post);
+}
+
+@GET("/api/posts/:id")
+fn getPost(id: string): Post {
+    return db.find(Post, id);
+}
+
+@Auth
+@POST("/api/posts")
+fn createPost(title: string, content: string): Post {
+    let user = currentUser();
+    let post = Post {
+        id: generateId(),
+        title: title,
+        content: content,
+        authorId: user.id,
+        createdAt: getCurrentTimestamp(),
+    };
+    return db.save(post);
+}
+
+@Auth
+@PUT("/api/posts/:id")
+fn updatePost(id: string, title: string, content: string): Post {
+    let post = db.find(Post, id);
+    post.title = title;
+    post.content = content;
+    return db.save(post);
+}
+
+@Auth
+@DELETE("/api/posts/:id")
+fn deletePost(id: string): void {
+    db.delete(Post, id);
+}

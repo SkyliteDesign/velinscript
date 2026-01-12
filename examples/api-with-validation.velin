@@ -1,0 +1,152 @@
+// API mit vollständiger Input Validation
+// Zeigt alle Validierungs-Möglichkeiten
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+    age: number,
+    phone: string,
+    website: string,
+}
+
+struct Product {
+    id: string,
+    name: string,
+    description: string,
+    price: number,
+    sku: string,
+    category: string,
+}
+
+@POST("/api/users")
+fn createUser(name: string, email: string, age: number, phone: string, website: string): User {
+    // Vollständige Validierung
+    let mut validator = Validator::new();
+    
+    validator
+        .required("name", &name)
+        .min_length("name", &name, 2)
+        .max_length("name", &name, 50)
+        .required("email", &email)
+        .email("email", &email)
+        .required("phone", &phone)
+        .pattern("phone", &phone, "^[0-9+-]+$", "Phone muss nur Zahlen und + enthalten")
+        .min_length("phone", &phone, 10)
+        .max_length("phone", &phone, 20);
+    
+    if (website != null && website != "") {
+        validator
+            .pattern("website", &website, "^https?://", "Website muss mit http:// oder https:// beginnen");
+    }
+    
+    if (!validator.is_valid()) {
+        let errors = validator.errors();
+        let errorMessage = errors.map(|e| format!("{}: {}", e.field, e.message)).join(", ");
+        return HttpResponse::bad_request(errorMessage);
+    }
+    
+    // Alters-Validierung
+    if (age < 0 || age > 150) {
+        return HttpResponse::bad_request("Age muss zwischen 0 und 150 sein");
+    }
+    
+    let user = User {
+        id: generateId(),
+        name: name,
+        email: email,
+        age: age,
+        phone: phone,
+        website: website,
+    };
+    
+    return db.save(user);
+}
+
+@PUT("/api/users/:id")
+fn updateUser(id: string, name: string, email: string): User {
+    let mut validator = Validator::new();
+    
+    validator
+        .required("name", &name)
+        .min_length("name", &name, 2)
+        .max_length("name", &name, 50)
+        .required("email", &email)
+        .email("email", &email);
+    
+    if (!validator.is_valid()) {
+        let errors = validator.errors();
+        let errorMessage = errors.map(|e| e.message).join(", ");
+        return HttpResponse::bad_request(errorMessage);
+    }
+    
+    let user = db.find(User, id);
+    if (user == null) {
+        return HttpResponse::not_found("User nicht gefunden");
+    }
+    
+    user.name = name;
+    user.email = email;
+    
+    return db.save(user);
+}
+
+@POST("/api/products")
+fn createProduct(name: string, description: string, price: number, sku: string, category: string): Product {
+    let mut validator = Validator::new();
+    
+    validator
+        .required("name", &name)
+        .min_length("name", &name, 3)
+        .max_length("name", &name, 100)
+        .required("description", &description)
+        .min_length("description", &description, 10)
+        .max_length("description", &description, 1000)
+        .required("sku", &sku)
+        .pattern("sku", &sku, "^[A-Z0-9-]+$", "SKU muss alphanumerisch sein (A-Z, 0-9, -)")
+        .min_length("sku", &sku, 3)
+        .max_length("sku", &sku, 50)
+        .required("category", &category)
+        .min_length("category", &category, 2)
+        .max_length("category", &category, 50);
+    
+    if (!validator.is_valid()) {
+        let errors = validator.errors();
+        let errorMessage = errors.map(|e| format!("{}: {}", e.field, e.message)).join(", ");
+        return HttpResponse::bad_request(errorMessage);
+    }
+    
+    // Preis-Validierung
+    if (price < 0) {
+        return HttpResponse::bad_request("Price muss positiv sein");
+    }
+    
+    let product = Product {
+        id: generateId(),
+        name: name,
+        description: description,
+        price: price,
+        sku: sku,
+        category: category,
+    };
+    
+    return db.save(product);
+}
+
+@GET("/api/users/:id")
+fn getUser(id: string): User {
+    let user = db.find(User, id);
+    if (user == null) {
+        return HttpResponse::not_found("User nicht gefunden");
+    }
+    return user;
+}
+
+@GET("/api/products")
+fn getProducts(category: string): List<Product> {
+    let products = db.findAll(Product);
+    if (category != null && category != "") {
+        return products.filter(|p| p.category == category);
+    }
+    return products;
+}

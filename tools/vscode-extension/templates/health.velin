@@ -1,0 +1,71 @@
+// Health Check und Metrics
+// Monitoring-Endpoints für Production
+
+// GET /health - Health Check Endpoint
+@GET("/health")
+fn healthCheck(): HealthResponse {
+    let services = ServiceHealth {
+        database: checkDatabase(),
+        vectorDB: checkVectorDB(),
+        llm: checkLLM(),
+        cache: checkCache(),
+    };
+    
+    let allHealthy = services.database.status == "healthy" &&
+                     services.vectorDB.status == "healthy" &&
+                     services.llm.status == "healthy" &&
+                     services.cache.status == "healthy";
+    
+    let config = getConfig();
+    
+    return HealthResponse {
+        status: allHealthy ? "healthy" : "degraded",
+        version: config.version ?? "1.0.0",
+        uptime: getUptime(),
+        services: services,
+        timestamp: getCurrentTimestamp(),
+    };
+}
+
+// GET /metrics - Metrics Endpoint
+@GET("/metrics")
+fn getMetrics(): MetricsResponse {
+    let cacheStats = getCacheStats();
+    
+    return MetricsResponse {
+        requests: requestMetrics,
+        errors: errorMetrics,
+        performance: performanceMetrics,
+        cache: CacheMetrics {
+            hits: cacheStats.hits,
+            misses: cacheStats.misses,
+            hitRate: cacheStats.hitRate,
+            totalEntries: cacheStats.totalEntries,
+            memoryUsage: cacheStats.memoryUsage,
+        },
+        timestamp: getCurrentTimestamp(),
+    };
+}
+
+// GET /ready - Readiness Check
+@GET("/ready")
+fn readinessCheck(): ReadyResponse {
+    let services = List<ServiceStatus>();
+    services.push(checkDatabase());
+    services.push(checkVectorDB());
+    services.push(checkLLM());
+    
+    let allReady = true;
+    for (service in services) {
+        if (service.status != "healthy") {
+            allReady = false;
+            break;
+        }
+    }
+    
+    return ReadyResponse {
+        ready: allReady,
+        services: services,
+        timestamp: getCurrentTimestamp(),
+    };
+}

@@ -1,0 +1,66 @@
+// Rollback-System
+// Transaktionaler, versionierter und Snapshot-basierter Rollback
+
+// Transaktionaler Rollback
+fn beginTransaction(): string {
+    return rollback.beginTransaction();
+}
+
+fn commitTransaction(transactionId: string): boolean {
+    return rollback.commit(transactionId);
+}
+
+fn rollbackTransaction(transactionId: string): boolean {
+    return rollback.rollback(transactionId);
+}
+
+// Versionierter Rollback
+fn createVersion(description: string): string {
+    return rollback.createVersion(description);
+}
+
+fn rollbackToVersion(versionId: string): boolean {
+    return rollback.rollbackToVersion(versionId);
+}
+
+fn listVersions(): List<Version> {
+    return rollback.listVersions();
+}
+
+// Snapshot-basierter Rollback
+fn createSnapshot(description: string): string {
+    return rollback.createSnapshot(description);
+}
+
+fn rollbackToSnapshot(snapshotId: string): boolean {
+    return rollback.rollbackToSnapshot(snapshotId);
+}
+
+fn listSnapshots(): List<Snapshot> {
+    return rollback.listSnapshots();
+}
+
+// Beispiel: Transaktionaler Rollback
+fn updateUserSafely(userId: string, data: UserData) {
+    let txId = beginTransaction();
+    
+    try {
+        let user = db.find(User, userId);
+        user.update(data);
+        db.save(user);
+        commitTransaction(txId);
+        logInfo("User aktualisiert", userId);
+    } catch (error) {
+        rollbackTransaction(txId);
+        logError("Update fehlgeschlagen, zurückgerollt", error);
+        throw error;
+    }
+}
+
+// Beispiel: Versionierter Rollback
+fn deployWithVersion() {
+    let versionId = createVersion("Vor Major Update");
+    // ... Änderungen ...
+    // Bei Fehler:
+    // rollbackToVersion(versionId);
+}

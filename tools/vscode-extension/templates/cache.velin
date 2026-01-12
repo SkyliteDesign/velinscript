@@ -1,0 +1,71 @@
+// Caching System
+// Performance-Optimierung durch intelligentes Caching
+
+// Cache initialisieren
+fn initCache(): Cache {
+    let config = getConfig();
+    
+    return Cache {
+        entries: Map<string, CacheEntry<any>>(),
+        config: CacheConfig {
+            enabled: config.cache.enabled,
+            defaultTTL: config.cache.ttl,
+            maxSize: 10000,
+            evictionPolicy: "LRU",
+        },
+    };
+}
+
+// cacheGet - Holt Wert aus Cache
+fn cacheGet<T>(key: string): T {
+    if (!cache.config.enabled) {
+        return null;
+    }
+    
+    if (!cache.entries.contains(key)) {
+        return null;
+    }
+    
+    let entry = cache.entries[key];
+    
+    // Prüfe ob abgelaufen
+    if (getCurrentTime() > entry.expiresAt) {
+        cacheInvalidate(key);
+        return null;
+    }
+    
+    entry.lastAccessed = getCurrentTime();
+    entry.hits = entry.hits + 1;
+    cache.entries[key] = entry;
+    
+    return entry.value as T;
+}
+
+// cacheSet - Speichert Wert im Cache
+fn cacheSet<T>(key: string, value: T, ttl: number) {
+    if (!cache.config.enabled) {
+        return;
+    }
+    
+    let now = getCurrentTime();
+    let entry = CacheEntry {
+        key: key,
+        value: value,
+        expiresAt: now + ttl,
+        createdAt: now,
+        hits: 0,
+        lastAccessed: now,
+    };
+    
+    cache.entries[key] = entry;
+}
+
+// cacheInvalidate - Entfernt Eintrag aus Cache
+fn cacheInvalidate(key: string) {
+    if (cache.entries.contains(key)) {
+        cache.entries.remove(key);
+    }
+}
+
+// Initialisiere Cache beim Start
+cache = initCache();

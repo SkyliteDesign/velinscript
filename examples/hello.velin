@@ -1,0 +1,24 @@
+// VelinScript Beispiel: Hello World API
+
+@GET("/api/hello")
+fn hello(): string {
+    return "Hello, VelinScript! 🚀";
+}
+
+@GET("/api/users/:id")
+fn getUser(id: string): User {
+    return db.find(User, id);
+}
+
+@Auth
+@Role("admin")
+@GET("/api/admin/users")
+fn getAdminUsers(): List<User> {
+    return db.findAll(User);
+}
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+}

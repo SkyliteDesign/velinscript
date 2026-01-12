@@ -1,0 +1,162 @@
+{
+  "ApiResponse": {
+    "prefix": "apiresponse",
+    "body": [
+      "let response = successResponse($1, requestId, startTime);",
+      "return applySecurityHeaders(response);"
+    ],
+    "description": "Standardisierte API Response"
+  },
+  "Error Handling": {
+    "prefix": "trycatch",
+    "body": [
+      "try {",
+      "    $1",
+      "    return successResponse(data, requestId, startTime);",
+      "} catch (error) {",
+      "    logError(\"$2\", createError(...), metadata);",
+      "    return errorResponse(...);",
+      "}"
+    ],
+    "description": "Try-Catch mit Error Handling"
+  },
+  "Cache Get": {
+    "prefix": "cacheget",
+    "body": [
+      "let cacheKey = generate${1:CacheKey}($2);",
+      "let cached = cacheGet<${3:Type}>(cacheKey);",
+      "if (cached != null) {",
+      "    return successResponseWithCache(cached, requestId, startTime, true);",
+      "}"
+    ],
+    "description": "Cache-Abfrage mit Fallback"
+  },
+  "Log Request": {
+    "prefix": "logreq",
+    "body": [
+      "let startTime = getCurrentTime();",
+      "let requestId = generateRequestId();",
+      "logRequest(request, \"$1\", requestId);"
+    ],
+    "description": "Request-Logging initialisieren"
+  },
+  "Security Middleware": {
+    "prefix": "secure",
+    "body": [
+      "@Secure",
+      "@${1:GET|POST}(\"$2\")",
+      "fn ${3:functionName}(request: HttpRequest$4): ApiResponse<${5:ReturnType}> {",
+      "    let securityResult = applySecurityMiddleware(request, \"$2\");",
+      "    if (securityResult != null && !securityResult.success) {",
+      "        return securityResult;",
+      "    }",
+      "    $6",
+      "}"
+    ],
+    "description": "Sicherer Endpoint mit Middleware"
+  },
+  "Success Response": {
+    "prefix": "success",
+    "body": [
+      "let response = successResponse($1, requestId, startTime);",
+      "let duration = getCurrentTime() - startTime;",
+      "logResponse(createHttpResponse(response), duration, requestId);",
+      "trackRequest(\"$2\", true, duration);",
+      "return applySecurityHeaders(response);"
+    ],
+    "description": "Erfolgreiche Response mit Logging"
+  },
+  "Error Response": {
+    "prefix": "error",
+    "body": [
+      "let error = create${1:ErrorType}($2);",
+      "logError(\"$3\", error, Map<string, string> { \"endpoint\": \"$4\" });",
+      "trackError(error, \"$4\");",
+      "return errorResponse(",
+      "    errorCodeToString(error.code),",
+      "    error.message,",
+      "    requestId,",
+      "    error.details",
+      ");"
+    ],
+    "description": "Error Response mit Logging"
+  },
+  "Cache Set": {
+    "prefix": "cacheset",
+    "body": [
+      "cacheSet($1, $2, $3);"
+    ],
+    "description": "Wert im Cache speichern"
+  },
+  "Performance Log": {
+    "prefix": "perf",
+    "body": [
+      "let ${1:startTime} = getCurrentTime();",
+      "// ... Operation ...",
+      "logPerformance(\"$2\", getCurrentTime() - ${1:startTime}, Map<string, string>());"
+    ],
+    "description": "Performance-Messung"
+  },
+  "Backup Create": {
+    "prefix": "backup",
+    "body": [
+      "let config = BackupConfig {",
+      "    strategy: BackupStrategy::${1:Full},",
+      "    destination: \"$2\",",
+      "    compression: CompressionType::${3:Gzip},",
+      "    retention: RetentionPolicy { days: $4, maxBackups: $5 }",
+      "};",
+      "let backup = backup.create(config);"
+    ],
+    "description": "Backup erstellen"
+  },
+  "Rollback Transaction": {
+    "prefix": "rollback",
+    "body": [
+      "let txId = rollback.beginTransaction();",
+      "try {",
+      "    $1",
+      "    rollback.commit(txId);",
+      "} catch (error) {",
+      "    rollback.rollback(txId);",
+      "    throw error;",
+      "}"
+    ],
+    "description": "Transaktionaler Rollback"
+  },
+  "Async Function": {
+    "prefix": "async",
+    "body": [
+      "async fn ${1:functionName}($2): ${3:ReturnType} {",
+      "    let result = await ${4:asyncOperation}();",
+      "    return result;",
+      "}"
+    ],
+    "description": "Async-Funktion mit await"
+  },
+  "JSON Serialization": {
+    "prefix": "json",
+    "body": [
+      "let json = toJSON($1);",
+      "let ${2:object} = fromJSON<${3:Type}>(json);"
+    ],
+    "description": "JSON Serialization"
+  },
+  "YAML Serialization": {
+    "prefix": "yaml",
+    "body": [
+      "let yaml = toYAML($1);",
+      "let ${2:object} = fromYAML<${3:Type}>(yaml);"
+    ],
+    "description": "YAML Serialization"
+  },
+  "Const Function": {
+    "prefix": "constfn",
+    "body": [
+      "const fn ${1:functionName}(): ${2:ReturnType} {",
+      "    return $3;",
+      "}"
+    ],
+    "description": "Const-Funktion (Compile-time)"
+  }
+}

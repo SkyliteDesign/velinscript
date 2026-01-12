@@ -1,0 +1,29 @@
+// Security Framework Beispiel
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+    role: string,
+}
+
+@Auth
+@GET("/api/profile")
+fn getProfile(): User {
+    // User wird aus JWT Token extrahiert
+    return currentUser();
+}
+
+@Auth
+@Role("admin")
+@GET("/api/admin/users")
+fn getAdminUsers(): List<User> {
+    return db.findAll(User);
+}
+
+@Auth
+@Role("user")
+@GET("/api/users/:id")
+fn getUser(id: string): User {
+    return db.find(User, id);
+}

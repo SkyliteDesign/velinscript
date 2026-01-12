@@ -1,0 +1,51 @@
+// OAuth2-geschützte API mit VelinScript
+// Beispiel für moderne Authentication mit OAuth2/OpenID Connect
+
+@OAuth2
+@GET("/api/profile")
+fn getProfile(): User {
+    // Automatisch OAuth2-geschützt
+    return currentUser();
+}
+
+@OAuth2
+@Role("admin")
+@GET("/api/admin/users")
+fn getAdminUsers(): List<User> {
+    // OAuth2 + Role-based Access Control
+    return db.findAll(User);
+}
+
+@OIDC
+@GET("/api/userinfo")
+fn getUserInfo(): UserInfo {
+    // OpenID Connect mit UserInfo Endpoint
+    return fetchUserInfo();
+}
+
+@MFA
+@POST("/api/sensitive-action")
+fn performSensitiveAction(): ActionResult {
+    // Multi-Factor Authentication erforderlich
+    return executeAction();
+}
+
+struct User {
+    id: string,
+    name: string,
+    @Privacy
+    email: string,
+    roles: List<string>,
+}
+
+struct UserInfo {
+    sub: string,
+    name: string,
+    email: string,
+    email_verified: boolean,
+}
+
+struct ActionResult {
+    success: boolean,
+    message: string,
+}

@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache Cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          compiler/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    - name: Build
+      working-directory: compiler
+      run: cargo build --verbose
+    
+    - name: Test
+      working-directory: compiler
+      run: cargo test --verbose
+    
+    - name: Check Format
+      working-directory: compiler
+      run: cargo fmt -- --check || true
+    
+    - name: Clippy
+      working-directory: compiler
+      run: cargo clippy -- -D warnings || true
+
+  build:
+    name: Build Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Build Release
+      working-directory: compiler
+      run: cargo build --release
+    
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: velin-compiler-${{ matrix.os }}
+        path: compiler/target/release/velin-compiler*

@@ -1,0 +1,51 @@
+// DSGVO-konforme API mit Privacy-Features
+// Automatisches PII-Wrapping und Secure Deletion
+
+struct User {
+    id: string,
+    name: string,
+    @Privacy
+    email: string,
+    @Privacy
+    phone: string,
+    @Privacy
+    ip_address: string,
+    created_at: string,
+}
+
+@GET("/api/users/:id")
+fn getUser(id: string): User {
+    // Email, Phone, IP werden automatisch als PrivacyWrapper<T> behandelt
+    // Automatisch verschleiert in Logs
+    return db.find(User, id);
+}
+
+@POST("/api/users")
+fn createUser(name: string, email: string, phone: string): User {
+    let user = User {
+        id: generateId(),
+        name: name,
+        email: email,  // Automatisch PrivacyWrapper<String>
+        phone: phone,  // Automatisch PrivacyWrapper<String>
+        ip_address: getClientIP(),
+        created_at: now(),
+    };
+    
+    return db.save(user);
+}
+
+@DELETE("/api/users/:id")
+fn deleteUser(id: string): void {
+    // Secure Deletion mit zeroize
+    let user = db.find(User, id);
+    secureDelete(user);  // Automatisch zeroize() aufgerufen
+    db.delete(User, id);
+}
+
+// Zero-Knowledge Encryption Beispiel
+fn processSensitiveData(data: string): string {
+    // Daten werden während Verarbeitung verschlüsselt
+    let encrypted = zeroKnowledgeEncrypt(data);
+    // ... Verarbeitung ...
+    return zeroKnowledgeDecrypt(encrypted);
+}

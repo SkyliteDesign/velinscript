@@ -1,0 +1,111 @@
+// Vector Search API Beispiel
+// Verwendet Vector DB für semantische Suche
+
+struct Document {
+    id: string,
+    title: string,
+    content: string,
+    embedding: List<number>,
+    createdAt: string,
+}
+
+struct SearchRequest {
+    query: string,
+    topK: number,
+}
+
+struct SearchResult {
+    document: Document,
+    score: number,
+}
+
+// LLM Client für Embeddings
+let llmClient = LLMClient::new(LLMProvider::OpenAI, getApiKey());
+
+// Vector DB initialisieren
+let vectorDB = VectorDB::new(VectorDBProvider::Pinecone, getConnectionString());
+
+@POST("/api/documents")
+fn createDocument(title: string, content: string): Document {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("title", &title)
+        .min_length("title", &title, 3)
+        .max_length("title", &title, 200)
+        .required("content", &content)
+        .min_length("content", &content, 10);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid document");
+    }
+    
+    // Embedding generieren
+    let embedding = llmClient.embed(content);
+    
+    let document = Document {
+        id: generateId(),
+        title: title,
+        content: content,
+        embedding: embedding,
+        createdAt: getCurrentTimestamp(),
+    };
+    
+    // In Vector DB speichern
+    vectorDB.upsert("documents", document.id, document.embedding);
+    
+    // In normale DB speichern
+    return db.save(document);
+}
+
+@POST("/api/documents/search")
+fn searchDocuments(request: SearchRequest): List<SearchResult> {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("query", &request.query)
+        .min_length("query", &request.query, 3);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid query");
+    }
+    
+    // Query Embedding generieren
+    let queryEmbedding = llmClient.embed(request.query);
+    
+    // Vector Search
+    let results = vectorDB.search("documents", queryEmbedding, request.topK);
+    
+    // Dokumente laden
+    let mut searchResults = List<SearchResult>();
+    for (result in results) {
+        let document = db.find(Document, result.id);
+        if (document != null) {
+            searchResults.push(SearchResult {
+                document: document,
+                score: result.score,
+            });
+        }
+    }
+    
+    return searchResults;
+}
+
+@GET("/api/documents/:id")
+fn getDocument(id: string): Document {
+    return db.find(Document, id);
+}
+
+@GET("/api/documents")
+fn getAllDocuments(): List<Document> {
+    return db.findAll(Document);
+}
+
+@DELETE("/api/documents/:id")
+fn deleteDocument(id: string): void {
+    // Aus Vector DB löschen
+    // vectorDB.delete("documents", id);
+    
+    // Aus normaler DB löschen
+    db.delete(Document, id);
+}

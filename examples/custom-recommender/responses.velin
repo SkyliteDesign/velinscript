@@ -1,0 +1,174 @@
+// Custom Recommender - Standardisierte API Responses
+// Einheitliches Response-Format für alle Endpoints
+
+// Standard API Response mit generischem Typ
+struct ApiResponse<T> {
+    success: boolean,
+    data: T,
+    error: ApiError,
+    metadata: ResponseMetadata,
+}
+
+// API Error-Struktur
+struct ApiError {
+    code: string,
+    message: string,
+    details: Map<string, string>,
+    timestamp: string,
+}
+
+// Response Metadata
+struct ResponseMetadata {
+    requestId: string,
+    timestamp: string,
+    processingTime: number,
+    version: string,
+    cacheHit: boolean,
+}
+
+// Health Response
+struct HealthResponse {
+    status: string,
+    version: string,
+    uptime: number,
+    services: ServiceHealth,
+    timestamp: string,
+}
+
+struct ServiceHealth {
+    database: ServiceStatus,
+    vectorDB: ServiceStatus,
+    llm: ServiceStatus,
+    cache: ServiceStatus,
+}
+
+struct ServiceStatus {
+    status: string,
+    responseTime: number,
+    lastCheck: string,
+}
+
+// Metrics Response
+struct MetricsResponse {
+    requests: RequestMetrics,
+    errors: ErrorMetrics,
+    performance: PerformanceMetrics,
+    cache: CacheMetrics,
+    timestamp: string,
+}
+
+struct RequestMetrics {
+    total: number,
+    successful: number,
+    failed: number,
+    averageResponseTime: number,
+    requestsPerMinute: number,
+}
+
+struct ErrorMetrics {
+    total: number,
+    byCode: Map<string, number>,
+    recentErrors: List<ErrorEntry>,
+}
+
+struct ErrorEntry {
+    code: string,
+    message: string,
+    timestamp: string,
+    endpoint: string,
+}
+
+struct PerformanceMetrics {
+    averageProcessingTime: number,
+    p95ProcessingTime: number,
+    p99ProcessingTime: number,
+    memoryUsage: number,
+    cpuUsage: number,
+}
+
+struct CacheMetrics {
+    hits: number,
+    misses: number,
+    hitRate: number,
+    totalEntries: number,
+    memoryUsage: number,
+}
+
+// Ready Response
+struct ReadyResponse {
+    ready: boolean,
+    services: List<ServiceStatus>,
+    timestamp: string,
+}
+
+// Helper-Funktionen für Response-Erstellung
+
+// successResponse - Erstellt erfolgreiche Response
+fn successResponse<T>(data: T, requestId: string, startTime: number): ApiResponse<T> {
+    let processingTime = getCurrentTime() - startTime;
+    let config = getConfig();
+    
+    return ApiResponse {
+        success: true,
+        data: data,
+        error: ApiError {
+            code: "",
+            message: "",
+            details: Map<string, string>(),
+            timestamp: "",
+        },
+        metadata: ResponseMetadata {
+            requestId: requestId,
+            timestamp: getCurrentTimestamp(),
+            processingTime: processingTime,
+            version: config.version ?? "1.0.0",
+            cacheHit: false,
+        },
+    };
+}
+
+// successResponseWithCache - Erstellt erfolgreiche Response mit Cache-Info
+fn successResponseWithCache<T>(data: T, requestId: string, startTime: number, cacheHit: boolean): ApiResponse<T> {
+    let response = successResponse(data, requestId, startTime);
+    response.metadata.cacheHit = cacheHit;
+    return response;
+}
+
+// errorResponse - Erstellt Fehler-Response
+fn errorResponse<T>(errorCode: string, message: string, requestId: string, details: Map<string, string>): ApiResponse<T> {
+    return ApiResponse {
+        success: false,
+        data: null,
+        error: ApiError {
+            code: errorCode,
+            message: message,
+            details: details,
+            timestamp: getCurrentTimestamp(),
+        },
+        metadata: ResponseMetadata {
+            requestId: requestId,
+            timestamp: getCurrentTimestamp(),
+            processingTime: 0,
+            version: "1.0.0",
+            cacheHit: false,
+        },
+    };
+}
+
+// createMetadata - Erstellt Response Metadata
+fn createMetadata(requestId: string, processingTime: number, cacheHit: boolean): ResponseMetadata {
+    let config = getConfig();
+    
+    return ResponseMetadata {
+        requestId: requestId,
+        timestamp: getCurrentTimestamp(),
+        processingTime: processingTime,
+        version: config.version ?? "1.0.0",
+        cacheHit: cacheHit,
+    };
+}
+
+// Helper für leere Success-Response
+fn emptySuccessResponse(requestId: string, startTime: number): ApiResponse<void> {
+    return successResponse(null, requestId, startTime);
+}

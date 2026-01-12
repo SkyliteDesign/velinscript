@@ -1,0 +1,76 @@
+// Calculator API Beispiel
+
+struct Calculation {
+    id: string,
+    operation: string,
+    operand1: number,
+    operand2: number,
+    result: number,
+    timestamp: string,
+}
+
+@GET("/api/calc/add")
+fn add(a: number, b: number): number {
+    return a + b;
+}
+
+@GET("/api/calc/subtract")
+fn subtract(a: number, b: number): number {
+    return a - b;
+}
+
+@GET("/api/calc/multiply")
+fn multiply(a: number, b: number): number {
+    return a * b;
+}
+
+@GET("/api/calc/divide")
+fn divide(a: number, b: number): number {
+    if (b == 0) {
+        return 0; // Error handling (später verbessern)
+    }
+    return a / b;
+}
+
+@POST("/api/calc/calculate")
+fn calculate(operation: string, a: number, b: number): Calculation {
+    let result: number;
+    
+    match (operation) {
+        "add" => {
+            result = a + b;
+        },
+        "subtract" => {
+            result = a - b;
+        },
+        "multiply" => {
+            result = a * b;
+        },
+        "divide" => {
+            if (b != 0) {
+                result = a / b;
+            } else {
+                result = 0;
+            }
+        },
+        _ => {
+            result = 0;
+        },
+    }
+    
+    let calc = Calculation {
+        id: generateId(),
+        operation: operation,
+        operand1: a,
+        operand2: b,
+        result: result,
+        timestamp: getCurrentTimestamp(),
+    };
+    
+    return db.save(calc);
+}
+
+@GET("/api/calc/history")
+fn getHistory(): List<Calculation> {
+    return db.findAll(Calculation);
+}

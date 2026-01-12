@@ -1,0 +1,43 @@
+// Testing Framework Beispiel
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+}
+
+@test
+fn testGetUser() {
+    let user = getUser("123");
+    assert(user.name == "John");
+    assert(user.id == "123");
+}
+
+@test
+fn testAdd() {
+    let result = add(2, 3);
+    assert(result == 5);
+}
+
+@test
+fn testUserCreation() {
+    let user = createUser("John", "john@example.com");
+    assert(user.name == "John");
+    assert(user.email == "john@example.com");
+}
+
+fn getUser(id: string): User {
+    return db.find(User, id);
+}
+
+fn add(a: number, b: number): number {
+    return a + b;
+}
+
+fn createUser(name: string, email: string): User {
+    return User {
+        id: generateId(),
+        name: name,
+        email: email,
+    };
+}

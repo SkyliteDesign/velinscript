@@ -1,0 +1,91 @@
+// ML Sentiment Analysis Beispiel
+// Verwendet ML Model für Sentiment-Analyse
+
+struct SentimentResult {
+    text: string,
+    sentiment: string,
+    confidence: number,
+}
+
+struct Review {
+    id: string,
+    productId: string,
+    text: string,
+    rating: number,
+    sentiment: string,
+}
+
+// Model laden beim Start
+let mut modelLoader = ModelLoader::new();
+modelLoader.load_model("sentiment", ModelType::Sentiment, "models/sentiment.onnx");
+
+@POST("/api/analyze/sentiment")
+fn analyzeSentiment(text: string): SentimentResult {
+    let prediction = modelLoader.predict("sentiment", text);
+    
+    // Prediction ist "positive" oder "negative"
+    let confidence = 0.95; // In Production: vom Model
+    
+    return SentimentResult {
+        text: text,
+        sentiment: prediction,
+        confidence: confidence,
+    };
+}
+
+@POST("/api/reviews")
+fn createReview(productId: string, text: string, rating: number): Review {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("text", &text)
+        .min_length("text", &text, 10)
+        .max_length("text", &text, 1000);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid review text");
+    }
+    
+    // Sentiment-Analyse
+    let sentiment = modelLoader.predict("sentiment", text);
+    
+    let review = Review {
+        id: generateId(),
+        productId: productId,
+        text: text,
+        rating: rating,
+        sentiment: sentiment,
+    };
+    
+    return db.save(review);
+}
+
+@GET("/api/reviews/:productId")
+fn getReviews(productId: string): List<Review> {
+    let reviews = db.findAll(Review);
+    return reviews.filter(|r| r.productId == productId);
+}
+
+@GET("/api/reviews/:productId/sentiment")
+fn getSentimentStats(productId: string): Map<string, number> {
+    let reviews = db.findAll(Review);
+    let productReviews = reviews.filter(|r| r.productId == productId);
+    
+    let mut stats = Map<string, number>();
+    let mut positive = 0;
+    let mut negative = 0;
+    
+    for (review in productReviews) {
+        if (review.sentiment == "positive") {
+            positive = positive + 1;
+        } else {
+            negative = negative + 1;
+        }
+    }
+    
+    stats["positive"] = positive;
+    stats["negative"] = negative;
+    stats["total"] = productReviews.length;
+    
+    return stats;
+}

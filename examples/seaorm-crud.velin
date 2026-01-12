@@ -1,0 +1,50 @@
+// SeaORM CRUD Operations Beispiel
+// Moderne ORM-Integration für typsichere Datenbankabfragen
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+    created_at: string,
+}
+
+@GET("/api/users")
+fn getUsers(): List<User> {
+    // SeaORM: Entity::find().all()
+    return db.findAll(User);
+}
+
+@GET("/api/users/:id")
+fn getUser(id: string): User {
+    // SeaORM: Entity::find_by_id()
+    return db.find(User, id);
+}
+
+@POST("/api/users")
+fn createUser(name: string, email: string): User {
+    let user = User {
+        id: generateId(),
+        name: name,
+        email: email,
+        created_at: now(),
+    };
+    
+    // SeaORM: ActiveModel::insert()
+    return db.save(user);
+}
+
+@PUT("/api/users/:id")
+fn updateUser(id: string, name: string, email: string): User {
+    let user = db.find(User, id);
+    user.name = name;
+    user.email = email;
+    
+    // SeaORM: ActiveModel::update()
+    return db.save(user);
+}
+
+@DELETE("/api/users/:id")
+fn deleteUser(id: string): void {
+    // SeaORM: Entity::delete_by_id()
+    db.delete(User, id);
+}

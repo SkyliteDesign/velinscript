@@ -1,0 +1,82 @@
+[package]
+name = "velin-compiler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1.10"
+sha2 = "0.10"
+md5 = "0.7"
+rand = "0.8"
+uuid = { version = "1.6", features = ["v4"] }
+base64 = "0.21"
+tokio = { version = "1.0", features = ["full"], optional = true }
+async-std = { version = "1.12", features = ["attributes"], optional = true }
+axum = { version = "0.7", features = ["macros"], optional = true }
+actix-web = { version = "4.4", features = ["macros"], optional = true }
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "mysql", "sqlite"], optional = true }
+tar = "0.4"
+flate2 = "1.0"
+zip = "0.6"
+serde_yaml = "0.9"
+anyhow = "1.0"
+thiserror = "1.0"
+itertools = "0.12"
+rayon = "1.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+derive_more = { version = "1.0", features = ["add", "display", "from", "into", "deref"] }
+sea-orm = { version = "0.12", features = ["sqlx-postgres", "sqlx-mysql", "sqlx-sqlite", "runtime-tokio-native-tls"], optional = true }
+oauth2 = { version = "4.4", optional = true }
+openidconnect = { version = "2.0", optional = true }
+jsonwebtoken = { version = "9.2", optional = true }
+rustls = { version = "0.21", optional = true }
+rustls-pemfile = { version = "1.0", optional = true }
+vaultrs = { version = "0.5", optional = true }
+zeroize = { version = "1.6", features = ["zeroize_derive"], optional = true }
+secrecy = { version = "0.8", features = ["serde", "alloc"], optional = true }
+
+[features]
+default = ["dep:tokio", "dep:axum", "axum"]
+async-std = ["dep:async-std"]
+axum = ["dep:axum"]
+actix = ["dep:actix-web"]
+sea-orm = ["dep:sea-orm"]
+oauth2 = ["dep:oauth2", "dep:openidconnect", "dep:jsonwebtoken"]
+vault = ["dep:vaultrs"]
+privacy = ["dep:zeroize", "dep:secrecy"]
+tls = ["dep:rustls", "dep:rustls-pemfile"]
+
+[[test]]
+name = "parser_test"
+path = "tests/parser_test.rs"
+
+[[test]]
+name = "type_checker_test"
+path = "tests/type_checker_test.rs"
+
+[[test]]
+name = "codegen_test"
+path = "tests/codegen_test.rs"
+
+[[test]]
+name = "formatter_test"
+path = "tests/formatter_test.rs"
+
+[[test]]
+name = "backup_test"
+path = "tests/backup_test.rs"
+
+[[test]]
+name = "rollback_test"
+path = "tests/rollback_test.rs"
+
+[[test]]
+name = "async_test"
+path = "tests/async_test.rs"
+
+[dev-dependencies]

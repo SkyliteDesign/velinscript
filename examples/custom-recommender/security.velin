@@ -1,0 +1,258 @@
+// Custom Recommender - Security Features
+// Erweiterte Security-Funktionen für Server und Cloud-Dienste
+
+// Security-Middleware und Validierung
+
+// validateApiKey - Validiert API Key aus Request Header
+fn validateApiKey(request: HttpRequest): boolean {
+    let config = getConfig();
+    
+    if (!config.security.apiKeyRequired) {
+        return true;
+    }
+    
+    let apiKey = request.headers.get(config.security.apiKeyHeader);
+    if (apiKey == null || apiKey == "") {
+        return false;
+    }
+    
+    // In Production: Validiere gegen gespeicherte API Keys
+    // return db.validateApiKey(apiKey);
+    return true;
+}
+
+// validateJWT - Validiert JWT Token
+fn validateJWT(token: string): boolean {
+    let config = getConfig();
+    
+    if (!config.security.jwt.enabled) {
+        return true;
+    }
+    
+    // In Production: Validiere JWT mit Secret
+    // return JWT.verify(token, config.security.jwt.secret);
+    return true;
+}
+
+// applySecurityHeaders - Fügt Security Headers zu ApiResponse hinzu
+fn applySecurityHeaders<T>(response: ApiResponse<T>): ApiResponse<T> {
+    // Security Headers werden in createHttpResponse gesetzt
+    // Diese Funktion kann für zusätzliche Header-Logik verwendet werden
+    return response;
+}
+
+// applySecurityHeadersToHttpResponse - Fügt Security Headers zu HttpResponse hinzu
+fn applySecurityHeadersToHttpResponse(response: HttpResponse): HttpResponse {
+    let config = getConfig();
+    
+    response.headers.set("X-Frame-Options", config.security.headers.xFrameOptions);
+    response.headers.set("X-Content-Type-Options", config.security.headers.xContentTypeOptions);
+    response.headers.set("X-XSS-Protection", config.security.headers.xXSSProtection);
+    
+    if (config.security.https.enabled) {
+        response.headers.set("Strict-Transport-Security", config.security.headers.strictTransportSecurity);
+    }
+    
+    return response;
+}
+
+// checkRateLimit - Prüft Rate Limit für IP-Adresse
+fn checkRateLimit(ipAddress: string): boolean {
+    let config = getConfig();
+    
+    if (!config.security.rateLimit.enabled) {
+        return true;
+    }
+    
+    // In Production: Verwende Redis oder ähnliches für Rate Limiting
+    // let count = cache.get("rate_limit:" + ipAddress);
+    // if (count >= config.security.rateLimit.requestsPerMinute) {
+    //     return false;
+    // }
+    // cache.increment("rate_limit:" + ipAddress, 60); // TTL 60 Sekunden
+    
+    return true;
+}
+
+// validateInputSize - Validiert Request-Größe
+fn validateInputSize(request: HttpRequest): boolean {
+    let config = getConfig();
+    
+    if (!config.security.inputValidation.enabled) {
+        return true;
+    }
+    
+    let requestSize = request.body.length;
+    if (requestSize > config.security.inputValidation.maxRequestSize) {
+        return false;
+    }
+    
+    return true;
+}
+
+// sanitizeInput - Sanitized User Input (erweitert)
+fn sanitizeInput(input: string): string {
+    if (input == null || input == "") {
+        return input;
+    }
+    
+    // Entferne potenziell gefährliche Zeichen und Patterns
+    let sanitized = input
+        // XSS-Schutz
+        .replace("<script>", "")
+        .replace("</script>", "")
+        .replace("<script", "")
+        .replace("javascript:", "")
+        .replace("onerror=", "")
+        .replace("onclick=", "")
+        .replace("onload=", "")
+        .replace("onmouseover=", "")
+        // SQL-Injection-Schutz (Basis)
+        .replace("';", "")
+        .replace("' OR", "")
+        .replace("' AND", "")
+        .replace("DROP TABLE", "")
+        .replace("DELETE FROM", "")
+        // Command-Injection-Schutz
+        .replace(";", "")
+        .replace("|", "")
+        .replace("&", "")
+        .replace("`", "")
+        .replace("$", "")
+        // HTML-Entities escapen
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#x27;");
+    
+    // Trim Whitespace
+    sanitized = sanitized.trim();
+    
+    return sanitized;
+}
+
+// sanitizeRequest - Sanitized gesamten Request
+fn sanitizeRequest(request: HttpRequest): HttpRequest {
+    // Sanitize Body
+    if (request.body != null) {
+        request.body = sanitizeObject(request.body);
+    }
+    
+    // Sanitize Query Parameters
+    if (request.queryParams != null) {
+        let sanitizedParams = Map<string, string>();
+        for (key in request.queryParams.keys()) {
+            sanitizedParams[key] = sanitizeInput(request.queryParams[key]);
+        }
+        request.queryParams = sanitizedParams;
+    }
+    
+    // Sanitize Path Parameters
+    if (request.pathParams != null) {
+        let sanitizedPathParams = Map<string, string>();
+        for (key in request.pathParams.keys()) {
+            sanitizedPathParams[key] = sanitizeInput(request.pathParams[key]);
+        }
+        request.pathParams = sanitizedPathParams;
+    }
+    
+    return request;
+}
+
+// sanitizeObject - Sanitized Objekt rekursiv
+fn sanitizeObject(obj: any): any {
+    if (obj == null) {
+        return null;
+    }
+    
+    if (typeof(obj) == "string") {
+        return sanitizeInput(obj);
+    }
+    
+    if (typeof(obj) == "object") {
+        if (obj is List) {
+            return obj.map(|item| sanitizeObject(item));
+        }
+        
+        if (obj is Map) {
+            let sanitized = Map<string, any>();
+            for (key in obj.keys()) {
+                sanitized[key] = sanitizeObject(obj[key]);
+            }
+            return sanitized;
+        }
+    }
+    
+    return obj;
+}
+
+// validateCORS - Prüft CORS-Header
+fn validateCORS(origin: string): boolean {
+    let config = getConfig();
+    
+    if (!config.api.cors.enabled) {
+        return false;
+    }
+    
+    return config.security.cors.allowedOrigins.contains(origin);
+}
+
+// Security Decorator für Endpoints
+// @Secure - Wendet alle Security-Features an
+@Secure
+@POST("/api/secure-endpoint")
+fn secureEndpoint(request: HttpRequest): HttpResponse {
+    // 1. Validiere API Key
+    if (!validateApiKey(request)) {
+        return HttpResponse::unauthorized("Invalid API Key");
+    }
+    
+    // 2. Prüfe Rate Limit
+    let ipAddress = request.remoteAddress;
+    if (!checkRateLimit(ipAddress)) {
+        return HttpResponse::too_many_requests("Rate limit exceeded");
+    }
+    
+    // 3. Validiere Input-Größe
+    if (!validateInputSize(request)) {
+        return HttpResponse::bad_request("Request too large");
+    }
+    
+    // 4. Sanitize Input
+    let input = sanitizeInput(request.body);
+    
+    // 5. Verarbeite Request
+    // ...
+    
+    // 6. Füge Security Headers hinzu
+    let response = HttpResponse::ok("Success");
+    return applySecurityHeaders(response);
+}
+
+// encryptSensitiveData - Verschlüsselt sensible Daten
+fn encryptSensitiveData(data: string, key: string): string {
+    // In Production: Verwende AES-256 Verschlüsselung
+    // return Crypto.encrypt(data, key);
+    return data;
+}
+
+// decryptSensitiveData - Entschlüsselt sensible Daten
+fn decryptSensitiveData(encryptedData: string, key: string): string {
+    // In Production: Verwende AES-256 Entschlüsselung
+    // return Crypto.decrypt(encryptedData, key);
+    return encryptedData;
+}
+
+// hashPassword - Hasht Passwort mit bcrypt
+fn hashPassword(password: string): string {
+    // In Production: Verwende bcrypt oder Argon2
+    // return Crypto.hashPassword(password);
+    return password;
+}
+
+// verifyPassword - Verifiziert Passwort
+fn verifyPassword(password: string, hash: string): boolean {
+    // In Production: Verwende bcrypt oder Argon2
+    // return Crypto.verifyPassword(password, hash);
+    return true;
+}

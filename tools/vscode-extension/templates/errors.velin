@@ -1,0 +1,86 @@
+// Error Handling
+// Error-Definitionen und Error-Codes
+
+// API Error Codes
+enum ApiErrorCode {
+    ValidationError,
+    NotFound,
+    Unauthorized,
+    Forbidden,
+    RateLimitExceeded,
+    InternalServerError,
+    DatabaseError,
+    LLMError,
+    VectorDBError,
+    CacheError,
+    ConfigurationError,
+    TimeoutError,
+}
+
+// Application Error
+struct AppError {
+    code: ApiErrorCode,
+    message: string,
+    details: Map<string, string>,
+    cause: string,
+    stackTrace: string,
+    timestamp: string,
+}
+
+// Error Code zu String Mapping
+fn errorCodeToString(code: ApiErrorCode): string {
+    match (code) {
+        ApiErrorCode::ValidationError => "VALIDATION_ERROR",
+        ApiErrorCode::NotFound => "NOT_FOUND",
+        ApiErrorCode::Unauthorized => "UNAUTHORIZED",
+        ApiErrorCode::Forbidden => "FORBIDDEN",
+        ApiErrorCode::RateLimitExceeded => "RATE_LIMIT_EXCEEDED",
+        ApiErrorCode::InternalServerError => "INTERNAL_SERVER_ERROR",
+        ApiErrorCode::DatabaseError => "DATABASE_ERROR",
+        ApiErrorCode::LLMError => "LLM_ERROR",
+        ApiErrorCode::VectorDBError => "VECTOR_DB_ERROR",
+        ApiErrorCode::CacheError => "CACHE_ERROR",
+        ApiErrorCode::ConfigurationError => "CONFIGURATION_ERROR",
+        ApiErrorCode::TimeoutError => "TIMEOUT_ERROR",
+        _ => "UNKNOWN_ERROR",
+    }
+}
+
+// createError - Erstellt AppError
+fn createError(code: ApiErrorCode, message: string, details: Map<string, string>, cause: string): AppError {
+    return AppError {
+        code: code,
+        message: message,
+        details: details,
+        cause: cause,
+        stackTrace: getStackTrace(),
+        timestamp: getCurrentTimestamp(),
+    };
+}
+
+// createValidationError - Erstellt Validierungs-Fehler
+fn createValidationError(field: string, message: string): AppError {
+    let details = Map<string, string>();
+    details["field"] = field;
+    
+    return createError(
+        ApiErrorCode::ValidationError,
+        message,
+        details,
+        "Validation failed"
+    );
+}
+
+// createNotFoundError - Erstellt Not-Found-Fehler
+fn createNotFoundError(resource: string, id: string): AppError {
+    let details = Map<string, string>();
+    details["resource"] = resource;
+    details["id"] = id;
+    
+    return createError(
+        ApiErrorCode::NotFound,
+        format("{} not found: {}", resource, id),
+        details,
+        "Resource lookup failed"
+    );
+}

@@ -1,0 +1,192 @@
+{
+  "name": "velinscript",
+  "displayName": "VelinScript",
+  "description": "VelinScript Language Support for VS Code",
+  "version": "0.1.0",
+  "publisher": "velinscript",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:velin"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "velin",
+        "aliases": [
+          "VelinScript",
+          "velin"
+        ],
+        "extensions": [
+          ".velin"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "velin",
+        "scopeName": "source.velin",
+        "path": "./syntaxes/velin.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "velin",
+        "path": "./snippets/velin.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "velin.compile",
+        "title": "Compile VelinScript"
+      },
+      {
+        "command": "velin.format",
+        "title": "Format Document"
+      },
+      {
+        "command": "velin.check",
+        "title": "Check VelinScript"
+      },
+      {
+        "command": "velin.generate.mlFunction",
+        "title": "Generate ML Function Template"
+      },
+      {
+        "command": "velin.generate.modelLoader",
+        "title": "Generate Model Loader Boilerplate"
+      },
+      {
+        "command": "velin.generate.aiEndpoint",
+        "title": "Generate AI API Endpoint Template"
+      },
+      {
+        "command": "velin.generate.responses",
+        "title": "Generate Responses Template"
+      },
+      {
+        "command": "velin.generate.errors",
+        "title": "Generate Errors Template"
+      },
+      {
+        "command": "velin.generate.logging",
+        "title": "Generate Logging Template"
+      },
+      {
+        "command": "velin.generate.cache",
+        "title": "Generate Cache Template"
+      },
+      {
+        "command": "velin.generate.health",
+        "title": "Generate Health Template"
+      },
+      {
+        "command": "velin.generate.async",
+        "title": "Generate Async Template"
+      },
+      {
+        "command": "velin.generate.security",
+        "title": "Generate Security Template"
+      },
+      {
+        "command": "velin.test",
+        "title": "Run Tests"
+      },
+      {
+        "command": "velin.test.unit",
+        "title": "Run Unit Tests"
+      },
+      {
+        "command": "velin.test.integration",
+        "title": "Run Integration Tests"
+      },
+      {
+        "command": "velin.config.init",
+        "title": "Initialize Config File"
+      },
+      {
+        "command": "velin.config.validate",
+        "title": "Validate Config File"
+      },
+      {
+        "command": "velin.generate.backup",
+        "title": "Generate Backup Template"
+      },
+      {
+        "command": "velin.generate.rollback",
+        "title": "Generate Rollback Template"
+      },
+      {
+        "command": "velin.generate.serialization",
+        "title": "Generate Serialization Template"
+      },
+      {
+        "command": "velin.backup.create",
+        "title": "Create Backup"
+      },
+      {
+        "command": "velin.backup.restore",
+        "title": "Restore Backup"
+      },
+      {
+        "command": "velin.backup.list",
+        "title": "List Backups"
+      },
+      {
+        "command": "velin.rollback.begin",
+        "title": "Begin Transaction"
+      },
+      {
+        "command": "velin.rollback.commit",
+        "title": "Commit Transaction"
+      },
+      {
+        "command": "velin.rollback.rollback",
+        "title": "Rollback Transaction"
+      },
+      {
+        "command": "velin.serialize.jsonToYaml",
+        "title": "Convert JSON to YAML"
+      },
+      {
+        "command": "velin.serialize.yamlToJson",
+        "title": "Convert YAML to JSON"
+      }
+    ],
+    "configuration": {
+      "title": "VelinScript",
+      "properties": {
+        "velin.lsp.path": {
+          "type": "string",
+          "default": "velin-lsp",
+          "description": "Path to velin-lsp binary"
+        },
+        "velin.compiler.path": {
+          "type": "string",
+          "default": "velin",
+          "description": "Path to velin compiler binary"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "@types/node": "^16.x",
+    "typescript": "^4.4.3"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^7.0.0"
+  }
+}

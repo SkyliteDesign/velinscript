@@ -1,0 +1,32 @@
+// ML Function Template
+// Generiert mit VelinScript VS Code Extension
+
+// Struktur für ML-Ergebnis (anpassen nach Bedarf)
+struct MLResult {
+    result: string,
+    confidence: number,
+    model: string,
+}
+
+// ML-Funktion mit ModelLoader
+// Ersetze "modelName" mit deinem Model-Namen
+// Ersetze ModelType::Classification mit dem passenden Typ (Sentiment, Regression, etc.)
+// Ersetze "models/model.onnx" mit dem Pfad zu deinem Model
+@POST("/api/ml/:modelName")
+fn mlFunction(input: string): MLResult {
+    // Model Loader initialisieren
+    let mut loader = ModelLoader::new();
+    
+    // Model laden (sollte beim Start erfolgen, nicht bei jedem Request)
+    loader.load_model("modelName", ModelType::Classification, "models/model.onnx");
+    
+    // Prediction durchführen
+    let prediction = loader.predict("modelName", input);
+    
+    // Ergebnis zurückgeben
+    return MLResult {
+        result: prediction,
+        confidence: 0.95, // In Production: Vom Model
+        model: "modelName",
+    };
+}

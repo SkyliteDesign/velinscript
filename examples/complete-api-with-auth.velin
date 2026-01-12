@@ -1,0 +1,264 @@
+// Vollständiges API Beispiel mit Authentication, Validation und ML
+// Kombiniert alle Features
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+    password: string,
+    role: string,
+    createdAt: string,
+}
+
+struct Post {
+    id: string,
+    title: string,
+    content: string,
+    authorId: string,
+    sentiment: string,
+    createdAt: string,
+}
+
+struct LoginRequest {
+    email: string,
+    password: string,
+}
+
+struct LoginResponse {
+    token: string,
+    user: User,
+}
+
+// Services initialisieren
+let authService = AuthService::new(getSecret());
+let modelLoader = ModelLoader::new();
+modelLoader.load_model("sentiment", ModelType::Sentiment, "models/sentiment.onnx");
+
+// Public Endpoints
+
+@POST("/api/auth/register")
+fn register(name: string, email: string, password: string): User {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("name", &name)
+        .min_length("name", &name, 2)
+        .max_length("name", &name, 50)
+        .required("email", &email)
+        .email("email", &email)
+        .required("password", &password)
+        .min_length("password", &password, 8);
+    
+    if (!validator.is_valid()) {
+        let errors = validator.errors();
+        return HttpResponse::bad_request(errors.map(|e| e.message).join(", "));
+    }
+    
+    // Prüfe ob Email bereits existiert
+    let existing = db.findByEmail(User, email);
+    if (existing != null) {
+        return HttpResponse::bad_request("Email bereits registriert");
+    }
+    
+    let user = User {
+        id: generateId(),
+        name: name,
+        email: email,
+        password: hashPassword(password), // In Production: hashen
+        role: "user",
+        createdAt: getCurrentTimestamp(),
+    };
+    
+    return db.save(user);
+}
+
+@POST("/api/auth/login")
+fn login(request: LoginRequest): LoginResponse {
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("email", &request.email)
+        .email("email", &request.email)
+        .required("password", &request.password);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid credentials");
+    }
+    
+    // User finden
+    let user = db.findByEmail(User, request.email);
+    if (user == null || !verifyPassword(request.password, user.password)) {
+        return HttpResponse::unauthorized("Invalid credentials");
+    }
+    
+    // Token generieren
+    let claims = UserClaims {
+        user_id: user.id,
+        email: user.email,
+        roles: [user.role],
+    };
+    let token = authService.generate_token(claims);
+    
+    return LoginResponse {
+        token: token.token,
+        user: user,
+    };
+}
+
+// Authenticated Endpoints
+
+@Auth
+@GET("/api/profile")
+fn getProfile(token: string): User {
+    let claims = authService.verify_token(token);
+    if (claims == null) {
+        return HttpResponse::unauthorized("Invalid token");
+    }
+    
+    return db.find(User, claims.user_id);
+}
+
+@Auth
+@PUT("/api/profile")
+fn updateProfile(token: string, name: string, email: string): User {
+    let claims = authService.verify_token(token);
+    if (claims == null) {
+        return HttpResponse::unauthorized("Invalid token");
+    }
+    
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("name", &name)
+        .min_length("name", &name, 2)
+        .max_length("name", &name, 50)
+        .required("email", &email)
+        .email("email", &email);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid input");
+    }
+    
+    let user = db.find(User, claims.user_id);
+    user.name = name;
+    user.email = email;
+    
+    return db.save(user);
+}
+
+// Posts mit Sentiment-Analyse
+
+@Auth
+@POST("/api/posts")
+fn createPost(token: string, title: string, content: string): Post {
+    let claims = authService.verify_token(token);
+    if (claims == null) {
+        return HttpResponse::unauthorized("Invalid token");
+    }
+    
+    // Validierung
+    let mut validator = Validator::new();
+    validator
+        .required("title", &title)
+        .min_length("title", &title, 3)
+        .max_length("title", &title, 200)
+        .required("content", &content)
+        .min_length("content", &content, 10);
+    
+    if (!validator.is_valid()) {
+        return HttpResponse::bad_request("Invalid post");
+    }
+    
+    // Sentiment-Analyse
+    let sentiment = modelLoader.predict("sentiment", content);
+    
+    let post = Post {
+        id: generateId(),
+        title: title,
+        content: content,
+        authorId: claims.user_id,
+        sentiment: sentiment,
+        createdAt: getCurrentTimestamp(),
+    };
+    
+    return db.save(post);
+}
+
+@Auth
+@GET("/api/posts")
+fn getPosts(token: string): List<Post> {
+    let claims = authService.verify_token(token);
+    if (claims == null) {
+        return HttpResponse::unauthorized("Invalid token");
+    }
+    
+    return db.findAll(Post);
+}
+
+@Auth
+@GET("/api/posts/:id")
+fn getPost(token: string, id: string): Post {
+    let claims = authService.verify_token(token);
+    if (claims == null) {
+        return HttpResponse::unauthorized("Invalid token");
+    }
+    
+    let post = db.find(Post, id);
+    if (post == null) {
+        return HttpResponse::not_found("Post nicht gefunden");
+    }
+    
+    return post;
+}
+
+// Admin Endpoints
+
+@Auth
+@Role("admin")
+@GET("/api/admin/users")
+fn getAdminUsers(token: string): List<User> {
+    if (!authService.has_role(token, "admin")) {
+        return HttpResponse::forbidden("Admin access required");
+    }
+    
+    return db.findAll(User);
+}
+
+@Auth
+@Role("admin")
+@DELETE("/api/admin/users/:id")
+fn deleteUser(token: string, id: string): void {
+    if (!authService.has_role(token, "admin")) {
+        return HttpResponse::forbidden("Admin access required");
+    }
+    
+    db.delete(User, id);
+}
+
+@Auth
+@Role("admin")
+@GET("/api/admin/posts/sentiment")
+fn getSentimentStats(token: string): Map<string, number> {
+    if (!authService.has_role(token, "admin")) {
+        return HttpResponse::forbidden("Admin access required");
+    }
+    
+    let posts = db.findAll(Post);
+    let mut stats = Map<string, number>();
+    let mut positive = 0;
+    let mut negative = 0;
+    
+    for (post in posts) {
+        if (post.sentiment == "positive") {
+            positive = positive + 1;
+        } else {
+            negative = negative + 1;
+        }
+    }
+    
+    stats["positive"] = positive;
+    stats["negative"] = negative;
+    stats["total"] = posts.length;
+    
+    return stats;
+}

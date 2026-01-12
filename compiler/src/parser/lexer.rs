@@ -156,28 +156,30 @@ impl<'a> Lexer<'a> {
     }
     
     fn skip_comment(&mut self) {
+        // We already consumed the first '/' in next_token()
+        // Now check for second '/' or '*'
         if let Some('/') = self.current {
-            self.advance();
-            if let Some('/') = self.current {
-                // Single-line comment
-                self.advance(); // consume second '/'
-                while let Some(ch) = self.current {
-                    if ch == '\n' || ch == '\r' {
+            // Single-line comment: //
+            self.advance(); // consume second '/'
+            // Skip until newline (but don't consume the newline)
+            while let Some(ch) = self.current {
+                if ch == '\n' || ch == '\r' {
+                    // Don't consume newline, let it be tokenized separately
+                    break;
+                }
+                self.advance();
+            }
+        } else if let Some('*') = self.current {
+            // Multi-line comment: /*
+            self.advance(); // consume '*'
+            while let Some(ch) = self.current {
+                if ch == '*' {
+                    self.advance();
+                    if let Some('/') = self.current {
+                        self.advance(); // consume closing '/'
                         break;
                     }
-                    self.advance();
-                }
-            } else if let Some('*') = self.current {
-                // Multi-line comment
-                self.advance(); // consume '*'
-                while let Some(ch) = self.current {
-                    if ch == '*' {
-                        self.advance();
-                        if let Some('/') = self.current {
-                            self.advance();
-                            break;
-                        }
-                    }
+                } else {
                     self.advance();
                 }
             }
@@ -515,5 +517,15 @@ mod tests {
         assert_eq!(tokens[2], Token::LParen);
         assert_eq!(tokens[3], Token::String("/api/users".to_string()));
         assert_eq!(tokens[4], Token::RParen);
+    }
+    
+    #[test]
+    fn test_comment_at_start() {
+        let mut lexer = Lexer::new("// Comment\nfn test() {}");
+        let tokens = lexer.tokenize().unwrap();
+        
+        // After comment and newline, should get Fn token
+        assert_eq!(tokens[0], Token::Newline);
+        assert_eq!(tokens[1], Token::Fn);
     }
 }

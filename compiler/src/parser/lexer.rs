@@ -137,6 +137,12 @@ impl<'a> Lexer<'a> {
     
     fn skip_whitespace(&mut self) {
         while let Some(ch) = self.current {
+            // Skip BOM (Byte Order Mark) if present
+            if ch == '\u{feff}' {
+                self.advance();
+                continue;
+            }
+            
             if ch.is_whitespace() && ch != '\n' {
                 self.advance();
             } else {

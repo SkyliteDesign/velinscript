@@ -68,6 +68,18 @@ impl Parser {
         let mut items = Vec::new();
         
         while !self.is_at_end() {
+            // Skip newlines and whitespace between items
+            while matches!(self.peek(), Some(Token::Newline) | None) {
+                if self.is_at_end() {
+                    break;
+                }
+                self.advance();
+            }
+            
+            if self.is_at_end() {
+                break;
+            }
+            
             items.push(self.parse_item()?);
         }
         
@@ -75,8 +87,18 @@ impl Parser {
     }
     
     fn parse_item(&mut self) -> Result<Item, ParseError> {
+        // Skip leading newlines
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         // Parse decorators if present
         let decorators = self.parse_decorators()?;
+        
+        // Skip newlines after decorators
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         
         // Parse visibility
         let visibility = if self.check(&Token::Pub) {
@@ -86,6 +108,11 @@ impl Parser {
             Visibility::Private
         };
         
+        // Skip newlines after visibility
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         // Check if async
         let is_async = if self.check(&Token::Async) {
             self.advance();
@@ -93,6 +120,11 @@ impl Parser {
         } else {
             false
         };
+        
+        // Skip newlines after async
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         
         // Check if const
         let is_const = if self.check(&Token::Const) {
@@ -102,9 +134,15 @@ impl Parser {
             false
         };
         
+        // Skip newlines after const
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         match self.peek() {
             Some(Token::Fn) => {
                 self.advance(); // consume 'fn'
+                // Newlines after 'fn' are handled in parse_function
                 Ok(Item::Function(self.parse_function(decorators, visibility, is_async, is_const)?))
             }
             Some(Token::Struct) => {
@@ -134,8 +172,17 @@ impl Parser {
     fn parse_decorators(&mut self) -> Result<Vec<Decorator>, ParseError> {
         let mut decorators = Vec::new();
         
+        // Skip leading newlines
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         while self.check(&Token::At) {
             decorators.push(self.parse_decorator()?);
+            // Skip newlines after each decorator
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
         }
         
         Ok(decorators)
@@ -193,19 +240,20 @@ impl Parser {
             _ => return Err(self.error("Expected decorator name")),
         };
         
-        // Skip whitespace after decorator name
+        // Parse arguments if present (before skipping newlines)
+        let args = if self.check(&Token::LParen) {
+            self.parse_decorator_args()?
+        } else {
+            Vec::new()
+        };
+        
+        // Skip whitespace and newlines after decorator (including args)
         while matches!(self.peek(), Some(Token::Newline) | None) {
             if self.is_at_end() {
                 break;
             }
             self.advance();
         }
-        
-        let args = if self.check(&Token::LParen) {
-            self.parse_decorator_args()?
-        } else {
-            Vec::new()
-        };
         
         Ok(Decorator { name, args })
     }
@@ -214,15 +262,35 @@ impl Parser {
         self.consume(&Token::LParen, "Expected '('")?;
         let mut args = Vec::new();
         
+        // Skip whitespace/newlines after opening paren
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         if !self.check(&Token::RParen) {
             loop {
                 args.push(self.parse_decorator_arg()?);
+                
+                // Skip whitespace/newlines before comma or closing paren
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
                 
                 if !self.check(&Token::Comma) {
                     break;
                 }
                 self.advance();
+                
+                // Skip whitespace/newlines after comma
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
             }
+        }
+        
+        // Skip whitespace/newlines before closing paren
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
         }
         
         self.consume(&Token::RParen, "Expected ')'")?;
@@ -281,21 +349,45 @@ impl Parser {
         is_async: bool,
         is_const: bool,
     ) -> Result<Function, ParseError> {
+        // Skip newlines after 'fn'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let name = match self.consume_identifier()? {
             Token::Identifier(name) => name,
             _ => unreachable!(),
         };
         
+        // Skip newlines before '('
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         self.consume(&Token::LParen, "Expected '('")?;
         let params = self.parse_parameters()?;
         self.consume(&Token::RParen, "Expected ')'")?;
         
+        // Skip newlines before return type
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let return_type = if self.check(&Token::Colon) {
             self.advance();
+            // Skip newlines after colon
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
             Some(self.parse_type()?)
         } else {
             None
         };
+        
+        // Skip newlines before block
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         
         let body = self.parse_block()?;
         
@@ -352,6 +444,15 @@ impl Parser {
         let mut statements = Vec::new();
         
         while !self.check(&Token::RBrace) && !self.is_at_end() {
+            // Skip newlines before statements
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            if self.check(&Token::RBrace) {
+                break;
+            }
+            
             statements.push(self.parse_statement()?);
         }
         
@@ -360,6 +461,10 @@ impl Parser {
     }
     
     fn parse_statement(&mut self) -> Result<Statement, ParseError> {
+        // Skip leading newlines
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         match self.peek() {
             Some(Token::Let) => {
                 self.advance();
@@ -915,15 +1020,34 @@ impl Parser {
     }
     
     fn parse_struct(&mut self, visibility: Visibility, decorators: Vec<Decorator>) -> Result<Struct, ParseError> {
+        // Skip newlines after 'struct'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let name = match self.consume_identifier()? {
             Token::Identifier(name) => name,
             _ => unreachable!(),
         };
         
+        // Skip newlines before '{'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         self.consume(&Token::LBrace, "Expected '{'")?;
         let mut fields = Vec::new();
         
         while !self.check(&Token::RBrace) {
+            // Skip newlines before field
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            if self.check(&Token::RBrace) {
+                break;
+            }
+            
             let field_visibility = if self.check(&Token::Pub) {
                 self.advance();
                 Visibility::Public
@@ -931,12 +1055,28 @@ impl Parser {
                 Visibility::Private
             };
             
+            // Skip newlines after visibility
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
             let field_name = match self.consume_identifier()? {
                 Token::Identifier(name) => name,
                 _ => unreachable!(),
             };
             
+            // Skip newlines before ':'
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
             self.consume(&Token::Colon, "Expected ':'")?;
+            
+            // Skip newlines after ':'
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
             let field_type = self.parse_type()?;
             
             fields.push(StructField {
@@ -944,6 +1084,11 @@ impl Parser {
                 field_type,
                 visibility: field_visibility,
             });
+            
+            // Skip newlines before comma
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
             
             if self.check(&Token::Comma) {
                 self.advance();
@@ -961,10 +1106,20 @@ impl Parser {
     }
     
     fn parse_enum(&mut self, visibility: Visibility) -> Result<Enum, ParseError> {
+        // Skip newlines after 'enum'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let name = match self.consume_identifier()? {
             Token::Identifier(name) => name,
             _ => unreachable!(),
         };
+        
+        // Skip newlines before '{'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         
         self.consume(&Token::LBrace, "Expected '{'")?;
         let mut variants = Vec::new();
@@ -1016,10 +1171,20 @@ impl Parser {
     }
     
     fn parse_type_alias(&mut self, visibility: Visibility) -> Result<TypeAlias, ParseError> {
+        // Skip newlines after 'type'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let name = match self.consume_identifier()? {
             Token::Identifier(name) => name,
             _ => unreachable!(),
         };
+        
+        // Skip newlines before '='
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         
         self.consume(&Token::Eq, "Expected '='")?;
         let aliased_type = self.parse_type()?;
@@ -1032,10 +1197,20 @@ impl Parser {
     }
     
     fn parse_module(&mut self, visibility: Visibility) -> Result<Module, ParseError> {
+        // Skip newlines after 'mod'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let name = match self.consume_identifier()? {
             Token::Identifier(name) => name,
             _ => unreachable!(),
         };
+        
+        // Skip newlines before '{'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         
         self.consume(&Token::LBrace, "Expected '{'")?;
         let mut items = Vec::new();

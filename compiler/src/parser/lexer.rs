@@ -120,6 +120,14 @@ impl<'a> Lexer<'a> {
             if ch == '\n' {
                 self.line += 1;
                 self.column = 0;
+            } else if ch == '\r' {
+                // Handle CRLF: skip \r, next char should be \n
+                if let Some('\n') = self.input.clone().next() {
+                    // Don't increment position yet, \n will be handled next
+                    self.column = 0;
+                } else {
+                    self.column += 1;
+                }
             } else {
                 self.column += 1;
             }
@@ -410,6 +418,14 @@ impl<'a> Lexer<'a> {
                 '.' => {
                     self.advance();
                     Token::Dot
+                }
+                '\r' => {
+                    self.advance();
+                    // Check if next is \n (CRLF)
+                    if let Some('\n') = self.current {
+                        self.advance();
+                    }
+                    Token::Newline
                 }
                 '\n' => {
                     self.advance();

@@ -80,10 +80,39 @@ impl Parser {
                 break;
             }
             
-            items.push(self.parse_item()?);
+            // Check if it's a let statement at top level (global variable)
+            if self.check(&Token::Let) {
+                items.push(self.parse_top_level_let()?);
+            } else {
+                items.push(self.parse_item()?);
+            }
         }
         
         Ok(Program { items })
+    }
+    
+    fn parse_top_level_let(&mut self) -> Result<Item, ParseError> {
+        // Consume 'let' token
+        self.advance();
+        
+        // Parse let statement as a global variable
+        // For now, we'll treat it as a statement that needs to be wrapped
+        // This is a temporary solution - in the future we might want a GlobalVariable item type
+        let let_stmt = self.parse_let()?;
+        // Convert LetStatement to a function that initializes the variable
+        // This is a workaround until we add proper global variable support
+        Ok(Item::Function(Function {
+            decorators: Vec::new(),
+            visibility: Visibility::Private,
+            name: format!("__init_{}", let_stmt.name),
+            params: Vec::new(),
+            return_type: None,
+            body: Block {
+                statements: vec![Statement::Let(let_stmt)],
+            },
+            is_async: false,
+            is_const: false,
+        }))
     }
     
     fn parse_item(&mut self) -> Result<Item, ParseError> {
@@ -501,6 +530,11 @@ impl Parser {
     }
     
     fn parse_let(&mut self) -> Result<LetStatement, ParseError> {
+        // Skip newlines before 'let'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let mutable = if let Some(Token::Identifier(name)) = self.peek() {
             if name == "mut" {
                 self.advance();
@@ -512,20 +546,50 @@ impl Parser {
             false
         };
         
+        // Skip newlines after 'mut' if present
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let name = match self.consume_identifier()? {
             Token::Identifier(name) => name,
             _ => unreachable!(),
         };
         
+        // Skip newlines before type or '='
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let var_type = if self.check(&Token::Colon) {
             self.advance();
+            // Skip newlines after colon
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
             Some(self.parse_type()?)
         } else {
             None
         };
         
+        // Skip newlines before '='
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         self.consume(&Token::Eq, "Expected '='")?;
+        
+        // Skip newlines after '='
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
         let value = self.parse_expression()?;
+        
+        // Skip newlines before semicolon
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         
         if self.check(&Token::Semicolon) {
             self.advance();

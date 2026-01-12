@@ -142,6 +142,14 @@ velin-compiler.exe serialize yaml-to-json <input> <output>
 - **[Getting Started Guide](docs/guides/getting-started.md)** - Schritt-für-Schritt Anleitung
 - **[API Dokumentation](docs/api/)** - API-Referenz
 - **[Beispiele](examples/)** - Beispiel-Projekte
+  - **[Custom Recommender](examples/custom-recommender/)** - Ein vollständiges, production-ready Beispiel für ein hybrides Recommendation System:
+    - **Hybrid Algorithmus**: Kombiniert Embedding-basierte Empfehlungen (60%) mit Collaborative Filtering (40%)
+    - **Vector Database Integration**: Nutzt LLM-Embeddings für semantische Ähnlichkeitssuche
+    - **Production-Ready Features**: Security-Middleware (API Key, Rate Limiting, CORS), strukturiertes Logging, intelligentes Caching, Error Handling, Health Monitoring
+    - **Umfassende API**: 5 Endpoints für Recommendations, Preferences, User History, Feedback und Similar Items
+    - **Modulare Architektur**: 15+ Module für Models, Security, Caching, Logging, Async Operations, WebAssembly Support
+    - **Vollständige Tests**: Unit- und Integration-Tests inklusive
+    - **Dokumentation**: API-Dokumentation, Security-Guide, WebAssembly-Dokumentation und Optimierungs-Guide
 
 ## 🏗️ Projekt-Struktur
 
@@ -196,7 +204,7 @@ Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe [LICENSE](LICENSE) f�
 - **GitHub**: https://github.com/SkyliteDesign/velinscript
 - **Issues**: https://github.com/SkyliteDesign/velinscript/issues
 - **Discussions**: https://github.com/SkyliteDesign/velinscript/discussions
-- **ForumBirdApi**: https://forum.birdapi.de
+- **Support & Forum**: https://forum.birdapi.de/forum/forumdisplay.php?fid=71
 
 ## 🙏 Danksagungen
 

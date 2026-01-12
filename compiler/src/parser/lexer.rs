@@ -111,6 +111,10 @@ impl<'a> Lexer<'a> {
             column: 0,
         };
         lexer.advance();
+        // Skip BOM if present at the start
+        if let Some('\u{feff}') = lexer.current {
+            lexer.advance();
+        }
         lexer
     }
     

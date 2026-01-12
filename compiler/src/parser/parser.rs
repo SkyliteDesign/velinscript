@@ -1118,10 +1118,9 @@ impl Parser {
                         self.consume(&Token::RParen, "Expected ')'")?;
                         
                         // Create a generic type constructor call
-                        // For now, we'll treat it as a regular function call
-                        // The type parameters will be handled by the code generator
-                        Ok(Expression::Call {
-                            callee: Box::new(Expression::Identifier(name_clone)),
+                        Ok(Expression::GenericConstructor {
+                            name: name_clone,
+                            type_params,
                             args,
                         })
                     } else {

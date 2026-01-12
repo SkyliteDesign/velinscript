@@ -896,6 +896,45 @@ impl RustCodeGenerator {
                 self.unindent();
                 self.write("}");
             }
+            Expression::GenericConstructor { name, type_params, args: _args } => {
+                match name.as_str() {
+                    "Map" => {
+                        if type_params.len() == 2 {
+                            self.write("std::collections::HashMap::<");
+                            self.generate_type(&type_params[0]);
+                            self.write(", ");
+                            self.generate_type(&type_params[1]);
+                            self.write(">::new()");
+                        } else {
+                            self.write("std::collections::HashMap::new()");
+                        }
+                    }
+                    "List" => {
+                        if type_params.len() == 1 {
+                            self.write("Vec::<");
+                            self.generate_type(&type_params[0]);
+                            self.write(">::new()");
+                        } else {
+                            self.write("Vec::new()");
+                        }
+                    }
+                    _ => {
+                        // Generic struct constructor
+                        self.write(&self.to_pascal_case(name));
+                        if !type_params.is_empty() {
+                            self.write("::<");
+                            for (i, tp) in type_params.iter().enumerate() {
+                                if i > 0 {
+                                    self.write(", ");
+                                }
+                                self.generate_type(tp);
+                            }
+                            self.write(">");
+                        }
+                        self.write("::new()");
+                    }
+                }
+            }
         }
     }
     

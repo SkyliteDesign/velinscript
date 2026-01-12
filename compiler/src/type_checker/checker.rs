@@ -17,6 +17,12 @@ impl TypeChecker {
         env.define_type("boolean".to_string(), Type::Boolean);
         env.define_type("void".to_string(), Type::Void);
         env.define_type("null".to_string(), Type::Null);
+        // Map is a generic type, so we register it as a type name
+        // The actual type will be Map<K, V> which is handled by Type::Map
+        env.define_type("Map".to_string(), Type::Map {
+            key: Box::new(Type::String),
+            value: Box::new(Type::String),
+        });
         
         TypeChecker {
             environment: env,
@@ -29,6 +35,12 @@ impl TypeChecker {
         for item in &program.items {
             match item {
                 Item::Struct(s) => {
+                    // Register generic type parameters as valid types in the struct scope
+                    // Type parameters are valid types within the struct definition
+                    // We don't need to register them globally, but we need to track them
+                    for _type_param in &s.type_params {
+                        // Type parameters will be validated when used in field types
+                    }
                     self.environment.define_type(
                         s.name.clone(),
                         Type::Named(s.name.clone()),
@@ -143,7 +155,17 @@ impl TypeChecker {
         
         // Check return type
         if let Some(expected_return) = &function.return_type {
-            if !self.types_compatible(&return_type, expected_return) {
+            // Special handling: Named type from struct literal should be compatible with Generic type of same name
+            let is_compatible = match (&return_type, expected_return) {
+                (Type::Named(n1), Type::Generic { name: n2, .. }) if n1 == n2 => {
+                    // Struct literal (Named) is compatible with generic return type (Generic)
+                    // This allows returning ApiResponse { ... } where ApiResponse<void> is expected
+                    true
+                }
+                _ => self.types_compatible(&return_type, expected_return)
+            };
+            
+            if !is_compatible {
                 self.errors.push(TypeError::type_mismatch(
                     &expected_return.to_string(),
                     &return_type.to_string(),
@@ -339,6 +361,78 @@ impl TypeChecker {
                 let expr_type = self.check_expression(expr)?;
                 self.check_unary_operation(op, &expr_type)
             }
+            Expression::GenericConstructor { name, type_params, args } => {
+                // Handle generic type constructors like Map<string, string>() or List<string>()
+                match name.as_str() {
+                    "Map" => {
+                        if type_params.len() == 2 {
+                            let key_type = &type_params[0];
+                            let value_type = &type_params[1];
+                            self.check_type(key_type)?;
+                            self.check_type(value_type)?;
+                            // Check constructor arguments (should be empty for Map())
+                            for arg in args {
+                                let _ = self.check_expression(&arg)?;
+                            }
+                            return Ok(Type::Map {
+                                key: Box::new(key_type.clone()),
+                                value: Box::new(value_type.clone()),
+                            });
+                        } else {
+                            self.errors.push(TypeError::new(
+                                TypeErrorKind::InvalidArgumentType {
+                                    position: 0,
+                                    expected: "Map<K, V> requires 2 type parameters".to_string(),
+                                    found: format!("{} type parameters", type_params.len()),
+                                },
+                                format!("Map requires 2 type parameters, found {}", type_params.len()),
+                            ));
+                            return Ok(Type::Void);
+                        }
+                    }
+                    "List" => {
+                        if type_params.len() == 1 {
+                            let item_type = &type_params[0];
+                            self.check_type(item_type)?;
+                            // Check constructor arguments
+                            for arg in args {
+                                let _ = self.check_expression(&arg)?;
+                            }
+                            return Ok(Type::List(Box::new(item_type.clone())));
+                        } else {
+                            self.errors.push(TypeError::new(
+                                TypeErrorKind::InvalidArgumentType {
+                                    position: 0,
+                                    expected: "List<T> requires 1 type parameter".to_string(),
+                                    found: format!("{} type parameters", type_params.len()),
+                                },
+                                format!("List requires 1 type parameter, found {}", type_params.len()),
+                            ));
+                            return Ok(Type::Void);
+                        }
+                    }
+                    _ => {
+                        // Check if it's a struct constructor with generics
+                        if let Some(_struct_type) = self.environment.get_type(name) {
+                            // Validate type parameters
+                            for type_param in type_params {
+                                self.check_type(type_param)?;
+                            }
+                            // Check constructor arguments
+                            for arg in args {
+                                let _ = self.check_expression(&arg)?;
+                            }
+                            return Ok(Type::Generic {
+                                name: name.clone(),
+                                params: type_params.clone(),
+                            });
+                        } else {
+                            self.errors.push(TypeError::undefined_type(name));
+                            return Ok(Type::Void);
+                        }
+                    }
+                }
+            }
             Expression::Call { callee, args } => {
                 let _callee_type = self.check_expression(callee)?;
                 
@@ -513,18 +607,17 @@ impl TypeChecker {
             }
             Expression::StructLiteral { name, fields } => {
                 // Check that the struct type exists
-                let struct_type = Type::Named(name.clone());
-                
-                // Verify struct exists in environment
+                // For now, return the struct type (could be generic)
+                // The actual type will be determined by the return type annotation
                 if let Some(_struct_def) = self.environment.get_type(name) {
-                    // For now, we just return the struct type
-                    // In future, could validate that all required fields are present
-                    // and that field types match
+                    // Validate field expressions
                     for (_field_name, field_expr) in fields {
                         let _field_type = self.check_expression(field_expr)?;
                         // Could validate field types here
                     }
-                    Ok(struct_type)
+                    // Return Named type - the actual generic instantiation will be checked
+                    // against the expected return type
+                    Ok(Type::Named(name.clone()))
                 } else {
                     self.errors.push(TypeError::new(
                         TypeErrorKind::UndefinedType(name.clone()),
@@ -625,12 +718,31 @@ impl TypeChecker {
         match type_def {
             Type::String | Type::Number | Type::Boolean | Type::Void | Type::Null => Ok(()),
             Type::Named(name) => {
-                if !self.environment.has_type(name) {
+                // Check if it's a generic type parameter (single uppercase letter or common pattern)
+                // For now, we'll be lenient and allow single-letter identifiers as type parameters
+                if name.len() == 1 && name.chars().next().map(|c| c.is_uppercase()).unwrap_or(false) {
+                    // This is likely a type parameter, allow it
+                    Ok(())
+                } else if !self.environment.has_type(name) {
                     self.errors.push(TypeError::undefined_type(name));
+                    Ok(())
+                } else {
+                    Ok(())
                 }
-                Ok(())
             }
-            Type::Generic { name: _, params } => {
+            Type::Generic { name, params } => {
+                // Check if the generic type name is valid (e.g., List, Map, ApiResponse)
+                if name == "List" || name == "Map" {
+                    // Built-in generic types - OK, continue
+                } else if !self.environment.has_type(name) {
+                    // Check if it's a struct with generics
+                    // For now, we'll check the base name
+                    let base_name = name.clone();
+                    if !self.environment.has_type(&base_name) {
+                        self.errors.push(TypeError::undefined_type(name));
+                        return Ok(()); // Return early to avoid checking params if type is invalid
+                    }
+                }
                 for param in params {
                     self.check_type(param)?;
                 }
@@ -673,7 +785,27 @@ impl TypeChecker {
         // Handle type aliases and named types
         match (t1, t2) {
             (Type::Named(n1), Type::Named(n2)) => n1 == n2,
+            (Type::Generic { name: n1, params: p1 }, Type::Generic { name: n2, params: p2 }) => {
+                if n1 == n2 && p1.len() == p2.len() {
+                    p1.iter().zip(p2.iter()).all(|(a, b)| self.types_compatible(a, b))
+                } else {
+                    false
+                }
+            }
+            (Type::Generic { name: n1, params: p1 }, Type::Named(n2)) => {
+                // ApiResponse<void> vs ApiResponse - check if base names match
+                // Allow if the generic has parameters (struct literal can be instantiated)
+                n1 == n2
+            }
+            (Type::Named(n1), Type::Generic { name: n2, params: _p2 }) => {
+                // ApiResponse vs ApiResponse<void> - struct literal can match generic return type
+                // This allows struct literals to be compatible with generic return types
+                n1 == n2
+            }
             (Type::List(l1), Type::List(l2)) => self.types_compatible(l1, l2),
+            (Type::Map { key: k1, value: v1 }, Type::Map { key: k2, value: v2 }) => {
+                self.types_compatible(k1, k2) && self.types_compatible(v1, v2)
+            }
             (Type::Optional(o1), Type::Optional(o2)) => self.types_compatible(o1, o2),
             _ => false,
         }

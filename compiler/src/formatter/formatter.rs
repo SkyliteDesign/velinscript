@@ -474,6 +474,27 @@ impl Formatter {
                 self.indent();
                 self.write("}");
             }
+            Expression::GenericConstructor { name, type_params, args } => {
+                self.write(name);
+                if !type_params.is_empty() {
+                    self.write("<");
+                    for (i, tp) in type_params.iter().enumerate() {
+                        if i > 0 {
+                            self.write(", ");
+                        }
+                        self.format_type(tp);
+                    }
+                    self.write(">");
+                }
+                self.write("(");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.format_expression(arg);
+                }
+                self.write(")");
+            }
         }
     }
     

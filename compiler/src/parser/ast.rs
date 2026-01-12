@@ -166,6 +166,11 @@ pub enum Expression {
         name: String,
         fields: Vec<(String, Expression)>,
     },
+    GenericConstructor {
+        name: String,
+        type_params: Vec<Type>,
+        args: Vec<Expression>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

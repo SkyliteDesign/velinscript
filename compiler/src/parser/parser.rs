@@ -1000,13 +1000,33 @@ impl Parser {
                     loop {
                         type_params.push(self.parse_type()?);
                         
+                        // Skip newlines before comma or closing '>'
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
+                        }
+                        
                         if !self.check(&Token::Comma) {
                             break;
                         }
                         self.advance();
+                        
+                        // Skip newlines after comma
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
+                        }
+                    }
+                    
+                    // Skip newlines before closing '>'
+                    while matches!(self.peek(), Some(Token::Newline)) {
+                        self.advance();
                     }
                     
                     self.consume(&Token::Gt, "Expected '>'")?;
+                    
+                    // Skip newlines after '>'
+                    while matches!(self.peek(), Some(Token::Newline)) {
+                        self.advance();
+                    }
                     
                     // Check if followed by function call: List<string>()
                     if self.check(&Token::LParen) {
@@ -1014,15 +1034,35 @@ impl Parser {
                         self.advance(); // consume '('
                         let mut args = Vec::new();
                         
+                        // Skip newlines after opening paren
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
+                        }
+                        
                         if !self.check(&Token::RParen) {
                             loop {
                                 args.push(self.parse_expression()?);
+                                
+                                // Skip newlines before comma or closing paren
+                                while matches!(self.peek(), Some(Token::Newline)) {
+                                    self.advance();
+                                }
                                 
                                 if !self.check(&Token::Comma) {
                                     break;
                                 }
                                 self.advance();
+                                
+                                // Skip newlines after comma
+                                while matches!(self.peek(), Some(Token::Newline)) {
+                                    self.advance();
+                                }
                             }
+                        }
+                        
+                        // Skip newlines before closing paren
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
                         }
                         
                         self.consume(&Token::RParen, "Expected ')'")?;
@@ -1083,12 +1123,32 @@ impl Parser {
                     self.advance();
                     let mut params = Vec::new();
                     
+                    // Skip newlines after '<'
+                    while matches!(self.peek(), Some(Token::Newline)) {
+                        self.advance();
+                    }
+                    
                     loop {
                         params.push(self.parse_type()?);
+                        
+                        // Skip newlines before comma or closing '>'
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
+                        }
                         
                         if !self.check(&Token::Comma) {
                             break;
                         }
+                        self.advance();
+                        
+                        // Skip newlines after comma
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
+                        }
+                    }
+                    
+                    // Skip newlines before closing '>'
+                    while matches!(self.peek(), Some(Token::Newline)) {
                         self.advance();
                     }
                     

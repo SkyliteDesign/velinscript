@@ -1,0 +1,246 @@
+// Custom Recommender - Caching System
+// Performance-Optimierung durch intelligentes Caching
+
+// Cache Entry mit generischem Typ
+struct CacheEntry<T> {
+    key: string,
+    value: T,
+    expiresAt: number,
+    createdAt: number,
+    hits: number,
+    lastAccessed: number,
+}
+
+// Cache Statistics
+struct CacheStats {
+    hits: number,
+    misses: number,
+    totalRequests: number,
+    hitRate: number,
+    totalEntries: number,
+    memoryUsage: number,
+}
+
+// Cache-Konfiguration
+struct CacheConfig {
+    enabled: boolean,
+    defaultTTL: number,
+    maxSize: number,
+    evictionPolicy: string,
+}
+
+// Globale Cache-Instanz
+let mut cache: Cache;
+let mut cacheStats: CacheStats;
+
+// Cache-Struktur
+struct Cache {
+    entries: Map<string, CacheEntry<any>>,
+    config: CacheConfig,
+}
+
+// Cache initialisieren
+fn initCache(): Cache {
+    let config = getConfig();
+    
+    return Cache {
+        entries: Map<string, CacheEntry<any>>(),
+        config: CacheConfig {
+            enabled: config.cache.enabled,
+            defaultTTL: config.cache.ttl,
+            maxSize: 10000,
+            evictionPolicy: "LRU", // Least Recently Used
+        },
+    };
+}
+
+// Cache Statistics initialisieren
+fn initCacheStats(): CacheStats {
+    return CacheStats {
+        hits: 0,
+        misses: 0,
+        totalRequests: 0,
+        hitRate: 0.0,
+        totalEntries: 0,
+        memoryUsage: 0,
+    };
+}
+
+// cacheGet - Holt Wert aus Cache
+fn cacheGet<T>(key: string): T {
+    if (!cache.config.enabled) {
+        cacheStats.misses = cacheStats.misses + 1;
+        cacheStats.totalRequests = cacheStats.totalRequests + 1;
+        return null;
+    }
+    
+    cacheStats.totalRequests = cacheStats.totalRequests + 1;
+    
+    if (!cache.entries.contains(key)) {
+        cacheStats.misses = cacheStats.misses + 1;
+        updateHitRate();
+        return null;
+    }
+    
+    let entry = cache.entries[key];
+    
+    // Prüfe ob abgelaufen
+    if (getCurrentTime() > entry.expiresAt) {
+        cacheInvalidate(key);
+        cacheStats.misses = cacheStats.misses + 1;
+        updateHitRate();
+        return null;
+    }
+    
+    // Update Zugriffs-Zeit und Hits
+    entry.lastAccessed = getCurrentTime();
+    entry.hits = entry.hits + 1;
+    cache.entries[key] = entry;
+    
+    cacheStats.hits = cacheStats.hits + 1;
+    updateHitRate();
+    
+    return entry.value as T;
+}
+
+// cacheSet - Speichert Wert im Cache
+fn cacheSet<T>(key: string, value: T, ttl: number) {
+    if (!cache.config.enabled) {
+        return;
+    }
+    
+    // Prüfe Cache-Größe
+    if (cache.entries.length >= cache.config.maxSize) {
+        evictEntries();
+    }
+    
+    let now = getCurrentTime();
+    let entry = CacheEntry {
+        key: key,
+        value: value,
+        expiresAt: now + ttl,
+        createdAt: now,
+        hits: 0,
+        lastAccessed: now,
+    };
+    
+    cache.entries[key] = entry;
+    cacheStats.totalEntries = cache.entries.length;
+}
+
+// cacheSetWithDefaultTTL - Speichert mit Standard-TTL
+fn cacheSetWithDefaultTTL<T>(key: string, value: T) {
+    cacheSet(key, value, cache.config.defaultTTL);
+}
+
+// cacheInvalidate - Entfernt Eintrag aus Cache
+fn cacheInvalidate(key: string) {
+    if (cache.entries.contains(key)) {
+        cache.entries.remove(key);
+        cacheStats.totalEntries = cache.entries.length;
+    }
+}
+
+// cacheClear - Leert Cache
+fn cacheClear(pattern: string) {
+    if (pattern == "*" || pattern == "") {
+        cache.entries.clear();
+    } else {
+        // Entferne alle Keys die Pattern matchen
+        let keysToRemove = List<string>();
+        for (key in cache.entries.keys()) {
+            if (key.contains(pattern)) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        for (key in keysToRemove) {
+            cacheInvalidate(key);
+        }
+    }
+    
+    cacheStats.totalEntries = cache.entries.length;
+}
+
+// evictEntries - Entfernt alte Einträge (LRU)
+fn evictEntries() {
+    if (cache.config.evictionPolicy == "LRU") {
+        // Sortiere nach lastAccessed und entferne älteste 10%
+        let entries = List<CacheEntry<any>>();
+        for (key in cache.entries.keys()) {
+            entries.push(cache.entries[key]);
+        }
+        
+        entries = entries.sort(|a, b| a.lastAccessed - b.lastAccessed);
+        
+        let toEvict = Math.max(1, entries.length / 10); // Entferne 10%
+        for (i in 0..toEvict) {
+            cacheInvalidate(entries[i].key);
+        }
+    }
+}
+
+// updateHitRate - Aktualisiert Hit-Rate
+fn updateHitRate() {
+    if (cacheStats.totalRequests > 0) {
+        cacheStats.hitRate = cacheStats.hits / cacheStats.totalRequests;
+    }
+}
+
+// getCacheStats - Gibt Cache-Statistiken zurück
+fn getCacheStats(): CacheStats {
+    cacheStats.memoryUsage = estimateCacheMemoryUsage();
+    return cacheStats;
+}
+
+// estimateCacheMemoryUsage - Schätzt Memory-Usage
+fn estimateCacheMemoryUsage(): number {
+    // In Production: Verwende echte Memory-Messung
+    return cache.entries.length * 1024; // Schätzung: 1KB pro Entry
+}
+
+// Cache-Key-Generierung
+
+// generateUserEmbeddingCacheKey - Generiert Cache-Key für User-Embedding
+fn generateUserEmbeddingCacheKey(userId: string): string {
+    return format("user:embedding:{}", userId);
+}
+
+// generateRecommendationsCacheKey - Generiert Cache-Key für Recommendations
+fn generateRecommendationsCacheKey(userId: string, filters: Map<string, string>): string {
+    let filterStr = JSON.stringify(filters);
+    return format("recommendations:{}:{}", userId, hashString(filterStr));
+}
+
+// generateUserHistoryCacheKey - Generiert Cache-Key für User-History
+fn generateUserHistoryCacheKey(userId: string, limit: number): string {
+    return format("history:{}:{}", userId, limit);
+}
+
+// generateSimilarItemsCacheKey - Generiert Cache-Key für Similar Items
+fn generateSimilarItemsCacheKey(itemId: string, limit: number): string {
+    return format("similar:{}:{}", itemId, limit);
+}
+
+// hashString - Hasht String für Cache-Key
+fn hashString(input: string): string {
+    // In Production: Verwende echten Hash (MD5, SHA256)
+    return input.length.toString();
+}
+
+// Cache-Warming
+
+// warmCache - Wärmt Cache mit häufig genutzten Daten
+fn warmCache() {
+    logInfo("Warming cache...", "", Map<string, string>());
+    
+    // Wärme User-Embeddings für aktive Nutzer
+    // Wärme Recommendations für aktive Nutzer
+    // Wärme Similar Items für populäre Items
+    
+    logInfo("Cache warmed", "", Map<string, string>());
+}
+
+// Initialisiere Cache beim Start
+cache = initCache();
+cacheStats = initCacheStats();

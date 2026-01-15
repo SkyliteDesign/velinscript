@@ -1,0 +1,121 @@
+// VelinScript - Automation Pipeline Beispiel
+// Zeigt Autonomie, zeigt Entscheidungslogik, zeigt echten Mehrwert
+
+struct Data {
+    id: string,
+    value: number,
+    category: string,
+    priority: string,
+}
+
+struct ProcessResult {
+    status: string,
+    score: number,
+    action: string,
+    message: string,
+}
+
+// Eingangsdaten prüfen
+fn validate(input: Data): bool {
+    if (input.value < 0 || input.value > 100) {
+        return false;
+    }
+    if (input.category == "") {
+        return false;
+    }
+    return true;
+}
+
+// Daten bewerten
+fn evaluate(input: Data): number {
+    let mut score = 0;
+    
+    // Basis-Score aus Wert
+    score = score + input.value;
+    
+    // Kategorie-Bonus
+    if (input.category == "critical") {
+        score = score + 30;
+    } else if (input.category == "important") {
+        score = score + 15;
+    }
+    
+    // Priority-Bonus
+    if (input.priority == "high") {
+        score = score + 20;
+    } else if (input.priority == "medium") {
+        score = score + 10;
+    }
+    
+    return score;
+}
+
+// Benachrichtigung senden
+fn notify(message: string): void {
+    // In Production: E-Mail, Slack, Webhook, etc.
+    log::info("Notification: {message}");
+}
+
+// Pipeline: Eingangsdaten verarbeiten
+fn process(input: Data): ProcessResult {
+    // 1. Validierung
+    if (!validate(input)) {
+        return ProcessResult {
+            status: "error",
+            score: 0,
+            action: "reject",
+            message: "Invalid input data",
+        };
+    }
+    
+    // 2. Bewertung
+    let score = evaluate(input);
+    
+    // 3. Entscheidungslogik
+    let action = "";
+    let message = "";
+    
+    if (score > 80) {
+        action = "gold";
+        message = "High priority item - immediate action required";
+        notify(message);
+    } else if (score > 50) {
+        action = "silver";
+        message = "Medium priority item - process within 24h";
+    } else {
+        action = "bronze";
+        message = "Low priority item - process when available";
+    }
+    
+    return ProcessResult {
+        status: "success",
+        score: score,
+        action: action,
+        message: message,
+    };
+}
+
+// API-Endpoint für Pipeline
+@POST("/api/process")
+fn processData(input: Data): ProcessResult {
+    return process(input);
+}
+
+// Batch-Verarbeitung
+@POST("/api/process/batch")
+fn processBatch(inputs: List<Data>): List<ProcessResult> {
+    let mut results: List<ProcessResult> = [];
+    
+    for (input in inputs) {
+        let result = process(input);
+        results.push(result);
+    }
+    
+    return results;
+}
+
+// Status-Endpoint
+@GET("/api/status")
+fn getStatus(): string {
+    return "Pipeline running";
+}

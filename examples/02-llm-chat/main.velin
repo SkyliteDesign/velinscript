@@ -1,0 +1,43 @@
+// VelinScript - LLM Chat Beispiel
+// Erstes KI-Beispiel: LLM zeigen, echte KI-API, wenig Code
+
+struct ChatRequest {
+    message: string,
+}
+
+struct ChatResponse {
+    content: string,
+    model: string,
+}
+
+// LLM Client initialisieren
+// Ersetze "openai" mit: "openai", "anthropic", "gemini", oder "local"
+let llmClient = LLMClient::new(LLMProvider::OpenAI, getApiKey());
+
+// API Key aus Umgebungsvariable laden
+fn getApiKey(): string {
+    // In Production: Verwende Umgebungsvariablen
+    // Windows: $env:OPENAI_API_KEY
+    // Linux/Mac: $OPENAI_API_KEY
+    return env::get("OPENAI_API_KEY");
+}
+
+@POST("/chat")
+fn chat(request: ChatRequest): ChatResponse {
+    // LLM aufrufen
+    // generate() akzeptiert einen String-Prompt und gibt Result<string, string> zurück
+    let response = llmClient.generate(request.message);
+    
+    // Result-Type behandeln
+    let content = "";
+    if (response.isOk()) {
+        content = response.unwrap();
+    } else {
+        content = "Error: " + response.unwrapErr();
+    }
+    
+    return ChatResponse {
+        content: content,
+        model: "gpt-4",
+    };
+}

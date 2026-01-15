@@ -1,0 +1,80 @@
+// Custom Recommender - Datenmodelle
+// Diese Datei definiert alle Datenstrukturen für das Recommendation System
+
+// User - Repräsentiert einen Nutzer im System
+struct User {
+    id: string,
+    name: string,
+    email: string,
+    preferences: List<string>,  // Liste von bevorzugten Tags/Kategorien
+    createdAt: string,
+}
+
+// Item - Repräsentiert ein Item (z.B. Produkt, Artikel, Video) das empfohlen werden kann
+struct Item {
+    id: string,
+    title: string,
+    description: string,
+    tags: List<string>,         // Tags für Kategorisierung
+    category: string,
+    embedding: List<number>,    // Vector Embedding für Ähnlichkeitssuche
+    metadata: Map<string, string>,  // Zusätzliche Metadaten
+    createdAt: string,
+}
+
+// UserPreference - Speichert Nutzerpräferenzen und Bewertungen
+struct UserPreference {
+    id: string,
+    userId: string,
+    itemId: string,
+    rating: number,             // Bewertung von 1-5
+    timestamp: string,
+    interactionType: string,    // "view", "like", "purchase", etc.
+}
+
+// Recommendation - Repräsentiert eine Empfehlung für einen Nutzer
+struct Recommendation {
+    itemId: string,
+    score: number,              // Relevanz-Score (0.0 - 1.0)
+    reason: string,             // Erklärung warum empfohlen wurde
+    method: string,             // "embedding", "collaborative", "hybrid"
+    item: Item,                 // Vollständiges Item-Objekt
+}
+
+// Feedback - Speichert Nutzer-Feedback zu Empfehlungen
+struct Feedback {
+    id: string,
+    userId: string,
+    itemId: string,
+    feedbackType: string,      // "positive", "negative", "not_interested"
+    timestamp: string,
+    comment: string,            // Optionaler Kommentar
+}
+
+// RecommendationRequest - Request-Struktur für Empfehlungen
+struct RecommendationRequest {
+    userId: string,
+    limit: number,              // Anzahl der gewünschten Empfehlungen
+    filters: Map<string, string>, // Optionale Filter (z.B. category, tags)
+}
+
+// RecommendationResponse - Response-Struktur für Empfehlungen
+struct RecommendationResponse {
+    userId: string,
+    recommendations: List<Recommendation>,
+    totalCount: number,
+    generatedAt: string,
+}
+
+// SimilarItemsRequest - Request für ähnliche Items
+struct SimilarItemsRequest {
+    itemId: string,
+    limit: number,
+}
+
+// SimilarItemsResponse - Response für ähnliche Items
+struct SimilarItemsResponse {
+    itemId: string,
+    similarItems: List<Item>,
+    totalCount: number,
+}

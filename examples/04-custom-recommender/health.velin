@@ -1,0 +1,364 @@
+// Custom Recommender - Health Check und Metrics
+// Monitoring-Endpoints für Production
+
+// Health Check Response
+struct HealthResponse {
+    status: string,
+    version: string,
+    uptime: number,
+    services: ServiceHealth,
+    timestamp: string,
+}
+
+struct ServiceHealth {
+    database: ServiceStatus,
+    vectorDB: ServiceStatus,
+    llm: ServiceStatus,
+    cache: ServiceStatus,
+}
+
+struct ServiceStatus {
+    status: string,
+    responseTime: number,
+    lastCheck: string,
+    error: string,
+}
+
+// Metrics Response
+struct MetricsResponse {
+    requests: RequestMetrics,
+    errors: ErrorMetrics,
+    performance: PerformanceMetrics,
+    cache: CacheMetrics,
+    timestamp: string,
+}
+
+struct RequestMetrics {
+    total: number,
+    successful: number,
+    failed: number,
+    averageResponseTime: number,
+    requestsPerMinute: number,
+    byEndpoint: Map<string, number>,
+}
+
+struct ErrorMetrics {
+    total: number,
+    byCode: Map<string, number>,
+    recentErrors: List<ErrorEntry>,
+}
+
+struct ErrorEntry {
+    code: string,
+    message: string,
+    timestamp: string,
+    endpoint: string,
+}
+
+struct PerformanceMetrics {
+    averageProcessingTime: number,
+    p95ProcessingTime: number,
+    p99ProcessingTime: number,
+    memoryUsage: number,
+    cpuUsage: number,
+}
+
+struct CacheMetrics {
+    hits: number,
+    misses: number,
+    hitRate: number,
+    totalEntries: number,
+    memoryUsage: number,
+}
+
+// Ready Response
+struct ReadyResponse {
+    ready: boolean,
+    services: List<ServiceStatus>,
+    timestamp: string,
+}
+
+// Globale Metriken
+let mut requestMetrics: RequestMetrics;
+let mut errorMetrics: ErrorMetrics;
+let mut performanceMetrics: PerformanceMetrics;
+let mut startTime: number;
+
+// Initialisiere Metriken
+fn initMetrics() {
+    startTime = getCurrentTime();
+    requestMetrics = RequestMetrics {
+        total: 0,
+        successful: 0,
+        failed: 0,
+        averageResponseTime: 0.0,
+        requestsPerMinute: 0.0,
+        byEndpoint: Map<string, number>(),
+    };
+    
+    errorMetrics = ErrorMetrics {
+        total: 0,
+        byCode: Map<string, number>(),
+        recentErrors: List<ErrorEntry>(),
+    };
+    
+    performanceMetrics = PerformanceMetrics {
+        averageProcessingTime: 0.0,
+        p95ProcessingTime: 0.0,
+        p99ProcessingTime: 0.0,
+        memoryUsage: 0,
+        cpuUsage: 0,
+    };
+}
+
+// GET /health - Health Check Endpoint
+@GET("/health")
+fn healthCheck(): HealthResponse {
+    let services = ServiceHealth {
+        database: checkDatabase(),
+        vectorDB: checkVectorDB(),
+        llm: checkLLM(),
+        cache: checkCache(),
+    };
+    
+    let allHealthy = services.database.status == "healthy" &&
+                     services.vectorDB.status == "healthy" &&
+                     services.llm.status == "healthy" &&
+                     services.cache.status == "healthy";
+    
+    let config = getConfig();
+    
+    return HealthResponse {
+        status: allHealthy ? "healthy" : "degraded",
+        version: config.version ?? "1.0.0",
+        uptime: getUptime(),
+        services: services,
+        timestamp: getCurrentTimestamp(),
+    };
+}
+
+// GET /metrics - Metrics Endpoint
+@GET("/metrics")
+fn getMetrics(): MetricsResponse {
+    let cacheStats = getCacheStats();
+    
+    return MetricsResponse {
+        requests: requestMetrics,
+        errors: errorMetrics,
+        performance: performanceMetrics,
+        cache: CacheMetrics {
+            hits: cacheStats.hits,
+            misses: cacheStats.misses,
+            hitRate: cacheStats.hitRate,
+            totalEntries: cacheStats.totalEntries,
+            memoryUsage: cacheStats.memoryUsage,
+        },
+        timestamp: getCurrentTimestamp(),
+    };
+}
+
+// GET /ready - Readiness Check
+@GET("/ready")
+fn readinessCheck(): ReadyResponse {
+    let services = List<ServiceStatus>();
+    services.push(checkDatabase());
+    services.push(checkVectorDB());
+    services.push(checkLLM());
+    
+    let allReady = true;
+    for (service in services) {
+        if (service.status != "healthy") {
+            allReady = false;
+            break;
+        }
+    }
+    
+    return ReadyResponse {
+        ready: allReady,
+        services: services,
+        timestamp: getCurrentTimestamp(),
+    };
+}
+
+// Service-Checks
+
+// checkDatabase - Prüft Database-Verbindung
+fn checkDatabase(): ServiceStatus {
+    let startTime = getCurrentTime();
+    
+    try {
+        // In Production: Teste echte Database-Verbindung
+        // let result = db.ping();
+        let responseTime = getCurrentTime() - startTime;
+        
+        return ServiceStatus {
+            status: "healthy",
+            responseTime: responseTime,
+            lastCheck: getCurrentTimestamp(),
+            error: "",
+        };
+    } catch (error) {
+        return ServiceStatus {
+            status: "unhealthy",
+            responseTime: getCurrentTime() - startTime,
+            lastCheck: getCurrentTimestamp(),
+            error: error.message,
+        };
+    }
+}
+
+// checkVectorDB - Prüft Vector Database-Verbindung
+fn checkVectorDB(): ServiceStatus {
+    let startTime = getCurrentTime();
+    
+    try {
+        // In Production: Teste echte Vector DB-Verbindung
+        // let result = vectorDB.ping();
+        let responseTime = getCurrentTime() - startTime;
+        
+        return ServiceStatus {
+            status: "healthy",
+            responseTime: responseTime,
+            lastCheck: getCurrentTimestamp(),
+            error: "",
+        };
+    } catch (error) {
+        return ServiceStatus {
+            status: "unhealthy",
+            responseTime: getCurrentTime() - startTime,
+            lastCheck: getCurrentTimestamp(),
+            error: error.message,
+        };
+    }
+}
+
+// checkLLM - Prüft LLM-Verbindung
+fn checkLLM(): ServiceStatus {
+    let startTime = getCurrentTime();
+    let config = getConfig();
+    
+    try {
+        // In Production: Teste echte LLM-Verbindung
+        // let llm = LLMClient::new(parseProvider(config.ml.llm.provider), config.ml.llm.apiKey);
+        // let result = llm.generate("test");
+        let responseTime = getCurrentTime() - startTime;
+        
+        return ServiceStatus {
+            status: "healthy",
+            responseTime: responseTime,
+            lastCheck: getCurrentTimestamp(),
+            error: "",
+        };
+    } catch (error) {
+        return ServiceStatus {
+            status: "unhealthy",
+            responseTime: getCurrentTime() - startTime,
+            lastCheck: getCurrentTimestamp(),
+            error: error.message,
+        };
+    }
+}
+
+// checkCache - Prüft Cache-Status
+fn checkCache(): ServiceStatus {
+    let config = getConfig();
+    
+    if (!config.cache.enabled) {
+        return ServiceStatus {
+            status: "disabled",
+            responseTime: 0,
+            lastCheck: getCurrentTimestamp(),
+            error: "",
+        };
+    }
+    
+    let stats = getCacheStats();
+    
+    return ServiceStatus {
+        status: "healthy",
+        responseTime: 0,
+        lastCheck: getCurrentTimestamp(),
+        error: "",
+    };
+}
+
+// Metrics-Tracking
+
+// trackRequest - Trackt Request-Metrik
+fn trackRequest(endpoint: string, success: boolean, duration: number) {
+    requestMetrics.total = requestMetrics.total + 1;
+    
+    if (success) {
+        requestMetrics.successful = requestMetrics.successful + 1;
+    } else {
+        requestMetrics.failed = requestMetrics.failed + 1;
+    }
+    
+    // Update Average Response Time
+    let totalDuration = requestMetrics.averageResponseTime * (requestMetrics.total - 1) + duration;
+    requestMetrics.averageResponseTime = totalDuration / requestMetrics.total;
+    
+    // Update Requests per Minute
+    let uptime = getUptime();
+    if (uptime > 0) {
+        requestMetrics.requestsPerMinute = (requestMetrics.total / uptime) * 60;
+    }
+    
+    // Track by Endpoint
+    if (!requestMetrics.byEndpoint.contains(endpoint)) {
+        requestMetrics.byEndpoint[endpoint] = 0;
+    }
+    requestMetrics.byEndpoint[endpoint] = requestMetrics.byEndpoint[endpoint] + 1;
+}
+
+// trackError - Trackt Error-Metrik
+fn trackError(error: AppError, endpoint: string) {
+    errorMetrics.total = errorMetrics.total + 1;
+    
+    let errorCode = errorCodeToString(error.code);
+    if (!errorMetrics.byCode.contains(errorCode)) {
+        errorMetrics.byCode[errorCode] = 0;
+    }
+    errorMetrics.byCode[errorCode] = errorMetrics.byCode[errorCode] + 1;
+    
+    // Füge zu recentErrors hinzu
+    errorMetrics.recentErrors.push(ErrorEntry {
+        code: errorCode,
+        message: error.message,
+        timestamp: error.timestamp,
+        endpoint: endpoint,
+    });
+    
+    // Behalte nur letzte 100 Errors
+    if (errorMetrics.recentErrors.length > 100) {
+        errorMetrics.recentErrors = errorMetrics.recentErrors.take(100);
+    }
+}
+
+// trackPerformance - Trackt Performance-Metrik
+fn trackPerformance(duration: number) {
+    // Update Average
+    let totalDuration = performanceMetrics.averageProcessingTime * (requestMetrics.total - 1) + duration;
+    performanceMetrics.averageProcessingTime = totalDuration / requestMetrics.total;
+    
+    // In Production: Berechne P95 und P99
+    // performanceMetrics.p95ProcessingTime = calculatePercentile(95);
+    // performanceMetrics.p99ProcessingTime = calculatePercentile(99);
+    
+    performanceMetrics.memoryUsage = getMemoryUsage();
+    performanceMetrics.cpuUsage = getCpuUsage();
+}
+
+// Helper-Funktionen
+
+fn getUptime(): number {
+    return getCurrentTime() - startTime;
+}
+
+fn getCurrentTime(): number {
+    // In Production: Verwende echte Time-API
+    return DateTime.now().getTime();
+}
+
+// Initialisiere Metriken beim Start
+initMetrics();

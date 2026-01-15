@@ -208,8 +208,9 @@ pub struct MFAService;
 impl MFAService {
     pub fn verify_totp(token: &str, secret: &str) -> bool {
         // TOTP verification logic
-        // In production, use a TOTP library like totp-rs
-        // This is a placeholder
+        // TODO: In production, use a TOTP library like totp-rs
+        // Aktuell: Basis-Validierung (nur Länge prüfen)
+        // Zukünftig: Vollständige TOTP-Verifizierung mit Zeitfenster
         !token.is_empty() && !secret.is_empty()
     }
     

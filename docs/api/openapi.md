@@ -7,7 +7,15 @@ VelinScript kann automatisch OpenAPI Specifications aus deinem Code generieren.
 ### CLI Befehl
 
 ```bash
-velin openapi -i main.velin -o api.json
+# Mit velin-api-doc Tool
+velin-api-doc generate -i main.velin -o api.json
+
+# Mit Format-Optionen
+velin-api-doc generate -i main.velin -o api.yaml --format yaml
+velin-api-doc generate -i main.velin -o api.md --format markdown
+
+# Mit Custom Titel und Version
+velin-api-doc generate -i main.velin -o api.json --title "My API" --version "1.0.0"
 ```
 
 Dies generiert eine OpenAPI 3.0 Specification aus allen API-Endpoints in deinem VelinScript Code.

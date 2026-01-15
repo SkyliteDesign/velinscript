@@ -12,6 +12,8 @@ pub enum Item {
     TypeAlias(TypeAlias),
     Module(Module),
     Use(Use),
+    Trait(Trait),
+    Impl(Impl),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,6 +21,7 @@ pub struct Function {
     pub decorators: Vec<Decorator>,
     pub visibility: Visibility,
     pub name: String,
+    pub type_params: Vec<GenericParam>, // Generic parameters with constraints
     pub params: Vec<Parameter>,
     pub return_type: Option<Type>,
     pub body: Block,
@@ -117,6 +120,7 @@ pub struct MatchStatement {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm {
     pub pattern: Pattern,
+    pub guard: Option<Expression>, // Pattern guard: `if condition`
     pub body: Block,
 }
 
@@ -126,6 +130,10 @@ pub enum Pattern {
     Identifier(String),
     Tuple(Vec<Pattern>),
     Struct { name: String, fields: Vec<(String, Pattern)> },
+    EnumVariant { name: String, data: Option<Vec<Pattern>> },
+    Range { start: Box<Expression>, end: Box<Expression>, inclusive: bool }, // 0..10 or 0..=10
+    Wildcard, // _
+    Or(Vec<Pattern>), // pattern1 | pattern2
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -171,6 +179,20 @@ pub enum Expression {
         type_params: Vec<Type>,
         args: Vec<Expression>,
     },
+    Lambda {
+        params: Vec<Parameter>,
+        return_type: Option<Type>,
+        body: Box<Expression>, // Can be a Block or a single expression
+    },
+    FormatString {
+        parts: Vec<FormatStringPart>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FormatStringPart {
+    Text(String),
+    Expression(Box<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -254,6 +276,41 @@ pub struct Use {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Trait {
+    pub name: String,
+    pub type_params: Vec<String>,
+    pub methods: Vec<TraitMethod>,
+    pub visibility: Visibility,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TraitMethod {
+    pub name: String,
+    pub params: Vec<Parameter>,
+    pub return_type: Option<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Impl {
+    pub trait_name: String,
+    pub for_type: Type,
+    pub type_params: Vec<String>,
+    pub methods: Vec<Function>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenericParam {
+    pub name: String,
+    pub constraints: Vec<GenericConstraint>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum GenericConstraint {
+    Trait(String),
+    Multiple(Vec<String>), // T: Trait1 & Trait2
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     // Basic types
     String,
@@ -289,6 +346,12 @@ pub enum Type {
     
     // Optional types
     Optional(Box<Type>),
+    
+    // Result type
+    Result {
+        ok: Box<Type>,
+        err: Box<Type>,
+    },
 }
 
 impl Type {
@@ -329,6 +392,9 @@ impl Type {
                 format!("({})", types_str)
             }
             Type::Optional(inner) => format!("{}?", inner.to_string()),
+            Type::Result { ok, err } => {
+                format!("Result<{}, {}>", ok.to_string(), err.to_string())
+            }
         }
     }
 }

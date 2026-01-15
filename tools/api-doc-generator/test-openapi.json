@@ -1,0 +1,138 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Test API",
+    "version": "1.0.0",
+    "description": "Auto-generated API documentation from VelinScript"
+  },
+  "paths": {
+    "/api/users/:id": {
+      "get": {
+        "operation_id": "get_user",
+        "summary": "getUser",
+        "description": null,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": null
+            },
+            "description": null
+          }
+        ],
+        "request_body": null,
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": null,
+                  "format": null,
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "security": null,
+        "tags": null
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "operation_id": "get_admin_users",
+        "summary": "getAdminUsers",
+        "description": null,
+        "parameters": [],
+        "request_body": null,
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "format": null
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "tags": null
+      }
+    },
+    "/api/hello": {
+      "get": {
+        "operation_id": "hello",
+        "summary": "hello",
+        "description": null,
+        "parameters": [],
+        "request_body": null,
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "format": null
+                }
+              }
+            }
+          }
+        },
+        "security": null,
+        "tags": null
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "format": null,
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": null
+          },
+          "id": {
+            "type": "string",
+            "format": null
+          },
+          "name": {
+            "type": "string",
+            "format": null
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email"
+        ]
+      }
+    },
+    "security_schemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearer_format": "JWT"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
+  ]
+}

@@ -33,3 +33,8 @@ pub mod vault;
 pub mod tls;
 pub mod iterators;
 pub mod extensions;
+pub mod result;
+pub mod collections;
+pub mod http_client;
+pub mod rate_limit;
+pub mod metrics;

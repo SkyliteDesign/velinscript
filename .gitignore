@@ -82,3 +82,7 @@ DOKUMENTATION.md
 GITHUB_SETUP.md
 PRE_COMMIT_CHECKLIST.md
 GIT_COMMIT_MESSAGE.txt
+
+# Test files (temporary)
+test-api-project/
+test_*.velin

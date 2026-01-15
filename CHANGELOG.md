@@ -8,11 +8,113 @@ und dieses Projekt hält sich an [Semantic Versioning](https://semver.org/lang/d
 ## [Unreleased]
 
 ### Geplant
-- LSP Server
-- Documentation Generator
-- Package Manager
-- Erweiterte Pattern Matching
-- Generic Constraints
+- Macros System
+- Compile-time Evaluation
+
+## [0.2.0] - 2024-XX-XX
+
+### Added
+- **Erweiterte Pattern Matching**
+  - Pattern Guards (`if condition` in Match Arms)
+  - Range Patterns (`0..=12`, `13..19`)
+  - Struct Destructuring mit Literal-Matching (`User { name: "admin" }`)
+  - Wildcard Patterns (`_`)
+  - Or Patterns (`"pending" | "processing"`)
+  - Enum Variant Patterns (`Status::Active`)
+
+- **Closure/Lambda Functions**
+  - Lambda-Syntax: `(params) => expression`
+  - Type Inference für Lambda-Parameter
+  - Capture von Variablen aus äußerem Scope
+  - Integration mit Collections Library
+
+- **Collections Library**
+  - `List<T>` mit funktionalen Methoden: filter, map, reduce, find, contains, indexOf, sort, reverse, chunk, slice
+  - `Map<K, V>` mit Methoden: keys, values, entries, get, set, delete, has, size
+  - `Set<T>` mit Methoden: add, remove, has, size, union, intersection, difference
+  - Parallelisierung für große Collections
+
+- **HTTP Client Library**
+  - `HttpClient` Klasse für Client-seitige HTTP-Requests
+  - Methoden: GET, POST, PUT, DELETE, PATCH
+  - Response-Parsing: json(), text(), status()
+  - Error Handling mit Retry-Logik
+  - Header-Management
+
+- **Rate Limiting Library**
+  - Fixed Window Strategy
+  - Sliding Window Strategy
+  - Token Bucket Strategy
+  - Distributed Rate Limiting (Redis-basiert)
+  - Decorator-basierte Integration (`@RateLimit`)
+
+- **Code Formatter (vollständig)**
+  - Vollständige Formatierung von VelinScript-Code
+  - Unterstützung für alle Language Features
+  - Konfigurierbare Formatierungsregeln
+  - CLI-Integration (`velin format`)
+
+- **Linter (velin-lint)**
+  - Code-Qualitätsanalyse
+  - Regeln: Unused Variables, Unused Imports, Complexity, Naming Conventions
+  - Erweiterbare Regel-Architektur
+  - CLI-Tool für Standalone-Nutzung
+
+- **Documentation Generator (velin-api-doc)**
+  - JSDoc-Parsing für `///` Kommentare
+  - HTML-Export
+  - Interactive Docs (Swagger UI)
+  - OpenAPI 3.0 Integration
+
+- **Hot Reload (velin-hot-reload)**
+  - Automatisches Neuladen bei Dateiänderungen
+  - File System Watching
+  - Watch-Mode und Server-Mode
+  - Integration mit Compiler
+
+- **Advanced Optimizer**
+  - Function Inlining (mit Heuristik für Rekursion)
+  - Loop Optimizations (while (false) Elimination)
+  - Dead Code Elimination
+  - Constant Folding
+
+### Fixed
+- Range Pattern Tokenisierung: `read_number()` erkennt jetzt korrekt `..=` als Range-Operator
+- Enum-Parsing: Newlines werden vor Enum-Varianten korrekt übersprungen
+- Mehrzeilige Funktionsaufrufe: Newlines werden in Argument-Listen korrekt behandelt
+- Pattern Matching: Alle Pattern-Typen (Range, Or, Wildcard, Struct Destructuring) funktionieren korrekt
+
+## [0.1.1] - 2024-XX-XX
+
+### Added
+- **Autonome Funktionen**
+  - Auto-Import Management im LSP Server
+  - Auto-Fix für häufige Fehler (Code Actions)
+  - Dead Code Detector Tool (velin-dead-code)
+  - Automatische Dependency Updates im Package Manager
+  - API Documentation Generator (velin-api-doc) für OpenAPI/Swagger
+
+- **LSP Server Verbesserungen**
+  - References Provider (Find All References)
+  - Rename Symbol Support
+  - Code Actions (Quick Fixes)
+  - Import-Organisierung
+
+- **Package Manager (velin-pkg)**
+  - Dependency Update Checking
+  - Automatische Updates mit `--all` Flag
+  - Breaking Change Detection
+
+- **Dead Code Detector**
+  - Automatische Erkennung von ungenutztem Code
+  - JSON Report Support
+  - Scan für ganze Verzeichnisse
+
+- **API Documentation Generator**
+  - OpenAPI 3.0 JSON/YAML Generation
+  - Markdown Dokumentation
+  - Automatische Schema-Extraktion aus Structs/Enums
+  - Security Schemes aus @Auth Decorators
 
 ## [0.1.0] - 2024-XX-XX
 

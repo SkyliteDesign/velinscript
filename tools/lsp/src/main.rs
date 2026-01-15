@@ -15,5 +15,5 @@ async fn main() {
     let stdout = tokio::io::stdout();
     
     let (service, socket) = LspService::new(|client| VelinLanguageServer::new(client));
-    Server::new(stdin, stdout, socket).serve().await;
+    Server::new(stdin, stdout, socket).serve(service).await;
 }

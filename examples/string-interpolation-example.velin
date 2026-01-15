@@ -1,0 +1,61 @@
+// String Interpolation Beispiel
+
+fn greetUser(name: string, age: number): string {
+    return "Hello, {name}! You are {age} years old.";
+}
+
+fn calculateTotal(price: number, quantity: number, discount: number): string {
+    let total = price * quantity * (1 - discount);
+    return "Price: {price}, Quantity: {quantity}, Discount: {discount * 100}%, Total: {total}";
+}
+
+fn createApiResponse(userId: string, status: string): string {
+    return "{ \"userId\": \"{userId}\", \"status\": \"{status}\" }";
+}
+
+fn formatLogMessage(component: string, level: string, message: string): string {
+    return "[{component}] [{level}] {message}";
+}
+
+// Multi-line Format-String
+fn createSQLQuery(userId: string, active: boolean): string {
+    return "
+        SELECT * FROM users
+        WHERE id = {userId}
+        AND active = {active}
+    ";
+}
+
+// Mit Funktionsaufrufen
+fn getFullName(first: string, last: string): string {
+    return first + " " + last;
+}
+
+fn createUserMessage(firstName: string, lastName: string): string {
+    let fullName = getFullName(firstName, lastName);
+    return "Welcome, {fullName}!";
+}
+
+// Mit Methodenaufrufen
+fn listInfo(items: List<string>): string {
+    return "List has {items.length()} items: {items.join(\", \")}";
+}
+
+fn main(): void {
+    let name = "John";
+    let age = 30;
+    let greeting = greetUser(name, age);
+    // Ergebnis: "Hello, John! You are 30 years old."
+    
+    let price = 19.99;
+    let quantity = 3;
+    let discount = 0.1;
+    let totalMessage = calculateTotal(price, quantity, discount);
+    // Ergebnis: "Price: 19.99, Quantity: 3, Discount: 10%, Total: 53.973"
+    
+    let response = createApiResponse("123", "active");
+    // Ergebnis: "{ \"userId\": \"123\", \"status\": \"active\" }"
+    
+    let logMessage = formatLogMessage("API", "INFO", "Request received");
+    // Ergebnis: "[API] [INFO] Request received"
+}

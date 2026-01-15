@@ -9,22 +9,27 @@ Lerne, wie du Input Validation in VelinScript implementierst.
 ```velin
 @POST("/api/users")
 fn createUser(name: string, email: string): User {
-    let mut validator = Validator::new();
+    let validator: Validator = Validator.new();
     
     validator
-        .required("name", &name)
-        .min_length("name", &name, 3)
-        .max_length("name", &name, 50)
-        .email("email", &email);
+        .required("name", name)
+        .minLength("name", name, 3)
+        .maxLength("name", name, 50)
+        .email("email", email);
     
-    if (!validator.is_valid()) {
-        return HttpResponse::bad_request(
-            validator.errors().map(|e| e.message).join(", ")
-        );
+    if (!validator.isValid()) {
+        let errors = validator.errors();
+        // Fehlerbehandlung
+        return User { id: "", name: "", email: "" };
     }
     
     // Validierung erfolgreich, weiter mit Logik
-    return db.save(User { name, email });
+    let user = User {
+        id: generateId(),
+        name: name,
+        email: email
+    };
+    return db.save(user);
 }
 ```
 

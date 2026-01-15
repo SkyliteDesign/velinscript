@@ -3,13 +3,14 @@
 use tower_lsp::lsp_types::*;
 use velin_compiler::parser::ast::*;
 
-pub fn get_completions(program: &Program, position: Position) -> Vec<CompletionItem> {
+pub fn get_completions(program: &Program, _position: Position) -> Vec<CompletionItem> {
     let mut completions = Vec::new();
     
     // Keywords
     let keywords = vec![
         "fn", "let", "return", "if", "else", "for", "while", "match",
         "struct", "enum", "type", "pub", "use", "mod", "async", "await",
+        "trait", "impl", "interface",
     ];
     
     for keyword in keywords {
@@ -30,6 +31,9 @@ pub fn get_completions(program: &Program, position: Position) -> Vec<CompletionI
         ("Auth", "Authentication decorator"),
         ("Role", "Role-based access decorator"),
         ("test", "Test decorator"),
+        ("describe", "Test suite decorator"),
+        ("fixture", "Test fixture decorator"),
+        ("mock", "Mock decorator"),
         ("Cache", "Cache decorator"),
         ("Secure", "Security middleware decorator"),
     ];
@@ -71,7 +75,7 @@ pub fn get_completions(program: &Program, position: Position) -> Vec<CompletionI
         }
     }
     
-    // Types (Structs, Enums)
+    // Types (Structs, Enums, Traits)
     for item in &program.items {
         match item {
             Item::Struct(s) => {
@@ -90,6 +94,19 @@ pub fn get_completions(program: &Program, position: Position) -> Vec<CompletionI
                     ..Default::default()
                 });
             }
+            Item::Trait(t) => {
+                let methods_str = t.methods
+                    .iter()
+                    .map(|m| m.name.clone())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                completions.push(CompletionItem {
+                    label: t.name.clone(),
+                    kind: Some(CompletionItemKind::INTERFACE),
+                    detail: Some(format!("Trait: {} (methods: {})", t.name, methods_str)),
+                    ..Default::default()
+                });
+            }
             _ => {}
         }
     }
@@ -101,7 +118,17 @@ pub fn get_completions(program: &Program, position: Position) -> Vec<CompletionI
         ("db.save", "Save entity"),
         ("db.delete", "Delete entity"),
         ("assert", "Assert condition"),
+        ("assert_eq", "Assert equality"),
+        ("assert_ne", "Assert inequality"),
         ("generateId", "Generate unique ID"),
+        // Result methods
+        ("Result::Ok", "Create Ok result"),
+        ("Result::Error", "Create Error result"),
+        (".unwrap", "Unwrap Result value"),
+        (".unwrap_or", "Unwrap Result or default"),
+        (".map", "Map Result value"),
+        (".is_ok", "Check if Result is Ok"),
+        (".is_err", "Check if Result is Error"),
         ("currentUser", "Get current user"),
         // Response Functions
         ("successResponse", "Create successful API response"),

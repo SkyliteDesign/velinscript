@@ -143,7 +143,8 @@ fn delete{}(id: string): boolean {{
 
 @test
 fn test{}() {{
-    // Test implementation placeholder
+    // TODO: Implementiere Test-Logik
+    // Ersetze diese Platzhalter-Assertion mit echten Test-Cases
     assert(true);
 }}
 "#,

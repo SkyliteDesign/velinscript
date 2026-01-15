@@ -45,6 +45,14 @@ impl DocumentCache {
     pub fn get_program(&self, uri: &str) -> Option<&Program> {
         self.documents.get(uri)?.program.as_ref()
     }
+    
+    pub fn get_parse_errors(&self, uri: &str) -> Option<&Vec<String>> {
+        Some(&self.documents.get(uri)?.parse_errors)
+    }
+    
+    pub fn get_uri(&self, uri: &str) -> Option<&String> {
+        Some(&self.documents.get(uri)?.uri)
+    }
 }
 
 impl Default for DocumentCache {

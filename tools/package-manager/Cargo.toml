@@ -1,0 +1,21 @@
+[package]
+name = "velin-pkg"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "velin-pkg"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+toml_edit = "0.21"
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+semver = "1.0"
+git2 = "0.18"
+walkdir = "2.0"

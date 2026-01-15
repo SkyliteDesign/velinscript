@@ -79,4 +79,20 @@ path = "tests/rollback_test.rs"
 name = "async_test"
 path = "tests/async_test.rs"
 
+[[test]]
+name = "pattern_matching_test"
+path = "tests/pattern_matching_test.rs"
+
+[[test]]
+name = "closures_test"
+path = "tests/closures_test.rs"
+
+[[test]]
+name = "collections_test"
+path = "tests/collections_test.rs"
+
+[[test]]
+name = "http_client_test"
+path = "tests/http_client_test.rs"
+
 [dev-dependencies]

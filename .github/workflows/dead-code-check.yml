@@ -1,0 +1,99 @@
+name: Dead Code Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  check-dead-code:
+    name: Check for Dead Code
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache Cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          tools/dead-code-detector/target/
+        key: ${{ runner.os }}-dead-code-${{ hashFiles('tools/dead-code-detector/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-dead-code-
+    
+    - name: Build Dead Code Detector
+      working-directory: tools/dead-code-detector
+      run: cargo build --release
+    
+    - name: Scan for Dead Code
+      id: scan
+      run: |
+        cd tools/dead-code-detector
+        ./target/release/velin-dead-code scan --json > dead-code-report.json || true
+        
+        if [ -f dead-code-report.json ] && [ -s dead-code-report.json ]; then
+          echo "has_dead_code=true" >> $GITHUB_OUTPUT
+          echo "Dead Code gefunden!"
+          cat dead-code-report.json
+        else
+          echo "has_dead_code=false" >> $GITHUB_OUTPUT
+          echo "✓ Kein Dead Code gefunden"
+        fi
+    
+    - name: Comment PR with Dead Code Findings
+      if: steps.scan.outputs.has_dead_code == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const report = JSON.parse(fs.readFileSync('tools/dead-code-detector/dead-code-report.json', 'utf8'));
+          
+          let comment = '## 🔍 Dead Code Detection Report\n\n';
+          comment += '⚠️ Dead Code wurde in diesem PR gefunden:\n\n';
+          
+          if (Array.isArray(report) && report.length > 0) {
+            report.forEach(item => {
+              comment += `- **${item.type}**: \`${item.name}\` in \`${item.file}\`\n`;
+            });
+          } else {
+            comment += 'Bitte prüfe den Dead Code Report.\n';
+          }
+          
+          comment += '\n💡 **Tipp**: Entferne ungenutzten Code oder verwende ihn, um die Code-Qualität zu verbessern.';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+    
+    - name: Upload Dead Code Report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: dead-code-report
+        path: tools/dead-code-detector/dead-code-report.json
+        retention-days: 7
+    
+    - name: Fail if Dead Code Found
+      if: steps.scan.outputs.has_dead_code == 'true'
+      run: |
+        echo "❌ Dead Code wurde gefunden. Bitte entferne ungenutzten Code oder verwende ihn."
+        exit 1

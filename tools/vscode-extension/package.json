@@ -172,9 +172,88 @@
           "type": "string",
           "default": "velin",
           "description": "Path to velin compiler binary"
+        },
+        "velin.debugger.path": {
+          "type": "string",
+          "default": "velin-debugger",
+          "description": "Path to velin-debugger binary"
+        },
+        "velin.debugger.port": {
+          "type": "number",
+          "default": 4711,
+          "description": "Port for DAP server"
         }
       }
-    }
+    },
+    "debuggers": [
+      {
+        "type": "velin",
+        "label": "VelinScript",
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to VelinScript program to debug"
+              },
+              "args": {
+                "type": "array",
+                "description": "Command line arguments"
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Working directory"
+              },
+              "env": {
+                "type": "object",
+                "description": "Environment variables"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Stop at entry point",
+                "default": false
+              }
+            }
+          },
+          "attach": {
+            "required": [
+              "port"
+            ],
+            "properties": {
+              "port": {
+                "type": "number",
+                "description": "Port to attach to",
+                "default": 4711
+              },
+              "host": {
+                "type": "string",
+                "description": "Host to attach to",
+                "default": "localhost"
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "velin",
+            "request": "launch",
+            "name": "Debug VelinScript",
+            "program": "${workspaceFolder}/main.velin",
+            "stopOnEntry": false
+          },
+          {
+            "type": "velin",
+            "request": "attach",
+            "name": "Attach to VelinScript",
+            "port": 4711,
+            "host": "localhost"
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

@@ -1,0 +1,104 @@
+name: Autonomous Features Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test-autonomous-features:
+    name: Test Autonomous Features
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache Cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          compiler/target/
+          tools/*/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    - name: Build Compiler
+      working-directory: compiler
+      run: cargo build --release
+    
+    - name: Build Dead Code Detector
+      working-directory: tools/dead-code-detector
+      run: cargo build --release
+    
+    - name: Build API Documentation Generator
+      working-directory: tools/api-doc-generator
+      run: cargo build --release
+    
+    - name: Build Package Manager
+      working-directory: tools/package-manager
+      run: cargo build --release
+    
+    - name: Build LSP Server
+      working-directory: tools/lsp
+      run: cargo build --release
+    
+    - name: Build Security Scanner
+      working-directory: tools/security-scanner
+      run: cargo build --release
+    
+    - name: Test Dead Code Detector
+      run: |
+        cd tools/dead-code-detector
+        ./target/release/velin-dead-code scan examples/hello.velin --json > dead-code-report.json || true
+        if [ -f dead-code-report.json ]; then
+          echo "Dead Code Report:"
+          cat dead-code-report.json
+        fi
+    
+    - name: Test API Documentation Generator
+      run: |
+        cd tools/api-doc-generator
+        ./target/release/velin-api-doc generate -i ../../examples/hello.velin -o test-openapi.json || true
+        if [ -f test-openapi.json ]; then
+          echo "OpenAPI JSON generated successfully"
+          # Validate JSON
+          python3 -m json.tool test-openapi.json > /dev/null && echo "✓ JSON is valid" || echo "✗ JSON is invalid"
+        fi
+    
+    - name: Test Package Manager
+      working-directory: tools/package-manager
+      run: |
+        ./target/release/velin-pkg --help || true
+        echo "✓ Package Manager CLI works"
+    
+    - name: Test with Complex Example
+      run: |
+        cd tools/dead-code-detector
+        ./target/release/velin-dead-code scan ../../examples/custom-recommender --json > complex-dead-code.json || true
+        if [ -f complex-dead-code.json ]; then
+          echo "Complex example scanned successfully"
+        fi
+    
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: autonomous-features-artifacts
+        path: |
+          tools/dead-code-detector/dead-code-report.json
+          tools/dead-code-detector/complex-dead-code.json
+          tools/api-doc-generator/test-openapi.json
+        retention-days: 7

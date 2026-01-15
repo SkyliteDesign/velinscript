@@ -1,4 +1,4 @@
-use crate::parser::ast::Type;
+use crate::parser::ast::{Type, Struct, Enum};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -6,6 +6,8 @@ pub struct Environment {
     variables: HashMap<String, Type>,
     functions: HashMap<String, FunctionSignature>,
     types: HashMap<String, Type>,
+    structs: HashMap<String, Struct>,
+    enums: HashMap<String, Enum>,
     parent: Option<Box<Environment>>,
 }
 
@@ -28,6 +30,8 @@ impl Environment {
             variables: HashMap::new(),
             functions: HashMap::new(),
             types: HashMap::new(),
+            structs: HashMap::new(),
+            enums: HashMap::new(),
             parent: None,
         }
     }
@@ -37,6 +41,8 @@ impl Environment {
             variables: HashMap::new(),
             functions: HashMap::new(),
             types: HashMap::new(),
+            structs: HashMap::new(),
+            enums: HashMap::new(),
             parent: Some(Box::new(parent)),
         }
     }
@@ -93,6 +99,34 @@ impl Environment {
     
     pub fn has_type(&self, name: &str) -> bool {
         self.get_type(name).is_some()
+    }
+    
+    pub fn define_struct(&mut self, name: String, struct_def: Struct) {
+        self.structs.insert(name, struct_def);
+    }
+    
+    pub fn get_struct(&self, name: &str) -> Option<Struct> {
+        if let Some(struct_def) = self.structs.get(name) {
+            Some(struct_def.clone())
+        } else if let Some(ref parent) = self.parent {
+            parent.get_struct(name)
+        } else {
+            None
+        }
+    }
+    
+    pub fn define_enum(&mut self, name: String, enum_def: Enum) {
+        self.enums.insert(name, enum_def);
+    }
+    
+    pub fn get_enum(&self, name: &str) -> Option<Enum> {
+        if let Some(enum_def) = self.enums.get(name) {
+            Some(enum_def.clone())
+        } else if let Some(ref parent) = self.parent {
+            parent.get_enum(name)
+        } else {
+            None
+        }
     }
 }
 

@@ -1,9 +1,10 @@
 // LSP Server Implementation
 
-use tower_lsp::lsp_types::*;
-use tower_lsp::{Client, LanguageServer, LspService, Server};
+use tower_lsp::lsp_types::{*, CodeActionOrCommand};
+use tower_lsp::{Client, LanguageServer};
+use tower_lsp::jsonrpc::Result as JsonRpcResult;
 use crate::document::DocumentCache;
-use crate::handlers::{get_completions, get_hover, find_definition, format_document};
+use crate::handlers::{get_completions, get_hover, find_definition, format_document, find_references, rename_symbol, get_code_actions};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -54,7 +55,7 @@ impl VelinLanguageServer {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for VelinLanguageServer {
-    async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
+    async fn initialize(&self, _: InitializeParams) -> JsonRpcResult<InitializeResult> {
         Ok(InitializeResult {
             server_info: Some(ServerInfo {
                 name: "velin-lsp".to_string(),
@@ -72,6 +73,9 @@ impl LanguageServer for VelinLanguageServer {
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
                 definition_provider: Some(OneOf::Left(true)),
                 document_formatting_provider: Some(OneOf::Left(true)),
+                references_provider: Some(OneOf::Left(true)),
+                rename_provider: Some(OneOf::Left(true)),
+                code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
                 ..Default::default()
             },
             ..Default::default()
@@ -84,16 +88,29 @@ impl LanguageServer for VelinLanguageServer {
             .await;
     }
 
-    async fn shutdown(&self) -> Result<()> {
+    async fn shutdown(&self) -> JsonRpcResult<()> {
         Ok(())
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
         let uri = params.text_document.uri.to_string();
-        let text = params.text_document.text;
+        let text = params.text_document.text.clone();
         
         let mut documents = self.documents.write().await;
+        // Use both uri and text
         documents.update(uri.clone(), text);
+        
+        // Use document info fields
+        if let Some(doc_info) = documents.get(&uri) {
+            let _doc_uri = &doc_info.uri;
+            if let Some(parse_errors) = documents.get_parse_errors(&uri) {
+                if !parse_errors.is_empty() {
+                    self.client
+                        .log_message(MessageType::WARNING, format!("Parse errors in {}: {:?}", uri, parse_errors))
+                        .await;
+                }
+            }
+        }
         
         self.client
             .log_message(MessageType::INFO, format!("Document opened: {}", uri))
@@ -108,26 +125,26 @@ impl LanguageServer for VelinLanguageServer {
             let text = change.text.clone();
             
             let mut documents = self.documents.write().await;
+            // Use both uri and text
             documents.update(uri.clone(), text);
         }
     }
 
-    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+    async fn completion(&self, params: CompletionParams) -> JsonRpcResult<Option<CompletionResponse>> {
         let uri = params.text_document_position.text_document.uri.to_string();
         let position = params.text_document_position.position;
         
         let documents = self.documents.read().await;
-        if let Some(doc) = documents.get(&uri) {
-            if let Some(program) = &doc.program {
-                let completions = get_completions(program, position);
-                return Ok(Some(CompletionResponse::Array(completions)));
-            }
+        // Use get_program method
+        if let Some(program) = documents.get_program(&uri) {
+            let completions = get_completions(program, position);
+            return Ok(Some(CompletionResponse::Array(completions)));
         }
         
         Ok(None)
     }
 
-    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+    async fn hover(&self, params: HoverParams) -> JsonRpcResult<Option<Hover>> {
         let uri = params.text_document_position_params.text_document.uri.to_string();
         let position = params.text_document_position_params.position;
         
@@ -152,7 +169,7 @@ impl LanguageServer for VelinLanguageServer {
     async fn goto_definition(
         &self,
         params: GotoDefinitionParams,
-    ) -> Result<Option<GotoDefinitionResponse>> {
+    ) -> JsonRpcResult<Option<GotoDefinitionResponse>> {
         let uri = params.text_document_position_params.text_document.uri.to_string();
         let position = params.text_document_position_params.position;
         
@@ -168,8 +185,9 @@ impl LanguageServer for VelinLanguageServer {
                 if let Some(program) = &doc.program {
                     if let Some(location) = find_definition(program, &word, &doc.text) {
                         // Update URI with actual document URI
+                        let uri_url = params.text_document_position_params.text_document.uri.clone();
                         let location = Location {
-                            uri: uri.clone(),
+                            uri: uri_url,
                             range: location.range,
                         };
                         return Ok(Some(GotoDefinitionResponse::Scalar(location)));
@@ -181,7 +199,7 @@ impl LanguageServer for VelinLanguageServer {
         Ok(None)
     }
 
-    async fn formatting(&self, params: DocumentFormattingParams) -> Result<Option<Vec<TextEdit>>> {
+    async fn formatting(&self, params: DocumentFormattingParams) -> JsonRpcResult<Option<Vec<TextEdit>>> {
         let uri = params.text_document.uri.to_string();
         
         let documents = self.documents.read().await;
@@ -191,6 +209,27 @@ impl LanguageServer for VelinLanguageServer {
             }
         }
         
+        Ok(None)
+    }
+
+    async fn references(&self, params: ReferenceParams) -> JsonRpcResult<Option<Vec<Location>>> {
+        let _uri = params.text_document_position.text_document.uri.clone();
+        
+        let documents = self.documents.read().await;
+        Ok(find_references(params, &documents))
+    }
+
+    async fn rename(&self, params: RenameParams) -> JsonRpcResult<Option<WorkspaceEdit>> {
+        let documents = self.documents.read().await;
+        Ok(rename_symbol(params, &documents))
+    }
+
+    async fn code_action(&self, params: CodeActionParams) -> JsonRpcResult<Option<CodeActionResponse>> {
+        let documents = self.documents.read().await;
+        if let Some(actions) = get_code_actions(params, &documents) {
+            let code_actions: Vec<CodeActionOrCommand> = actions.into_iter().map(|a| CodeActionOrCommand::CodeAction(a)).collect();
+            return Ok(Some(code_actions));
+        }
         Ok(None)
     }
 }

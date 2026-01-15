@@ -2,10 +2,13 @@ import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node';
 import * as path from 'path';
 import * as fs from 'fs';
+import { registerDebugger } from './debugger';
 
 let client: LanguageClient;
 
 export function activate(context: vscode.ExtensionContext) {
+	// Register debugger
+	registerDebugger(context);
 	const config = vscode.workspace.getConfiguration('velin');
 	const lspPath = config.get<string>('lsp.path', 'velin-lsp');
 	const compilerPath = config.get<string>('compiler.path', 'velin');
@@ -19,6 +22,9 @@ export function activate(context: vscode.ExtensionContext) {
 	// Client options
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{ scheme: 'file', language: 'velin' }],
+		diagnosticCollectionName: 'velin',
+		// Enable all LSP features
+		initializationOptions: {},
 	};
 
 	// Create language client
@@ -31,6 +37,73 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Start the client
 	client.start();
+	
+	// Register diagnostics (error highlighting)
+	context.subscriptions.push(
+		vscode.languages.onDidChangeDiagnostics(() => {
+			// Diagnostics are automatically handled by the language client
+		})
+	);
+	
+	// Register code actions provider
+	context.subscriptions.push(
+		vscode.languages.registerCodeActionsProvider(
+			{ scheme: 'file', language: 'velin' },
+			{
+				provideCodeActions(document, range, context, token) {
+					// Code actions are handled by LSP server
+					return [];
+				}
+			},
+			{
+				providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
+			}
+		)
+	);
+	
+	// Register task provider for build/test tasks
+	context.subscriptions.push(
+		vscode.tasks.registerTaskProvider('velin', {
+			provideTasks(token) {
+				const tasks: vscode.Task[] = [];
+				
+				// Build task
+				tasks.push(new vscode.Task(
+					{ type: 'velin', task: 'build' },
+					vscode.TaskScope.Workspace,
+					'Build',
+					'velin',
+					new vscode.ShellExecution(`${compilerPath} compile -i main.velin`),
+					'$velin'
+				));
+				
+				// Test task
+				tasks.push(new vscode.Task(
+					{ type: 'velin', task: 'test' },
+					vscode.TaskScope.Workspace,
+					'Test',
+					'velin',
+					new vscode.ShellExecution(`${compilerPath} test`),
+					'$velin'
+				));
+				
+				// Check task
+				tasks.push(new vscode.Task(
+					{ type: 'velin', task: 'check' },
+					vscode.TaskScope.Workspace,
+					'Check',
+					'velin',
+					new vscode.ShellExecution(`${compilerPath} check -i main.velin`),
+					'$velin'
+				));
+				
+				return tasks;
+			},
+			resolveTask(task, token) {
+				return task;
+			}
+		})
+	);
 
 	// Helper function to read template file
 	function readTemplate(templateName: string): string {

@@ -1,0 +1,37 @@
+// Debugger Beispiel - Setze Breakpoints und debugge diesen Code
+
+fn calculateFactorial(n: number): number {
+    if (n <= 1) {
+        return 1;  // Breakpoint hier
+    }
+    return n * calculateFactorial(n - 1);  // Breakpoint hier
+}
+
+fn processUser(user: User): string {
+    let name = user.name;  // Breakpoint hier
+    let email = user.email;  // Breakpoint hier
+    
+    if (name.length() > 0) {
+        return "User: {name}, Email: {email}";  // Breakpoint hier
+    }
+    
+    return "Invalid user";  // Breakpoint hier
+}
+
+fn main(): void {
+    let x = 5;  // Breakpoint hier
+    let y = 10;  // Breakpoint hier
+    let sum = x + y;  // Breakpoint hier
+    
+    let factorial = calculateFactorial(5);  // Breakpoint hier
+    
+    let user = User {
+        id: "123",
+        name: "John",
+        email: "john@example.com"
+    };
+    
+    let message = processUser(user);  // Breakpoint hier
+    
+    // Inspect: x, y, sum, factorial, user, message
+}

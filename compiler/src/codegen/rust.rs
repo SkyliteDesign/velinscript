@@ -108,15 +108,28 @@ impl RustCodeGenerator {
                     }
                 }
             } else {
-                self.writeln("// Note: AuthMiddleware and RoleMiddleware need to be implemented");
+                self.writeln("// TODO: AuthMiddleware and RoleMiddleware implementieren");
+                self.writeln("// Diese Middleware-Komponenten müssen für vollständige Security-Funktionalität implementiert werden");
             }
             self.writeln("");
         }
+        
+        // Check if Result type is used
+        let has_result = self.has_result_usage(program);
         
         // Generate all items
         for item in &program.items {
             self.generate_item(item, &framework, self.use_seaorm);
             self.writeln("");
+        }
+        
+        // Add Result methods if Result is used
+        if has_result {
+            use crate::stdlib::result::ResultStdlib;
+            let result_methods = ResultStdlib::generate_result_methods();
+            self.writeln("");
+            self.writeln("// Result Extension Methods");
+            self.writeln(&result_methods);
         }
         
         self.output.clone()
@@ -205,6 +218,221 @@ impl RustCodeGenerator {
         false
     }
     
+    fn has_result_usage(&self, program: &Program) -> bool {
+        // Check if Result type is used anywhere in the program
+        self.check_type_for_result(&program.items)
+    }
+    
+    fn check_type_for_result(&self, items: &[Item]) -> bool {
+        for item in items {
+            match item {
+                Item::Function(f) => {
+                    // Check return type
+                    if let Some(ref return_type) = f.return_type {
+                        if self.is_result_type(return_type) {
+                            return true;
+                        }
+                    }
+                    // Check parameters
+                    for param in &f.params {
+                        if self.is_result_type(&param.param_type) {
+                            return true;
+                        }
+                    }
+                    // Check body for Result usage
+                    if self.check_block_for_result(&f.body) {
+                        return true;
+                    }
+                }
+                Item::Struct(s) => {
+                    for field in &s.fields {
+                        if self.is_result_type(&field.field_type) {
+                            return true;
+                        }
+                    }
+                }
+                Item::Enum(e) => {
+                    for variant in &e.variants {
+                        if let Some(ref types) = variant.data {
+                            for t in types {
+                                if self.is_result_type(t) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                Item::TypeAlias(ta) => {
+                    if self.is_result_type(&ta.aliased_type) {
+                        return true;
+                    }
+                }
+                Item::Trait(t) => {
+                    for method in &t.methods {
+                        for param in &method.params {
+                            if self.is_result_type(&param.param_type) {
+                                return true;
+                            }
+                        }
+                        if let Some(ref return_type) = method.return_type {
+                            if self.is_result_type(return_type) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                Item::Impl(i) => {
+                    if self.is_result_type(&i.for_type) {
+                        return true;
+                    }
+                    for method in &i.methods {
+                        if let Some(ref return_type) = method.return_type {
+                            if self.is_result_type(return_type) {
+                                return true;
+                            }
+                        }
+                        for param in &method.params {
+                            if self.is_result_type(&param.param_type) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                Item::Module(m) => {
+                    if self.check_type_for_result(&m.items) {
+                        return true;
+                    }
+                }
+                Item::Use(_) => {}
+            }
+        }
+        false
+    }
+    
+    fn is_result_type(&self, t: &Type) -> bool {
+        match t {
+            Type::Result { .. } => true,
+            Type::Generic { name, .. } => name == "Result",
+            Type::List(inner) => self.is_result_type(inner),
+            Type::Map { key, value } => self.is_result_type(key) || self.is_result_type(value),
+            Type::Tuple(types) => types.iter().any(|t| self.is_result_type(t)),
+            Type::Optional(inner) => self.is_result_type(inner),
+            Type::Function { params, return_type } => {
+                params.iter().any(|t| self.is_result_type(t)) || self.is_result_type(return_type)
+            }
+            _ => false,
+        }
+    }
+    
+    fn check_block_for_result(&self, block: &Block) -> bool {
+        for statement in &block.statements {
+            match statement {
+                Statement::Let(let_stmt) => {
+                    if let Some(ref var_type) = let_stmt.var_type {
+                        if self.is_result_type(var_type) {
+                            return true;
+                        }
+                    }
+                    if self.check_expression_for_result(&let_stmt.value) {
+                        return true;
+                    }
+                }
+                Statement::Return(ret_stmt) => {
+                    if let Some(ref value) = ret_stmt.value {
+                        if self.check_expression_for_result(value) {
+                            return true;
+                        }
+                    }
+                }
+                Statement::Expression(expr_stmt) => {
+                    if self.check_expression_for_result(&expr_stmt.expression) {
+                        return true;
+                    }
+                }
+                Statement::If(if_stmt) => {
+                    if self.check_expression_for_result(&if_stmt.condition) {
+                        return true;
+                    }
+                    if self.check_block_for_result(&if_stmt.then_block) {
+                        return true;
+                    }
+                    if let Some(ref else_block) = if_stmt.else_block {
+                        if self.check_block_for_result(else_block) {
+                            return true;
+                        }
+                    }
+                }
+                Statement::For(for_stmt) => {
+                    if self.check_expression_for_result(&for_stmt.iterable) {
+                        return true;
+                    }
+                    if self.check_block_for_result(&for_stmt.body) {
+                        return true;
+                    }
+                }
+                Statement::While(while_stmt) => {
+                    if self.check_expression_for_result(&while_stmt.condition) {
+                        return true;
+                    }
+                    if self.check_block_for_result(&while_stmt.body) {
+                        return true;
+                    }
+                }
+                Statement::Match(match_stmt) => {
+                    if self.check_expression_for_result(&match_stmt.expression) {
+                        return true;
+                    }
+                    for arm in &match_stmt.arms {
+                        if self.check_block_for_result(&arm.body) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
+    }
+    
+    fn check_expression_for_result(&self, expr: &Expression) -> bool {
+        match expr {
+            Expression::Literal(_) => false,
+            Expression::FormatString { .. } => false,
+            Expression::Identifier(name) => name == "Result",
+            Expression::BinaryOp { left, right, .. } => {
+                self.check_expression_for_result(left) || self.check_expression_for_result(right)
+            }
+            Expression::UnaryOp { expr, .. } => self.check_expression_for_result(expr),
+            Expression::Call { callee, args } => {
+                self.check_expression_for_result(callee)
+                    || args.iter().any(|arg| self.check_expression_for_result(arg))
+            }
+            Expression::Member { object, member: _ } => self.check_expression_for_result(object),
+            Expression::Index { object, index } => {
+                self.check_expression_for_result(object) || self.check_expression_for_result(index)
+            }
+            Expression::If {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
+                self.check_expression_for_result(condition)
+                    || self.check_expression_for_result(then_expr)
+                    || self.check_expression_for_result(else_expr)
+            }
+            Expression::Block(block) => self.check_block_for_result(block),
+            Expression::Await { expr } => self.check_expression_for_result(expr),
+            Expression::StructLiteral { fields, .. } => {
+                fields.iter().any(|(_, expr)| self.check_expression_for_result(expr))
+            }
+            Expression::GenericConstructor { type_params, .. } => {
+                type_params.iter().any(|t| self.is_result_type(t))
+            }
+            Expression::Lambda { body, .. } => {
+                self.check_expression_for_result(body)
+            }
+        }
+    }
+    
     fn generate_item(&mut self, item: &Item, framework: &Framework, use_seaorm: bool) {
         match item {
             Item::Function(f) => self.generate_function(f, framework, use_seaorm),
@@ -216,6 +444,8 @@ impl RustCodeGenerator {
                 // Use statements are handled differently in Rust
                 // For now, skip
             }
+            Item::Trait(t) => self.generate_trait(t),
+            Item::Impl(i) => self.generate_impl(i, framework, use_seaorm),
         }
     }
     
@@ -240,6 +470,42 @@ impl RustCodeGenerator {
         
         self.write("fn ");
         self.write(&self.to_snake_case(&function.name));
+        
+        // Generate generic type parameters with constraints
+        if !function.type_params.is_empty() {
+            self.write("<");
+            for (i, param) in function.type_params.iter().enumerate() {
+                if i > 0 {
+                    self.write(", ");
+                }
+                self.write(&param.name);
+                
+                // Generate constraints (T: Trait1 + Trait2)
+                if !param.constraints.is_empty() {
+                    self.write(": ");
+                    for (j, constraint) in param.constraints.iter().enumerate() {
+                        if j > 0 {
+                            self.write(" + ");
+                        }
+                        match constraint {
+                            GenericConstraint::Trait(trait_name) => {
+                                self.write(&self.to_pascal_case(trait_name));
+                            }
+                            GenericConstraint::Multiple(trait_names) => {
+                                for (k, trait_name) in trait_names.iter().enumerate() {
+                                    if k > 0 {
+                                        self.write(" + ");
+                                    }
+                                    self.write(&self.to_pascal_case(trait_name));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            self.write(">");
+        }
+        
         self.write("(");
         
         // Generate parameters
@@ -374,7 +640,56 @@ impl RustCodeGenerator {
                 }
             }
             "test" => {
-                self.writeln("#[test]");
+                use crate::stdlib::testing::TestingStdlib;
+                self.writeln(&TestingStdlib::generate_test_attribute());
+            }
+            "describe" => {
+                use crate::stdlib::testing::TestingStdlib;
+                let suite_name = decorator.args.first().and_then(|arg| {
+                    if let DecoratorArg::String(s) = arg {
+                        Some(s.as_str())
+                    } else {
+                        None
+                    }
+                });
+                self.writeln(&TestingStdlib::generate_describe_attribute(suite_name));
+            }
+            "fixture" => {
+                // Fixture wird als Setup/Teardown-Funktion generiert
+                // Wird in der Funktion selbst behandelt
+                let fixture_name = decorator.args.first().and_then(|arg| {
+                    if let DecoratorArg::String(s) = arg {
+                        Some(s.as_str())
+                    } else {
+                        None
+                    }
+                }).unwrap_or("default");
+                // Fixture-Code wird später in der Funktion generiert
+                self.writeln(&format!("// Fixture: {}", fixture_name));
+            }
+            "mock" => {
+                // Mock wird als Trait-Implementierung generiert
+                let trait_name = decorator.args.iter().find_map(|arg| {
+                    if let DecoratorArg::Named { name, value } = arg {
+                        if name == "trait" {
+                            if let DecoratorArg::String(s) = value.as_ref() {
+                                return Some(s.as_str());
+                            }
+                        }
+                    }
+                    None
+                }).unwrap_or("MockTrait");
+                let struct_name = decorator.args.iter().find_map(|arg| {
+                    if let DecoratorArg::Named { name, value } = arg {
+                        if name == "struct" {
+                            if let DecoratorArg::String(s) = value.as_ref() {
+                                return Some(s.as_str());
+                            }
+                        }
+                    }
+                    None
+                }).unwrap_or("Mock");
+                self.writeln(&format!("// Mock: {} for {}", struct_name, trait_name));
             }
             _ => {
                 // Generic decorator
@@ -518,6 +833,121 @@ impl RustCodeGenerator {
         self.writeln("}");
     }
     
+    fn generate_trait(&mut self, trait_def: &Trait) {
+        if trait_def.visibility == Visibility::Public {
+            self.write("pub ");
+        }
+        self.write("trait ");
+        self.write(&self.to_pascal_case(&trait_def.name));
+        
+        // Generate generic type parameters
+        if !trait_def.type_params.is_empty() {
+            self.write("<");
+            for (i, param) in trait_def.type_params.iter().enumerate() {
+                if i > 0 {
+                    self.write(", ");
+                }
+                self.write(param);
+            }
+            self.write(">");
+        }
+        
+        self.writeln(" {");
+        self.indent();
+        
+        // Generate trait methods
+        for method in &trait_def.methods {
+            self.write("    fn ");
+            self.write(&self.to_snake_case(&method.name));
+            self.write("(");
+            
+            // Generate parameters
+            for (i, param) in method.params.iter().enumerate() {
+                if i > 0 {
+                    self.write(", ");
+                }
+                self.write(&self.to_snake_case(&param.name));
+                self.write(": ");
+                self.generate_type(&param.param_type);
+            }
+            
+            self.write(")");
+            
+            // Generate return type
+            if let Some(ref return_type) = method.return_type {
+                self.write(" -> ");
+                self.generate_type(return_type);
+            }
+            
+            self.writeln(";");
+        }
+        
+        self.unindent();
+        self.writeln("}");
+    }
+    
+    fn generate_impl(&mut self, impl_def: &Impl, framework: &Framework, use_seaorm: bool) {
+        self.write("impl");
+        
+        // Generate generic type parameters
+        if !impl_def.type_params.is_empty() {
+            self.write("<");
+            for (i, param) in impl_def.type_params.iter().enumerate() {
+                if i > 0 {
+                    self.write(", ");
+                }
+                self.write(param);
+            }
+            self.write(">");
+        }
+        
+        // Generate trait name (if not blank impl)
+        if !impl_def.trait_name.is_empty() {
+            self.write(" ");
+            self.write(&self.to_pascal_case(&impl_def.trait_name));
+            self.write(" for");
+        }
+        
+        self.write(" ");
+        
+        // Generate the type being implemented
+        self.generate_type(&impl_def.for_type);
+        
+        self.writeln(" {");
+        self.indent();
+        
+        // Generate impl methods
+        for method in &impl_def.methods {
+            self.generate_function(method, framework, use_seaorm);
+            self.writeln("");
+        }
+        
+        self.unindent();
+        self.writeln("}");
+        if !impl_def.trait_name.is_empty() {
+            self.write(" ");
+            self.write(&self.to_pascal_case(&impl_def.trait_name));
+            self.write(" for ");
+        } else {
+            self.write(" ");
+        }
+        
+        // Generate type
+        self.generate_type(&impl_def.for_type);
+        
+        self.writeln(" {");
+        self.indent();
+        
+        // Generate impl methods
+        for method in &impl_def.methods {
+            self.generate_function(method, framework, use_seaorm);
+            self.writeln("");
+        }
+        
+        self.unindent();
+        self.writeln("}");
+    }
+    
     fn generate_type_alias(&mut self, type_alias: &TypeAlias) {
         if type_alias.visibility == Visibility::Public {
             self.write("pub ");
@@ -641,6 +1071,13 @@ impl RustCodeGenerator {
                 self.generate_type(inner);
                 self.write(">");
             }
+            Type::Result { ok, err } => {
+                self.write("Result<");
+                self.generate_type(ok);
+                self.write(", ");
+                self.generate_type(err);
+                self.write(">");
+            }
         }
     }
     
@@ -726,6 +1163,13 @@ impl RustCodeGenerator {
                 
                 for arm in &match_stmt.arms {
                     self.generate_pattern(&arm.pattern);
+                    
+                    // Generate guard if present
+                    if let Some(ref guard) = arm.guard {
+                        self.write(" if ");
+                        self.generate_expression(guard);
+                    }
+                    
                     self.write(" => ");
                     self.generate_block(&arm.body);
                     self.writeln(",");
@@ -801,6 +1245,34 @@ impl RustCodeGenerator {
                 
                 // Check if this is a standard library function call
                 if let Expression::Member { object, member } = callee.as_ref() {
+                    // Check for HTTP Client method calls
+                    use crate::stdlib::http_client::is_http_client_method;
+                    
+                    if is_http_client_method(member) {
+                        self.generate_http_client_call(object, member, args);
+                        return;
+                    }
+                    
+                    // Check for collections method calls: list.filter(), map.keys(), etc.
+                    
+                    // Check if this is a List method
+                    if self.is_list_method(member) {
+                        self.generate_collections_call(object, member, args, "list");
+                        return;
+                    }
+                    
+                    // Check if this is a Map method
+                    if self.is_map_method(member) {
+                        self.generate_collections_call(object, member, args, "map");
+                        return;
+                    }
+                    
+                    // Check if this is a Set method
+                    if self.is_set_method(member) {
+                        self.generate_collections_call(object, member, args, "set");
+                        return;
+                    }
+                    
                     if let Expression::Identifier(obj_name) = object.as_ref() {
                         if obj_name == "db" {
                             self.generate_db_call(member, args);
@@ -843,9 +1315,19 @@ impl RustCodeGenerator {
                 self.write(")");
             }
             Expression::Member { object, member } => {
-                self.generate_expression(object);
-                self.write(".");
-                self.write(&self.to_snake_case(member));
+                // Check if this is a Result method call
+                use crate::stdlib::result::ResultStdlib;
+                if ResultStdlib::is_result_method(member) {
+                    // This will be handled as a method call, so just generate the member access
+                    // The actual method call will be generated in the Call expression
+                    self.generate_expression(object);
+                    self.write(".");
+                    self.write(&self.to_snake_case(member));
+                } else {
+                    self.generate_expression(object);
+                    self.write(".");
+                    self.write(&self.to_snake_case(member));
+                }
             }
             Expression::Index { object, index } => {
                 self.generate_expression(object);
@@ -895,6 +1377,74 @@ impl RustCodeGenerator {
                 self.writeln("");
                 self.unindent();
                 self.write("}");
+            }
+            Expression::Lambda { params, return_type: _, body } => {
+                // Generate Rust closure: |param1, param2| { body }
+                self.write("|");
+                for (i, param) in params.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.write(&self.to_snake_case(&param.name));
+                    self.write(": ");
+                    self.generate_type(&param.param_type);
+                }
+                self.write("| ");
+                
+                // Generate body
+                match body.as_ref() {
+                    Expression::Block(block) => {
+                        self.writeln("{");
+                        self.indent();
+                        self.generate_block(block);
+                        self.unindent();
+                        self.write("}");
+                    }
+                    _ => {
+                        // Single expression - wrap in braces
+                        self.write("{ ");
+                        self.generate_expression(body);
+                        self.write(" }");
+                    }
+                }
+            }
+            Expression::FormatString { parts } => {
+                // Generate Rust format! macro
+                self.write("format!(");
+                
+                // Build format string and arguments
+                let mut format_str = String::new();
+                let mut args = Vec::new();
+                let mut arg_index = 0;
+                
+                for part in parts {
+                    match part {
+                        FormatStringPart::Text(text) => {
+                            // Escape special characters for format! macro
+                            let escaped = text
+                                .replace('{', "{{")
+                                .replace('}', "}}");
+                            format_str.push_str(&escaped);
+                        }
+                        FormatStringPart::Expression(expr) => {
+                            format_str.push_str(&format!("{{{}}}", arg_index));
+                            args.push(expr);
+                            arg_index += 1;
+                        }
+                    }
+                }
+                
+                // Write format string
+                let escaped_format = format_str.replace('\\', "\\\\").replace('"', "\\\"");
+                self.write(&format!("\"{}\"", escaped_format));
+                
+                // Write arguments
+                for arg in args {
+                    self.write(", ");
+                    self.generate_expression(arg);
+                }
+                
+                self.write(")");
             }
             Expression::GenericConstructor { name, type_params, args: _args } => {
                 match name.as_str() {
@@ -990,6 +1540,9 @@ impl RustCodeGenerator {
             Pattern::Identifier(name) => {
                 self.write(&self.to_snake_case(name));
             }
+            Pattern::Wildcard => {
+                self.write("_");
+            }
             Pattern::Tuple(patterns) => {
                 self.write("(");
                 for (i, p) in patterns.iter().enumerate() {
@@ -1012,6 +1565,45 @@ impl RustCodeGenerator {
                     self.generate_pattern(field_pattern);
                 }
                 self.write(" }");
+            }
+            Pattern::EnumVariant { name, data } => {
+                // Convert "Enum::Variant" to "Enum::Variant"
+                let parts: Vec<&str> = name.split("::").collect();
+                if parts.len() == 2 {
+                    self.write(&self.to_pascal_case(parts[0]));
+                    self.write("::");
+                    self.write(&self.to_pascal_case(parts[1]));
+                } else {
+                    self.write(&self.to_pascal_case(name));
+                }
+                
+                if let Some(ref patterns) = data {
+                    self.write("(");
+                    for (i, p) in patterns.iter().enumerate() {
+                        if i > 0 {
+                            self.write(", ");
+                        }
+                        self.generate_pattern(p);
+                    }
+                    self.write(")");
+                }
+            }
+            Pattern::Range { start, end, inclusive } => {
+                self.generate_expression(start);
+                if *inclusive {
+                    self.write("..=");
+                } else {
+                    self.write("..");
+                }
+                self.generate_expression(end);
+            }
+            Pattern::Or(patterns) => {
+                for (i, p) in patterns.iter().enumerate() {
+                    if i > 0 {
+                        self.write(" | ");
+                    }
+                    self.generate_pattern(p);
+                }
             }
         }
     }
@@ -1725,6 +2317,538 @@ impl RustCodeGenerator {
         self.write("    ");
         self.writeln("}");
         self.writeln("");
+    }
+    
+    /// Prüft ob eine Methode eine List-Methode ist
+    fn is_list_method(&self, method: &str) -> bool {
+        matches!(method, 
+            "filter" | "map" | "reduce" | "find" | "contains" | "indexOf" | 
+            "sort" | "reverse" | "chunk" | "slice" | "chunks" | "sorted" |
+            "unique" | "flatten" | "join" | "groupBy" | "group_by"
+        )
+    }
+    
+    /// Prüft ob eine Methode eine Map-Methode ist
+    fn is_map_method(&self, method: &str) -> bool {
+        matches!(method, 
+            "keys" | "values" | "entries" | "get" | "set" | "delete" | 
+            "has" | "size" | "containsKey" | "contains_key"
+        )
+    }
+    
+    /// Prüft ob eine Methode eine Set-Methode ist
+    fn is_set_method(&self, method: &str) -> bool {
+        matches!(method, 
+            "add" | "remove" | "has" | "size" | "union" | "intersection" | 
+            "difference" | "contains"
+        )
+    }
+    
+    /// Generiert HTTP Client Methoden-Aufrufe
+    fn generate_http_client_call(&mut self, object: &Expression, method: &str, args: &[Expression]) {
+        // Check if object is HttpClient or response
+        let is_client = if let Expression::Identifier(name) = object {
+            name == "client" || name == "httpClient" || name == "http_client"
+        } else {
+            false
+        };
+        
+        // Extrahiere Client-Name für spätere Verwendung
+        let client_name = if let Expression::Identifier(name) = object {
+            name.clone()
+        } else {
+            "client".to_string()
+        };
+        
+        match method {
+            "get" => {
+                if let Some(url) = args.first() {
+                    let mut url_str = String::new();
+                    let old_output = std::mem::replace(&mut self.output, url_str);
+                    self.generate_expression(url);
+                    url_str = std::mem::replace(&mut self.output, old_output);
+                    
+                    let headers = args.get(1).map(|arg| {
+                        let mut headers_str = String::new();
+                        let old_output = std::mem::replace(&mut self.output, headers_str);
+                        self.generate_expression(arg);
+                        headers_str = std::mem::replace(&mut self.output, old_output);
+                        headers_str
+                    });
+                    
+                    if is_client {
+                        self.write(&format!("{}.get({})", client_name, url_str));
+                        if let Some(h) = headers {
+                            self.write(&format!(".headers({})", h));
+                        }
+                        self.write(".send().await");
+                    } else {
+                        use crate::stdlib::http_client::HttpClientStdlib;
+                        self.write(&HttpClientStdlib::generate_get(&url_str, headers.as_deref()));
+                    }
+                }
+            }
+            "post" => {
+                if let Some(url) = args.first() {
+                    let mut url_str = String::new();
+                    let old_output = std::mem::replace(&mut self.output, url_str);
+                    self.generate_expression(url);
+                    url_str = std::mem::replace(&mut self.output, old_output);
+                    
+                    let body = args.get(1).map(|arg| {
+                        let mut body_str = String::new();
+                        let old_output = std::mem::replace(&mut self.output, body_str);
+                        self.generate_expression(arg);
+                        body_str = std::mem::replace(&mut self.output, old_output);
+                        body_str
+                    });
+                    
+                    let headers = args.get(2).map(|arg| {
+                        let mut headers_str = String::new();
+                        let old_output = std::mem::replace(&mut self.output, headers_str);
+                        self.generate_expression(arg);
+                        headers_str = std::mem::replace(&mut self.output, old_output);
+                        headers_str
+                    });
+                    
+                    if is_client {
+                        self.write(&format!("{}.post({})", client_name, url_str));
+                        if let Some(b) = body {
+                            self.write(&format!(".json(&{})", b));
+                        }
+                        if let Some(h) = headers {
+                            self.write(&format!(".headers({})", h));
+                        }
+                        self.write(".send().await");
+                    } else {
+                        use crate::stdlib::http_client::HttpClientStdlib;
+                        self.write(&HttpClientStdlib::generate_post(&url_str, body.as_deref(), headers.as_deref()));
+                    }
+                }
+            }
+            "put" => {
+                if let Some(url) = args.first() {
+                    let mut url_str = String::new();
+                    let old_output = std::mem::replace(&mut self.output, url_str);
+                    self.generate_expression(url);
+                    url_str = std::mem::replace(&mut self.output, old_output);
+                    
+                    let body = args.get(1).map(|arg| {
+                        let mut body_str = String::new();
+                        let old_output = std::mem::replace(&mut self.output, body_str);
+                        self.generate_expression(arg);
+                        body_str = std::mem::replace(&mut self.output, old_output);
+                        body_str
+                    });
+                    
+                    let headers = args.get(2).map(|arg| {
+                        let mut headers_str = String::new();
+                        let old_output = std::mem::replace(&mut self.output, headers_str);
+                        self.generate_expression(arg);
+                        headers_str = std::mem::replace(&mut self.output, old_output);
+                        headers_str
+                    });
+                    
+                    if is_client {
+                        self.write(&format!("{}.put({})", client_name, url_str));
+                        if let Some(b) = body {
+                            self.write(&format!(".json(&{})", b));
+                        }
+                        if let Some(h) = headers {
+                            self.write(&format!(".headers({})", h));
+                        }
+                        self.write(".send().await");
+                    } else {
+                        use crate::stdlib::http_client::HttpClientStdlib;
+                        self.write(&HttpClientStdlib::generate_put(&url_str, body.as_deref(), headers.as_deref()));
+                    }
+                }
+            }
+            "delete" => {
+                if let Some(url) = args.first() {
+                    let mut url_str = String::new();
+                    let old_output = std::mem::replace(&mut self.output, url_str);
+                    self.generate_expression(url);
+                    url_str = std::mem::replace(&mut self.output, old_output);
+                    
+                    let headers = args.get(1).map(|arg| {
+                        let mut headers_str = String::new();
+                        let old_output = std::mem::replace(&mut self.output, headers_str);
+                        self.generate_expression(arg);
+                        headers_str = std::mem::replace(&mut self.output, old_output);
+                        headers_str
+                    });
+                    
+                    if is_client {
+                        self.write(&format!("{}.delete({})", client_name, url_str));
+                        if let Some(h) = headers {
+                            self.write(&format!(".headers({})", h));
+                        }
+                        self.write(".send().await");
+                    } else {
+                        use crate::stdlib::http_client::HttpClientStdlib;
+                        self.write(&HttpClientStdlib::generate_delete(&url_str, headers.as_deref()));
+                    }
+                }
+            }
+            "patch" => {
+                if let Some(url) = args.first() {
+                    let mut url_str = String::new();
+                    let old_output = std::mem::replace(&mut self.output, url_str);
+                    self.generate_expression(url);
+                    url_str = std::mem::replace(&mut self.output, old_output);
+                    
+                    let body = args.get(1).map(|arg| {
+                        let mut body_str = String::new();
+                        let old_output = std::mem::replace(&mut self.output, body_str);
+                        self.generate_expression(arg);
+                        body_str = std::mem::replace(&mut self.output, old_output);
+                        body_str
+                    });
+                    
+                    let headers = args.get(2).map(|arg| {
+                        let mut headers_str = String::new();
+                        let old_output = std::mem::replace(&mut self.output, headers_str);
+                        self.generate_expression(arg);
+                        headers_str = std::mem::replace(&mut self.output, old_output);
+                        headers_str
+                    });
+                    
+                    if is_client {
+                        self.write(&format!("{}.patch({})", client_name, url_str));
+                        if let Some(b) = body {
+                            self.write(&format!(".json(&{})", b));
+                        }
+                        if let Some(h) = headers {
+                            self.write(&format!(".headers({})", h));
+                        }
+                        self.write(".send().await");
+                    } else {
+                        use crate::stdlib::http_client::HttpClientStdlib;
+                        self.write(&HttpClientStdlib::generate_patch(&url_str, body.as_deref(), headers.as_deref()));
+                    }
+                }
+            }
+            "json" => {
+                // response.json()
+                self.generate_expression(object);
+                self.write(".json::<serde_json::Value>().await");
+            }
+            "text" => {
+                // response.text()
+                self.generate_expression(object);
+                self.write(".text().await");
+            }
+            "status" => {
+                // response.status()
+                self.generate_expression(object);
+                self.write(".status()");
+            }
+            _ => {
+                // Fallback
+                self.generate_expression(object);
+                self.write(".");
+                self.write(&self.to_snake_case(method));
+                self.write("(");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.generate_expression(arg);
+                }
+                self.write(")");
+            }
+        }
+    }
+    
+    /// Generiert Collections-Methoden-Aufrufe
+    fn generate_collections_call(&mut self, object: &Expression, method: &str, args: &[Expression], collection_type: &str) {
+        use crate::stdlib::collections::CollectionsStdlib;
+        
+        // Generate object expression as string for collections methods
+        let mut obj_str = String::new();
+        let old_output = std::mem::replace(&mut self.output, obj_str);
+        self.generate_expression(object);
+        obj_str = std::mem::replace(&mut self.output, old_output);
+        
+        match collection_type {
+            "list" => {
+                match method {
+                    "filter" => {
+                        if let Some(predicate) = args.first() {
+                            let mut pred_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, pred_str);
+                            self.generate_expression(predicate);
+                            pred_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_list_filter(&obj_str, &pred_str));
+                        }
+                    }
+                    "map" => {
+                        if let Some(mapper) = args.first() {
+                            let mut map_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, map_str);
+                            self.generate_expression(mapper);
+                            map_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_list_map(&obj_str, &map_str));
+                        }
+                    }
+                    "reduce" => {
+                        if args.len() >= 2 {
+                            let mut reducer_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, reducer_str);
+                            self.generate_expression(&args[0]);
+                            reducer_str = std::mem::replace(&mut self.output, old_output);
+                            
+                            let mut initial_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, initial_str);
+                            self.generate_expression(&args[1]);
+                            initial_str = std::mem::replace(&mut self.output, old_output);
+                            
+                            self.write(&CollectionsStdlib::generate_list_reduce(&obj_str, &reducer_str, &initial_str));
+                        }
+                    }
+                    "find" => {
+                        if let Some(predicate) = args.first() {
+                            let mut pred_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, pred_str);
+                            self.generate_expression(predicate);
+                            pred_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_list_find(&obj_str, &pred_str));
+                        }
+                    }
+                    "contains" => {
+                        if let Some(item) = args.first() {
+                            let mut item_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, item_str);
+                            self.generate_expression(item);
+                            item_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_list_contains(&obj_str, &item_str));
+                        }
+                    }
+                    "indexOf" | "index_of" => {
+                        if let Some(item) = args.first() {
+                            let mut item_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, item_str);
+                            self.generate_expression(item);
+                            item_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_list_index_of(&obj_str, &item_str));
+                        }
+                    }
+                    "sort" => {
+                        let compare = args.first().map(|arg| {
+                            let mut compare_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, compare_str);
+                            self.generate_expression(arg);
+                            compare_str = std::mem::replace(&mut self.output, old_output);
+                            compare_str
+                        });
+                        self.write(&CollectionsStdlib::generate_list_sort(&obj_str, compare.as_deref()));
+                    }
+                    "reverse" => {
+                        self.write(&CollectionsStdlib::generate_list_reverse(&obj_str));
+                    }
+                    "chunk" | "chunks" => {
+                        if let Some(size) = args.first() {
+                            let mut size_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, size_str);
+                            self.generate_expression(size);
+                            size_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_list_chunk(&obj_str, &size_str));
+                        }
+                    }
+                    "slice" => {
+                        if args.len() >= 2 {
+                            let mut start_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, start_str);
+                            self.generate_expression(&args[0]);
+                            start_str = std::mem::replace(&mut self.output, old_output);
+                            
+                            let mut end_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, end_str);
+                            self.generate_expression(&args[1]);
+                            end_str = std::mem::replace(&mut self.output, old_output);
+                            
+                            self.write(&CollectionsStdlib::generate_list_slice(&obj_str, &start_str, &end_str));
+                        }
+                    }
+                    _ => {
+                        // Fallback to standard method call
+                        self.generate_expression(object);
+                        self.write(".");
+                        self.write(&self.to_snake_case(method));
+                        self.write("(");
+                        for (i, arg) in args.iter().enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.generate_expression(arg);
+                        }
+                        self.write(")");
+                    }
+                }
+            }
+            "map" => {
+                match method {
+                    "keys" => {
+                        self.write(&CollectionsStdlib::generate_map_keys(&obj_str));
+                    }
+                    "values" => {
+                        self.write(&CollectionsStdlib::generate_map_values(&obj_str));
+                    }
+                    "entries" => {
+                        self.write(&CollectionsStdlib::generate_map_entries(&obj_str));
+                    }
+                    "get" => {
+                        if let Some(key) = args.first() {
+                            let mut key_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, key_str);
+                            self.generate_expression(key);
+                            key_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_map_get(&obj_str, &key_str));
+                        }
+                    }
+                    "set" => {
+                        if args.len() >= 2 {
+                            let mut key_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, key_str);
+                            self.generate_expression(&args[0]);
+                            key_str = std::mem::replace(&mut self.output, old_output);
+                            
+                            let mut value_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, value_str);
+                            self.generate_expression(&args[1]);
+                            value_str = std::mem::replace(&mut self.output, old_output);
+                            
+                            self.write(&CollectionsStdlib::generate_map_set(&obj_str, &key_str, &value_str));
+                        }
+                    }
+                    "delete" | "remove" => {
+                        if let Some(key) = args.first() {
+                            let mut key_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, key_str);
+                            self.generate_expression(key);
+                            key_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_map_delete(&obj_str, &key_str));
+                        }
+                    }
+                    "has" | "containsKey" | "contains_key" => {
+                        if let Some(key) = args.first() {
+                            let mut key_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, key_str);
+                            self.generate_expression(key);
+                            key_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_map_has(&obj_str, &key_str));
+                        }
+                    }
+                    "size" | "len" => {
+                        self.write(&CollectionsStdlib::generate_map_size(&obj_str));
+                    }
+                    _ => {
+                        // Fallback
+                        self.generate_expression(object);
+                        self.write(".");
+                        self.write(&self.to_snake_case(method));
+                        self.write("(");
+                        for (i, arg) in args.iter().enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.generate_expression(arg);
+                        }
+                        self.write(")");
+                    }
+                }
+            }
+            "set" => {
+                match method {
+                    "add" => {
+                        if let Some(item) = args.first() {
+                            let mut item_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, item_str);
+                            self.generate_expression(item);
+                            item_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_set_add(&obj_str, &item_str));
+                        }
+                    }
+                    "remove" => {
+                        if let Some(item) = args.first() {
+                            let mut item_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, item_str);
+                            self.generate_expression(item);
+                            item_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_set_remove(&obj_str, &item_str));
+                        }
+                    }
+                    "has" | "contains" => {
+                        if let Some(item) = args.first() {
+                            let mut item_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, item_str);
+                            self.generate_expression(item);
+                            item_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_set_has(&obj_str, &item_str));
+                        }
+                    }
+                    "size" | "len" => {
+                        self.write(&CollectionsStdlib::generate_set_size(&obj_str));
+                    }
+                    "union" => {
+                        if let Some(other) = args.first() {
+                            let mut other_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, other_str);
+                            self.generate_expression(other);
+                            other_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_set_union(&obj_str, &other_str));
+                        }
+                    }
+                    "intersection" => {
+                        if let Some(other) = args.first() {
+                            let mut other_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, other_str);
+                            self.generate_expression(other);
+                            other_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_set_intersection(&obj_str, &other_str));
+                        }
+                    }
+                    "difference" => {
+                        if let Some(other) = args.first() {
+                            let mut other_str = String::new();
+                            let old_output = std::mem::replace(&mut self.output, other_str);
+                            self.generate_expression(other);
+                            other_str = std::mem::replace(&mut self.output, old_output);
+                            self.write(&CollectionsStdlib::generate_set_difference(&obj_str, &other_str));
+                        }
+                    }
+                    _ => {
+                        // Fallback
+                        self.generate_expression(object);
+                        self.write(".");
+                        self.write(&self.to_snake_case(method));
+                        self.write("(");
+                        for (i, arg) in args.iter().enumerate() {
+                            if i > 0 {
+                                self.write(", ");
+                            }
+                            self.generate_expression(arg);
+                        }
+                        self.write(")");
+                    }
+                }
+            }
+            _ => {
+                // Fallback
+                self.generate_expression(object);
+                self.write(".");
+                self.write(&self.to_snake_case(method));
+                self.write("(");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.generate_expression(arg);
+                }
+                self.write(")");
+            }
+        }
     }
 }
 

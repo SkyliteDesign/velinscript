@@ -1,0 +1,175 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "VelinScript",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#decorators"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#expressions"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.velin",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.velin",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.velin",
+          "match": "\\b(if|else|for|while|match|return|break|continue|try|catch|throw)\\b"
+        },
+        {
+          "name": "keyword.other.velin",
+          "match": "\\b(fn|let|const|static|pub|use|mod|async|await|in|trait|interface|impl|struct|enum|type|mut)\\b"
+        },
+        {
+          "name": "constant.language.velin",
+          "match": "\\b(true|false|null|void)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.primitive.velin",
+          "match": "\\b(string|number|boolean|void|null)\\b"
+        },
+        {
+          "name": "storage.type.collection.velin",
+          "match": "\\b(List|Map|Optional|Result)\\b"
+        },
+        {
+          "name": "entity.name.type.velin",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.velin",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.velin",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.velin",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.velin",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.velin",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arithmetic.velin",
+          "match": "[+\\-*/%]"
+        },
+        {
+          "name": "keyword.operator.comparison.velin",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.logical.velin",
+          "match": "&&|\\|\\||!"
+        },
+        {
+          "name": "keyword.operator.assignment.velin",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.access.velin",
+          "match": "\\."
+        },
+        {
+          "name": "keyword.operator.arrow.velin",
+          "match": "->|=>"
+        }
+      ]
+    },
+    "decorators": {
+      "patterns": [
+        {
+          "name": "entity.name.tag.decorator.velin",
+          "match": "@[A-Z][a-zA-Z0-9_]*"
+        },
+        {
+          "name": "entity.name.tag.decorator.velin",
+          "match": "@(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)"
+        },
+        {
+          "name": "entity.name.tag.decorator.velin",
+          "match": "@(Auth|Secure|Role|RateLimit|Validate|Cache|Test)"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.velin",
+          "match": "\\b[a-z][a-zA-Z0-9_]*\\s*(?=\\()"
+        }
+      ]
+    },
+    "expressions": {
+      "patterns": [
+        {
+          "name": "variable.other.velin",
+          "match": "\\b[a-z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.velin"
+}

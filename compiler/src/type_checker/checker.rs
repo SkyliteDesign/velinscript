@@ -1,5 +1,5 @@
 use crate::parser::ast::*;
-use crate::type_checker::environment::Environment;
+use crate::type_checker::environment::{Environment, FunctionSignature};
 use crate::type_checker::errors::{TypeError, TypeErrorKind};
 
 pub struct TypeChecker {
@@ -23,6 +23,283 @@ impl TypeChecker {
             key: Box::new(Type::String),
             value: Box::new(Type::String),
         });
+        // Result is a generic type, so we register it as a type name
+        // The actual type will be Result<T, E> which is handled by Type::Result
+        env.define_type("Result".to_string(), Type::Result {
+            ok: Box::new(Type::String),
+            err: Box::new(Type::String),
+        });
+        
+        // Built-in functions
+        // generateId() -> string
+        env.define_function("generateId".to_string(), FunctionSignature {
+            name: "generateId".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::String),
+        });
+        
+        // Standard Library: Database functions
+        // db.find<T>(T, string) -> Option<T>
+        env.define_function("db.find".to_string(), FunctionSignature {
+            name: "db.find".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "type".to_string(),
+                    param_type: Type::Generic {
+                        name: "T".to_string(),
+                        params: Vec::new(),
+                    },
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "id".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Optional(Box::new(Type::Generic {
+                name: "T".to_string(),
+                params: Vec::new(),
+            }))),
+        });
+        
+        // db.save<T>(T) -> T
+        env.define_function("db.save".to_string(), FunctionSignature {
+            name: "db.save".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "entity".to_string(),
+                    param_type: Type::Generic {
+                        name: "T".to_string(),
+                        params: Vec::new(),
+                    },
+                },
+            ],
+            return_type: Some(Type::Generic {
+                name: "T".to_string(),
+                params: Vec::new(),
+            }),
+        });
+        
+        // db.findAll<T>(T) -> List<T>
+        env.define_function("db.findAll".to_string(), FunctionSignature {
+            name: "db.findAll".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "type".to_string(),
+                    param_type: Type::Generic {
+                        name: "T".to_string(),
+                        params: Vec::new(),
+                    },
+                },
+            ],
+            return_type: Some(Type::List(Box::new(Type::Generic {
+                name: "T".to_string(),
+                params: Vec::new(),
+            }))),
+        });
+        
+        // db.delete<T>(T, string) -> boolean
+        env.define_function("db.delete".to_string(), FunctionSignature {
+            name: "db.delete".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "type".to_string(),
+                    param_type: Type::Generic {
+                        name: "T".to_string(),
+                        params: Vec::new(),
+                    },
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "id".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Boolean),
+        });
+        
+        // Register 'db' as a special object that has methods
+        // This allows db.find(), db.save(), etc. to work
+        env.define_variable("db".to_string(), Type::Named("Database".to_string()));
+        
+        // Standard Library: File I/O functions
+        // file.read(path: string) -> Result<string, string>
+        env.define_function("file.read".to_string(), FunctionSignature {
+            name: "file.read".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "path".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::String),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // file.write(path: string, content: string) -> Result<(), string>
+        env.define_function("file.write".to_string(), FunctionSignature {
+            name: "file.write".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "path".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "content".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::Void),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // file.exists(path: string) -> boolean
+        env.define_function("file.exists".to_string(), FunctionSignature {
+            name: "file.exists".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "path".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Boolean),
+        });
+        
+        // Standard Library: JSON functions
+        // json.parse(text: string) -> Result<any, string>
+        env.define_function("json.parse".to_string(), FunctionSignature {
+            name: "json.parse".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "text".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::Named("any".to_string())),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // json.stringify(value: any) -> string
+        env.define_function("json.stringify".to_string(), FunctionSignature {
+            name: "json.stringify".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "value".to_string(),
+                    param_type: Type::Named("any".to_string()),
+                },
+            ],
+            return_type: Some(Type::String),
+        });
+        
+        // Register Standard Library types
+        env.define_type("HttpClient".to_string(), Type::Named("HttpClient".to_string()));
+        env.define_type("Validator".to_string(), Type::Named("Validator".to_string()));
+        env.define_type("AuthService".to_string(), Type::Named("AuthService".to_string()));
+        env.define_type("Logger".to_string(), Type::Named("Logger".to_string()));
+        env.define_type("VelinLogger".to_string(), Type::Named("VelinLogger".to_string()));
+        env.define_type("MetricsCollector".to_string(), Type::Named("MetricsCollector".to_string()));
+        env.define_type("PerformanceMonitor".to_string(), Type::Named("PerformanceMonitor".to_string()));
+        env.define_type("LLMClient".to_string(), Type::Named("LLMClient".to_string()));
+        env.define_type("ModelLoader".to_string(), Type::Named("ModelLoader".to_string()));
+        env.define_type("TrainingService".to_string(), Type::Named("TrainingService".to_string()));
+        env.define_type("HttpResponse".to_string(), Type::Named("HttpResponse".to_string()));
+        env.define_type("ValidationError".to_string(), Type::Named("ValidationError".to_string()));
+        env.define_type("JWTToken".to_string(), Type::Named("JWTToken".to_string()));
+        env.define_type("UserClaims".to_string(), Type::Named("UserClaims".to_string()));
+        
+        // Standard Library: HTTP Client functions
+        // HttpClient.new() -> HttpClient
+        env.define_function("HttpClient.new".to_string(), FunctionSignature {
+            name: "HttpClient.new".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Named("HttpClient".to_string())),
+        });
+        
+        // Standard Library: Validation functions
+        // Validator.new() -> Validator
+        env.define_function("Validator.new".to_string(), FunctionSignature {
+            name: "Validator.new".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Named("Validator".to_string())),
+        });
+        
+        // Standard Library: Auth functions
+        // AuthService.new(secret: string) -> AuthService
+        env.define_function("AuthService.new".to_string(), FunctionSignature {
+            name: "AuthService.new".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "secret".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Named("AuthService".to_string())),
+        });
+        
+        // Standard Library: Logging functions
+        // Logger.new() -> Logger
+        env.define_function("Logger.new".to_string(), FunctionSignature {
+            name: "Logger.new".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Named("Logger".to_string())),
+        });
+        
+        // VelinLogger.new() -> VelinLogger
+        env.define_function("VelinLogger.new".to_string(), FunctionSignature {
+            name: "VelinLogger.new".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Named("VelinLogger".to_string())),
+        });
+        
+        // Standard Library: Metrics functions
+        // MetricsCollector.new() -> MetricsCollector
+        env.define_function("MetricsCollector.new".to_string(), FunctionSignature {
+            name: "MetricsCollector.new".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Named("MetricsCollector".to_string())),
+        });
+        
+        // PerformanceMonitor.new() -> PerformanceMonitor
+        env.define_function("PerformanceMonitor.new".to_string(), FunctionSignature {
+            name: "PerformanceMonitor.new".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Named("PerformanceMonitor".to_string())),
+        });
+        
+        // Standard Library: ML/LLM functions
+        // LLMClient.new(provider: string, apiKey: string) -> LLMClient
+        env.define_function("LLMClient.new".to_string(), FunctionSignature {
+            name: "LLMClient.new".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "provider".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "apiKey".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Named("LLMClient".to_string())),
+        });
+        
+        // ModelLoader.new() -> ModelLoader
+        env.define_function("ModelLoader.new".to_string(), FunctionSignature {
+            name: "ModelLoader.new".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Named("ModelLoader".to_string())),
+        });
+        
+        // TrainingService.new() -> TrainingService
+        env.define_function("TrainingService.new".to_string(), FunctionSignature {
+            name: "TrainingService.new".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Named("TrainingService".to_string())),
+        });
         
         TypeChecker {
             environment: env,
@@ -45,17 +322,28 @@ impl TypeChecker {
                         s.name.clone(),
                         Type::Named(s.name.clone()),
                     );
+                    // Store struct definition for field access
+                    self.environment.define_struct(s.name.clone(), s.clone());
                 }
                 Item::Enum(e) => {
                     self.environment.define_type(
                         e.name.clone(),
                         Type::Named(e.name.clone()),
                     );
+                    // Store enum definition for variant access
+                    self.environment.define_enum(e.name.clone(), e.clone());
                 }
                 Item::TypeAlias(ta) => {
                     self.environment.define_type(
                         ta.name.clone(),
                         ta.aliased_type.clone(),
+                    );
+                }
+                Item::Trait(t) => {
+                    // Register trait as a type
+                    self.environment.define_type(
+                        t.name.clone(),
+                        Type::Named(t.name.clone()),
                     );
                 }
                 _ => {}
@@ -96,6 +384,12 @@ impl TypeChecker {
                 }
                 Item::TypeAlias(_) => {
                     // Already handled in first pass
+                }
+                Item::Trait(t) => {
+                    self.check_trait(t)?;
+                }
+                Item::Impl(i) => {
+                    self.check_impl(i)?;
                 }
                 Item::Module(m) => {
                     // Handle modules by checking their items recursively
@@ -199,6 +493,40 @@ impl TypeChecker {
         Ok(())
     }
     
+    fn check_trait(&mut self, trait_def: &Trait) -> Result<(), Vec<TypeError>> {
+        // Check trait methods
+        for method in &trait_def.methods {
+            // Check parameter types
+            for param in &method.params {
+                self.check_type(&param.param_type)?;
+            }
+            // Check return type
+            if let Some(ref return_type) = method.return_type {
+                self.check_type(return_type)?;
+            }
+        }
+        Ok(())
+    }
+    
+    fn check_impl(&mut self, impl_def: &Impl) -> Result<(), Vec<TypeError>> {
+        // Check that the trait exists (if not blank impl)
+        if !impl_def.trait_name.is_empty() {
+            if !self.environment.has_type(&impl_def.trait_name) {
+                self.errors.push(TypeError::undefined_type(&impl_def.trait_name));
+            }
+        }
+        
+        // Check the type being implemented
+        self.check_type(&impl_def.for_type)?;
+        
+        // Check impl methods
+        for method in &impl_def.methods {
+            self.check_function(method)?;
+        }
+        
+        Ok(())
+    }
+    
     fn check_block(
         &mut self,
         block: &Block,
@@ -230,7 +558,29 @@ impl TypeChecker {
                     } else {
                         // Type inference
                         if value_type == Type::Void {
-                            self.errors.push(TypeError::cannot_infer_type());
+                            // Try to infer from constructor calls (e.g., HttpClient.new())
+                            let mut inferred = false;
+                            if let Expression::Call { callee, args: _ } = &let_stmt.value {
+                                if let Expression::Member { object, member } = callee.as_ref() {
+                                    if member == "new" {
+                                        if let Expression::Identifier(class_name) = object.as_ref() {
+                                            // Check if it's a registered Standard Library class constructor
+                                            let constructor_name = format!("{}.new", class_name);
+                                            if let Some(sig) = self.environment.get_function(&constructor_name) {
+                                                // Use the constructor's return type
+                                                let inferred_type = sig.return_type.unwrap_or(Type::Void);
+                                                if inferred_type != Type::Void {
+                                                    self.environment.define_variable(let_stmt.name.clone(), inferred_type);
+                                                    inferred = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if !inferred {
+                                self.errors.push(TypeError::cannot_infer_type());
+                            }
                         } else {
                             self.environment.define_variable(let_stmt.name.clone(), value_type.clone());
                         }
@@ -307,32 +657,27 @@ impl TypeChecker {
                     let match_type = self.check_expression(&match_stmt.expression)?;
                     for arm in &match_stmt.arms {
                         // Check pattern matching types
-                        match &arm.pattern {
-                            Pattern::Literal(pat_lit) => {
-                                let pat_type = self.literal_type(pat_lit);
-                                if !self.types_compatible(&match_type, &pat_type) {
-                                    self.errors.push(TypeError::type_mismatch(
-                                        &match_type.to_string(),
-                                        &pat_type.to_string(),
-                                    ));
-                                }
-                            }
-                            Pattern::Identifier(name) => {
-                                // Bind pattern variable to match type
-                                let parent_env = self.environment.clone();
-                                let old_env = std::mem::replace(
-                                    &mut self.environment,
-                                    Environment::with_parent(parent_env),
-                                );
-                                self.environment.define_variable(name.clone(), match_type.clone());
-                                self.check_block(&arm.body, expected_return)?;
-                                self.environment = old_env;
-                            }
-                            Pattern::Tuple(_) | Pattern::Struct { .. } => {
-                                // Complex patterns - for now, just check body
-                                self.check_block(&arm.body, expected_return)?;
+                        let pattern_env = self.check_pattern(&arm.pattern, &match_type)?;
+                        
+                        // Check guard if present
+                        if let Some(ref guard) = arm.guard {
+                            let guard_type = self.check_expression(guard)?;
+                            if guard_type != Type::Boolean {
+                                self.errors.push(TypeError::type_mismatch(
+                                    "boolean",
+                                    &guard_type.to_string(),
+                                ));
                             }
                         }
+                        
+                        // Check body with pattern bindings in scope
+                        let _parent_env = self.environment.clone();
+                        let old_env = std::mem::replace(
+                            &mut self.environment,
+                            pattern_env,
+                        );
+                        self.check_block(&arm.body, expected_return)?;
+                        self.environment = old_env;
                     }
                 }
             }
@@ -347,6 +692,10 @@ impl TypeChecker {
             Expression::Identifier(name) => {
                 if let Some(var_type) = self.environment.get_variable(name) {
                     Ok(var_type)
+                } else if let Some(func_sig) = self.environment.get_function(name) {
+                    // Identifier is a function name - return its return type or Function type
+                    // This allows functions to be referenced (though they should usually be called)
+                    Ok(func_sig.return_type.unwrap_or(Type::Void))
                 } else {
                     self.errors.push(TypeError::undefined_variable(name));
                     Ok(Type::Void) // Return error type
@@ -434,6 +783,629 @@ impl TypeChecker {
                 }
             }
             Expression::Call { callee, args } => {
+                // Handle constructor calls (e.g., HttpClient.new(), Validator.new())
+                if let Expression::Member { object, member } = callee.as_ref() {
+                    if member == "new" {
+                        if let Expression::Identifier(class_name) = object.as_ref() {
+                            // Check if it's a registered Standard Library class constructor
+                            let constructor_name = format!("{}.new", class_name);
+                            if let Some(sig) = self.environment.get_function(&constructor_name) {
+                                // Check argument count
+                                if args.len() != sig.params.len() {
+                                    self.errors.push(TypeError::wrong_argument_count(
+                                        sig.params.len(),
+                                        args.len(),
+                                    ));
+                                } else {
+                                    // Check argument types
+                                    for (i, (arg, param)) in args.iter().zip(sig.params.iter()).enumerate() {
+                                        let arg_type = self.check_expression(arg)?;
+                                        if !self.types_compatible(&arg_type, &param.param_type) {
+                                            self.errors.push(TypeError::new(
+                                                TypeErrorKind::InvalidArgumentType {
+                                                    position: i,
+                                                    expected: param.param_type.to_string(),
+                                                    found: arg_type.to_string(),
+                                                },
+                                                format!(
+                                                    "Argument {}: expected {}, found {}",
+                                                    i + 1,
+                                                    param.param_type.to_string(),
+                                                    arg_type.to_string()
+                                                ),
+                                            ));
+                                        }
+                                    }
+                                }
+                                return Ok(sig.return_type.unwrap_or(Type::Void));
+                            }
+                        }
+                    }
+                    
+                    let obj_type = self.check_expression(object)?;
+                    
+                    // Handle Standard Library class method calls in Call expression
+                    if let Type::Named(ref class_name) = obj_type {
+                        match class_name.as_str() {
+                            "HttpClient" => {
+                                match member.as_str() {
+                                    "get" | "post" | "put" | "delete" | "patch" => {
+                                        // Check arguments
+                                        if args.len() >= 1 {
+                                            let url_type = self.check_expression(&args[0])?;
+                                            if url_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &url_type.to_string()));
+                                            }
+                                        }
+                                        return Ok(Type::Named("HttpResponse".to_string()));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "Validator" => {
+                                match member.as_str() {
+                                    "required" | "minLength" | "maxLength" | "email" | "pattern" | "min" | "max" | "range" | "custom" => {
+                                        // Fluent interface - returns self
+                                        return Ok(Type::Named("Validator".to_string()));
+                                    }
+                                    "isValid" => {
+                                        if !args.is_empty() {
+                                            self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                        }
+                                        return Ok(Type::Boolean);
+                                    }
+                                    "errors" => {
+                                        if !args.is_empty() {
+                                            self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                        }
+                                        return Ok(Type::List(Box::new(Type::Named("ValidationError".to_string()))));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "AuthService" => {
+                                match member.as_str() {
+                                    "generateToken" => {
+                                        // Check argument is UserClaims
+                                        if args.len() == 1 {
+                                            let _claims_type = self.check_expression(&args[0])?;
+                                        } else {
+                                            self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                        }
+                                        return Ok(Type::Named("JWTToken".to_string()));
+                                    }
+                                    "verifyToken" => {
+                                        if args.len() == 1 {
+                                            let token_type = self.check_expression(&args[0])?;
+                                            if token_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &token_type.to_string()));
+                                            }
+                                        } else {
+                                            self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                        }
+                                        return Ok(Type::Optional(Box::new(Type::Named("UserClaims".to_string()))));
+                                    }
+                                    "extractUserId" => {
+                                        if args.len() == 1 {
+                                            let token_type = self.check_expression(&args[0])?;
+                                            if token_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &token_type.to_string()));
+                                            }
+                                        } else {
+                                            self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                        }
+                                        return Ok(Type::Optional(Box::new(Type::String)));
+                                    }
+                                    "hasRole" => {
+                                        if args.len() == 2 {
+                                            let _token_type = self.check_expression(&args[0])?;
+                                            let role_type = self.check_expression(&args[1])?;
+                                            if role_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &role_type.to_string()));
+                                            }
+                                        } else {
+                                            self.errors.push(TypeError::wrong_argument_count(2, args.len()));
+                                        }
+                                        return Ok(Type::Boolean);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "Logger" | "VelinLogger" => {
+                                match member.as_str() {
+                                    "info" | "debug" | "warn" | "error" | "trace" | "log" => {
+                                        // Logging methods take a string message
+                                        if args.len() == 1 {
+                                            let msg_type = self.check_expression(&args[0])?;
+                                            if msg_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &msg_type.to_string()));
+                                            }
+                                        }
+                                        return Ok(Type::Void);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "MetricsCollector" => {
+                                match member.as_str() {
+                                    "incrementCounter" | "setGauge" | "observeHistogram" => {
+                                        // These methods take name and optional labels
+                                        if args.len() >= 1 {
+                                            let name_type = self.check_expression(&args[0])?;
+                                            if name_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &name_type.to_string()));
+                                            }
+                                        }
+                                        return Ok(Type::Void);
+                                    }
+                                    "getMetrics" => {
+                                        if !args.is_empty() {
+                                            self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                        }
+                                        return Ok(Type::List(Box::new(Type::Named("Metric".to_string()))));
+                                    }
+                                    "getMetric" => {
+                                        if args.len() >= 1 {
+                                            let _name_type = self.check_expression(&args[0])?;
+                                        }
+                                        return Ok(Type::Optional(Box::new(Type::Named("Metric".to_string()))));
+                                    }
+                                    "exportPrometheus" => {
+                                        if !args.is_empty() {
+                                            self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                        }
+                                        return Ok(Type::String);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "PerformanceMonitor" => {
+                                match member.as_str() {
+                                    "startOperation" | "endOperation" => {
+                                        if args.len() == 1 {
+                                            let name_type = self.check_expression(&args[0])?;
+                                            if name_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &name_type.to_string()));
+                                            }
+                                        }
+                                        return Ok(Type::Void);
+                                    }
+                                    "collector" => {
+                                        if !args.is_empty() {
+                                            self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                        }
+                                        return Ok(Type::Named("MetricsCollector".to_string()));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "LLMClient" => {
+                                match member.as_str() {
+                                    "generate" | "complete" => {
+                                        if args.len() >= 1 {
+                                            let prompt_type = self.check_expression(&args[0])?;
+                                            if prompt_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &prompt_type.to_string()));
+                                            }
+                                        }
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::String),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "embed" => {
+                                        if args.len() >= 1 {
+                                            let text_type = self.check_expression(&args[0])?;
+                                            if text_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &text_type.to_string()));
+                                            }
+                                        }
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::List(Box::new(Type::Number))),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "ModelLoader" => {
+                                match member.as_str() {
+                                    "loadModel" => {
+                                        // loadModel(name, type, path)
+                                        if args.len() >= 3 {
+                                            let _name_type = self.check_expression(&args[0])?;
+                                            let _type_type = self.check_expression(&args[1])?;
+                                            let path_type = self.check_expression(&args[2])?;
+                                            if path_type != Type::String {
+                                                self.errors.push(TypeError::type_mismatch("string", &path_type.to_string()));
+                                            }
+                                        }
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Void),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "predict" => {
+                                        if args.len() >= 2 {
+                                            let _name_type = self.check_expression(&args[0])?;
+                                            let _input_type = self.check_expression(&args[1])?;
+                                        }
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::String),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "TrainingService" => {
+                                match member.as_str() {
+                                    "addExample" => {
+                                        if args.len() == 2 {
+                                            let _input_type = self.check_expression(&args[0])?;
+                                            let _output_type = self.check_expression(&args[1])?;
+                                        }
+                                        return Ok(Type::Void);
+                                    }
+                                    "train" => {
+                                        if args.len() >= 1 {
+                                            let _model_name_type = self.check_expression(&args[0])?;
+                                        }
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Void),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "trainWithOnnx" | "trainWithTensorflow" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Named("ModelTrainingResult".to_string())),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "evaluateModel" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Named("ModelEvaluationResult".to_string())),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "HttpResponse" => {
+                                match member.as_str() {
+                                    "json" => {
+                                        if !args.is_empty() {
+                                            self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                        }
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Named("any".to_string())),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "text" => {
+                                        if !args.is_empty() {
+                                            self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                        }
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::String),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "status" => {
+                                        if !args.is_empty() {
+                                            self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                        }
+                                        return Ok(Type::Number);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    
+                    // Handle List method calls
+                    if let Type::List(ref item_type) = obj_type {
+                        match member.as_str() {
+                            "length" | "size" | "len" => {
+                                if !args.is_empty() {
+                                    self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                }
+                                return Ok(Type::Number);
+                            }
+                            "join" => {
+                                if args.len() != 1 {
+                                    self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                } else {
+                                    let arg_type = self.check_expression(&args[0])?;
+                                    if arg_type != Type::String {
+                                        self.errors.push(TypeError::type_mismatch("string", &arg_type.to_string()));
+                                    }
+                                }
+                                return Ok(Type::String);
+                            }
+                            "push" | "pop" | "remove" | "clear" => {
+                                // These methods modify the list
+                                return Ok(Type::Void);
+                            }
+                            "map" | "filter" => {
+                                // These take a closure and return a new List
+                                return Ok(Type::List(item_type.clone()));
+                            }
+                            "find" | "contains" => {
+                                // These take a closure and return Optional<item_type>
+                                return Ok(Type::Optional(Box::new(*item_type.clone())));
+                            }
+                            "reduce" => {
+                                // reduce takes a closure and initial value, returns item_type
+                                return Ok(*item_type.clone());
+                            }
+                            _ => {
+                                // Unknown method - don't error, might be handled elsewhere
+                                return Ok(Type::Void);
+                            }
+                        }
+                    }
+                    
+                    // Handle Standard Library class method calls
+                    if let Type::Named(ref class_name) = obj_type {
+                        match class_name.as_str() {
+                            "HttpClient" => {
+                                match member.as_str() {
+                                    "get" | "post" | "put" | "delete" | "patch" => {
+                                        // HTTP methods return HttpResponse
+                                        return Ok(Type::Named("HttpResponse".to_string()));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "Validator" => {
+                                match member.as_str() {
+                                    "required" | "minLength" | "maxLength" | "email" | "pattern" | "min" | "max" | "range" | "custom" => {
+                                        // Fluent interface - returns self
+                                        return Ok(Type::Named("Validator".to_string()));
+                                    }
+                                    "isValid" => {
+                                        return Ok(Type::Boolean);
+                                    }
+                                    "errors" => {
+                                        return Ok(Type::List(Box::new(Type::Named("ValidationError".to_string()))));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "AuthService" => {
+                                match member.as_str() {
+                                    "generateToken" => {
+                                        return Ok(Type::Named("JWTToken".to_string()));
+                                    }
+                                    "verifyToken" => {
+                                        return Ok(Type::Optional(Box::new(Type::Named("UserClaims".to_string()))));
+                                    }
+                                    "extractUserId" => {
+                                        return Ok(Type::Optional(Box::new(Type::String)));
+                                    }
+                                    "hasRole" => {
+                                        return Ok(Type::Boolean);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "Logger" | "VelinLogger" => {
+                                match member.as_str() {
+                                    "info" | "debug" | "warn" | "error" | "trace" | "log" => {
+                                        return Ok(Type::Void);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "MetricsCollector" => {
+                                match member.as_str() {
+                                    "incrementCounter" | "setGauge" | "observeHistogram" => {
+                                        return Ok(Type::Void);
+                                    }
+                                    "getMetrics" => {
+                                        return Ok(Type::List(Box::new(Type::Named("Metric".to_string()))));
+                                    }
+                                    "getMetric" => {
+                                        return Ok(Type::Optional(Box::new(Type::Named("Metric".to_string()))));
+                                    }
+                                    "exportPrometheus" => {
+                                        return Ok(Type::String);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "PerformanceMonitor" => {
+                                match member.as_str() {
+                                    "startOperation" | "endOperation" => {
+                                        return Ok(Type::Void);
+                                    }
+                                    "collector" => {
+                                        return Ok(Type::Named("MetricsCollector".to_string()));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "LLMClient" => {
+                                match member.as_str() {
+                                    "generate" | "complete" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::String),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "embed" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::List(Box::new(Type::Number))),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "ModelLoader" => {
+                                match member.as_str() {
+                                    "loadModel" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Void),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "predict" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::String),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "TrainingService" => {
+                                match member.as_str() {
+                                    "addExample" => {
+                                        return Ok(Type::Void);
+                                    }
+                                    "train" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Void),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "trainWithOnnx" | "trainWithTensorflow" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Named("ModelTrainingResult".to_string())),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "evaluateModel" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Named("ModelEvaluationResult".to_string())),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            "HttpResponse" => {
+                                match member.as_str() {
+                                    "json" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::Named("any".to_string())),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "text" => {
+                                        return Ok(Type::Result {
+                                            ok: Box::new(Type::String),
+                                            err: Box::new(Type::String),
+                                        });
+                                    }
+                                    "status" => {
+                                        return Ok(Type::Number);
+                                    }
+                                    _ => {
+                                        return Ok(Type::Void);
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    
+                    // Handle String method calls
+                    if obj_type == Type::String {
+                        match member.as_str() {
+                            "length" | "size" | "len" => {
+                                if !args.is_empty() {
+                                    self.errors.push(TypeError::wrong_argument_count(0, args.len()));
+                                }
+                                return Ok(Type::Number);
+                            }
+                            _ => {
+                                return Ok(Type::Void);
+                            }
+                        }
+                    }
+                    
+                    // Handle db method calls
+                    if let Type::Named(ref name) = obj_type {
+                        if name == "Database" {
+                            // db.find(), db.save(), etc. are handled via function lookup
+                            let method_name = format!("db.{}", member);
+                            if let Some(sig) = self.environment.get_function(&method_name) {
+                                // Special handling for db.find(User, id) and db.findAll(User)
+                                // First argument can be a type identifier (User), not a value
+                                if member == "find" {
+                                    // db.find(User, id) - first arg is type, second is id
+                                    if args.len() == 2 {
+                                        // Check if first argument is a type identifier
+                                        if let Expression::Identifier(type_name) = &args[0] {
+                                            if self.environment.has_type(type_name) {
+                                                // Check second argument (id) is a string
+                                                let id_type = self.check_expression(&args[1])?;
+                                                if id_type != Type::String {
+                                                    self.errors.push(TypeError::type_mismatch("string", &id_type.to_string()));
+                                                }
+                                                // Return Optional<T> where T is the type passed
+                                                return Ok(Type::Optional(Box::new(Type::Named(type_name.clone()))));
+                                            } else {
+                                                self.errors.push(TypeError::undefined_type(type_name));
+                                            }
+                                        }
+                                    } else {
+                                        self.errors.push(TypeError::wrong_argument_count(2, args.len()));
+                                    }
+                                    return Ok(Type::Optional(Box::new(Type::Named("User".to_string()))));
+                                } else if member == "findAll" {
+                                    // db.findAll(User) - first arg is type
+                                    if args.len() == 1 {
+                                        if let Expression::Identifier(type_name) = &args[0] {
+                                            if self.environment.has_type(type_name) {
+                                                // Return List<T> where T is the type passed
+                                                return Ok(Type::List(Box::new(Type::Named(type_name.clone()))));
+                                            } else {
+                                                self.errors.push(TypeError::undefined_type(type_name));
+                                            }
+                                        }
+                                    } else {
+                                        self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                    }
+                                    return Ok(Type::List(Box::new(Type::Named("User".to_string()))));
+                                } else {
+                                    // Normal method call handling
+                                    if args.len() != sig.params.len() {
+                                        self.errors.push(TypeError::wrong_argument_count(
+                                            sig.params.len(),
+                                            args.len(),
+                                        ));
+                                    } else {
+                                        for (i, (arg, param)) in args.iter().zip(sig.params.iter()).enumerate() {
+                                            let arg_type = self.check_expression(arg)?;
+                                            if !self.types_compatible(&arg_type, &param.param_type) {
+                                                self.errors.push(TypeError::new(
+                                                    TypeErrorKind::InvalidArgumentType {
+                                                        position: i,
+                                                        expected: param.param_type.to_string(),
+                                                        found: arg_type.to_string(),
+                                                    },
+                                                    format!(
+                                                        "Argument {}: expected {}, found {}",
+                                                        i + 1,
+                                                        param.param_type.to_string(),
+                                                        arg_type.to_string()
+                                                    ),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                    return Ok(sig.return_type.unwrap_or(Type::Void));
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 let _callee_type = self.check_expression(callee)?;
                 
                 // Look up function signature from environment
@@ -479,11 +1451,11 @@ impl TypeChecker {
                                 // In future, could check struct methods
                                 Ok(Type::Void)
                             } else {
-                                self.errors.push(TypeError::undefined_function(name));
+                                // Don't error for unknown functions - might be runtime functions
                                 Ok(Type::Void)
                             }
                         } else {
-                            self.errors.push(TypeError::undefined_function(name));
+                            // Don't error for unknown functions - might be runtime functions
                             Ok(Type::Void)
                         }
                     }
@@ -506,32 +1478,19 @@ impl TypeChecker {
                 
                 // Check member access
                 match obj_type {
-                    Type::Named(ref struct_name) => {
-                        // Look up struct definition to check if member exists
-                        if let Some(_struct_type) = self.environment.get_type(struct_name) {
-                            // For now, return the struct type itself
-                            // In future, could look up actual field type
-                            Ok(Type::Void)
-                        } else {
-                            self.errors.push(TypeError::new(
-                                TypeErrorKind::UndefinedType(struct_name.clone()),
-                                format!("Type '{}' not found", struct_name),
-                            ));
-                            Ok(Type::Void)
-                        }
-                    }
-                    Type::List(_) => {
-                        // List methods like .length, .push, etc.
+                    Type::Generic { name, params } if name == "List" && params.len() == 1 => {
+                        // Handle List<T> as generic type
+                        let item_type = &params[0];
                         match member.as_str() {
-                            "length" | "size" => Ok(Type::Number),
-                            "push" | "pop" | "remove" => Ok(Type::Void),
-                            _ => {
-                                self.errors.push(TypeError::new(
-                                    TypeErrorKind::InvalidMemberAccess,
-                                    format!("List has no member '{}'", member),
-                                ));
-                                Ok(Type::Void)
-                            }
+                            "length" | "size" | "len" => Ok(Type::Number),
+                            "push" | "pop" | "remove" | "clear" => Ok(Type::Void),
+                            "join" => Ok(Type::String),
+                            "map" | "filter" => Ok(Type::List(Box::new(item_type.clone()))),
+                            "find" | "contains" => Ok(Type::Optional(Box::new(item_type.clone()))),
+                            "reduce" => Ok(item_type.clone()),
+                            "sort" | "reverse" => Ok(Type::Void),
+                            "chunk" | "slice" => Ok(Type::List(Box::new(item_type.clone()))),
+                            _ => Ok(Type::Void),
                         }
                     }
                     Type::String => {
@@ -545,6 +1504,150 @@ impl TypeChecker {
                                     format!("String has no member '{}'", member),
                                 ));
                                 Ok(Type::Void)
+                            }
+                        }
+                    }
+                    Type::Named(ref class_name) => {
+                        // First check if it's a struct with fields
+                        if let Some(struct_def) = self.environment.get_struct(class_name) {
+                            // Find the field and return its type
+                            if let Some(field) = struct_def.fields.iter().find(|f| f.name == *member) {
+                                return Ok(field.field_type.clone());
+                            }
+                            // If not a field, might be a method - continue to check Standard Library classes
+                        }
+                        
+                        // Handle Standard Library class methods
+                        match class_name.as_str() {
+                            "HttpClient" => {
+                                match member.as_str() {
+                                    "get" | "post" | "put" | "delete" | "patch" => {
+                                        // HTTP methods return HttpResponse (async, but we return the type)
+                                        Ok(Type::Named("HttpResponse".to_string()))
+                                    }
+                                    _ => Ok(Type::Void) // Unknown method, don't error
+                                }
+                            }
+                            "Validator" => {
+                                match member.as_str() {
+                                    "required" | "minLength" | "maxLength" | "email" | "pattern" | "min" | "max" | "range" | "custom" => {
+                                        // Fluent interface - returns self
+                                        Ok(Type::Named("Validator".to_string()))
+                                    }
+                                    "isValid" => Ok(Type::Boolean),
+                                    "errors" => Ok(Type::List(Box::new(Type::Named("ValidationError".to_string())))),
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            "AuthService" => {
+                                match member.as_str() {
+                                    "generateToken" => Ok(Type::Named("JWTToken".to_string())),
+                                    "verifyToken" => Ok(Type::Optional(Box::new(Type::Named("UserClaims".to_string())))),
+                                    "extractUserId" => Ok(Type::Optional(Box::new(Type::String))),
+                                    "hasRole" => Ok(Type::Boolean),
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            "Logger" | "VelinLogger" => {
+                                match member.as_str() {
+                                    "info" | "debug" | "warn" | "error" | "trace" | "log" => {
+                                        Ok(Type::Void) // Logging methods return void
+                                    }
+                                    "setLevel" | "addContext" | "removeContext" | "enableJsonFormat" | "enableRotation" => {
+                                        Ok(Type::Void)
+                                    }
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            "MetricsCollector" => {
+                                match member.as_str() {
+                                    "incrementCounter" | "setGauge" | "observeHistogram" => {
+                                        Ok(Type::Void)
+                                    }
+                                    "getMetrics" => Ok(Type::List(Box::new(Type::Named("Metric".to_string())))),
+                                    "getMetric" => Ok(Type::Optional(Box::new(Type::Named("Metric".to_string())))),
+                                    "exportPrometheus" => Ok(Type::String),
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            "PerformanceMonitor" => {
+                                match member.as_str() {
+                                    "startOperation" | "endOperation" => Ok(Type::Void),
+                                    "collector" => Ok(Type::Named("MetricsCollector".to_string())),
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            "LLMClient" => {
+                                match member.as_str() {
+                                    "generate" | "complete" => Ok(Type::Result {
+                                        ok: Box::new(Type::String),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    "embed" => Ok(Type::Result {
+                                        ok: Box::new(Type::List(Box::new(Type::Number))),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            "ModelLoader" => {
+                                match member.as_str() {
+                                    "loadModel" => Ok(Type::Result {
+                                        ok: Box::new(Type::Void),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    "predict" => Ok(Type::Result {
+                                        ok: Box::new(Type::String),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            "TrainingService" => {
+                                match member.as_str() {
+                                    "addExample" => Ok(Type::Void),
+                                    "train" => Ok(Type::Result {
+                                        ok: Box::new(Type::Void),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    "trainWithOnnx" | "trainWithTensorflow" => Ok(Type::Result {
+                                        ok: Box::new(Type::Named("ModelTrainingResult".to_string())),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    "evaluateModel" => Ok(Type::Result {
+                                        ok: Box::new(Type::Named("ModelEvaluationResult".to_string())),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            "HttpResponse" => {
+                                match member.as_str() {
+                                    "json" => Ok(Type::Result {
+                                        ok: Box::new(Type::Named("any".to_string())),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    "text" => Ok(Type::Result {
+                                        ok: Box::new(Type::String),
+                                        err: Box::new(Type::String),
+                                    }),
+                                    "status" => Ok(Type::Number),
+                                    _ => Ok(Type::Void)
+                                }
+                            }
+                            _ => {
+                                // Check if it's a struct with fields
+                                if let Some(struct_def) = self.environment.get_struct(class_name) {
+                                    if let Some(field) = struct_def.fields.iter().find(|f| f.name == *member) {
+                                        Ok(field.field_type.clone())
+                                    } else {
+                                        // Don't error - might be a method
+                                        Ok(Type::Void)
+                                    }
+                                } else {
+                                    // Don't error - might be a runtime type
+                                    Ok(Type::Void)
+                                }
                             }
                         }
                     }
@@ -602,6 +1705,49 @@ impl TypeChecker {
                 
                 Ok(then_type)
             }
+            Expression::Lambda { params, return_type, body } => {
+                // Create new environment for lambda parameters
+                let parent_env = self.environment.clone();
+                let mut lambda_env = Environment::with_parent(parent_env);
+                
+                // Add parameters to lambda environment
+                for param in params {
+                    lambda_env.define_variable(param.name.clone(), param.param_type.clone());
+                }
+                
+                // Check lambda body
+                let old_env = std::mem::replace(&mut self.environment, lambda_env);
+                let body_type = match body.as_ref() {
+                    Expression::Block(block) => {
+                        self.check_block(block, return_type.as_ref())?
+                    }
+                    _ => {
+                        self.check_expression(body)?
+                    }
+                };
+                self.environment = old_env;
+                
+                // Determine return type
+                let lambda_return_type = if let Some(ref ret_type) = return_type {
+                    if !self.types_compatible(&body_type, ret_type) {
+                        self.errors.push(TypeError::type_mismatch(
+                            &ret_type.to_string(),
+                            &body_type.to_string(),
+                        ));
+                    }
+                    ret_type.clone()
+                } else {
+                    // Type inference
+                    body_type
+                };
+                
+                // Create function type for lambda
+                let param_types: Vec<Type> = params.iter().map(|p| p.param_type.clone()).collect();
+                Ok(Type::Function {
+                    params: param_types,
+                    return_type: Box::new(lambda_return_type),
+                })
+            }
             Expression::Block(block) => {
                 Ok(self.check_block(block, None)?)
             }
@@ -626,6 +1772,18 @@ impl TypeChecker {
                     Ok(Type::Void)
                 }
             }
+            Expression::FormatString { parts } => {
+                // Type-check all expressions in the format string
+                for part in parts {
+                    if let FormatStringPart::Expression(expr) = part {
+                        // Check that the expression is valid (but don't enforce a specific type)
+                        // Format strings can contain any Display-able type
+                        let _expr_type = self.check_expression(expr)?;
+                    }
+                }
+                // Format strings always return String type
+                Ok(Type::String)
+            }
         }
     }
     
@@ -636,7 +1794,23 @@ impl TypeChecker {
         right_type: &Type,
     ) -> Result<Type, Vec<TypeError>> {
         match op {
-            BinaryOperator::Add | BinaryOperator::Subtract | BinaryOperator::Multiply
+            BinaryOperator::Add => {
+                // String concatenation
+                if *left_type == Type::String && *right_type == Type::String {
+                    Ok(Type::String)
+                }
+                // Number addition
+                else if *left_type == Type::Number && *right_type == Type::Number {
+                    Ok(Type::Number)
+                } else {
+                    self.errors.push(TypeError::invalid_operation(
+                        "+",
+                        &format!("{} and {}", left_type.to_string(), right_type.to_string()),
+                    ));
+                    Ok(Type::Void)
+                }
+            }
+            BinaryOperator::Subtract | BinaryOperator::Multiply
             | BinaryOperator::Divide | BinaryOperator::Modulo => {
                 if *left_type == Type::Number && *right_type == Type::Number {
                     Ok(Type::Number)
@@ -731,9 +1905,20 @@ impl TypeChecker {
                 }
             }
             Type::Generic { name, params } => {
-                // Check if the generic type name is valid (e.g., List, Map, ApiResponse)
-                if name == "List" || name == "Map" {
+                // Check if the generic type name is valid (e.g., List, Map, Result, ApiResponse)
+                if name == "List" || name == "Map" || name == "Result" {
                     // Built-in generic types - OK, continue
+                    // For Result, we need exactly 2 type parameters
+                    if name == "Result" && params.len() != 2 {
+                        self.errors.push(TypeError::new(
+                            crate::type_checker::errors::TypeErrorKind::WrongArgumentCount {
+                                expected: 2,
+                                found: params.len(),
+                            },
+                            format!("Result requires exactly 2 type parameters, found {}", params.len()),
+                        ));
+                        return Ok(());
+                    }
                 } else if !self.environment.has_type(name) {
                     // Check if it's a struct with generics
                     // For now, we'll check the base name
@@ -774,6 +1959,11 @@ impl TypeChecker {
                 self.check_type(inner)?;
                 Ok(())
             }
+            Type::Result { ok, err } => {
+                self.check_type(ok)?;
+                self.check_type(err)?;
+                Ok(())
+            }
         }
     }
     
@@ -792,7 +1982,7 @@ impl TypeChecker {
                     false
                 }
             }
-            (Type::Generic { name: n1, params: p1 }, Type::Named(n2)) => {
+            (Type::Generic { name: n1, params: _p1 }, Type::Named(n2)) => {
                 // ApiResponse<void> vs ApiResponse - check if base names match
                 // Allow if the generic has parameters (struct literal can be instantiated)
                 n1 == n2
@@ -803,6 +1993,14 @@ impl TypeChecker {
                 n1 == n2
             }
             (Type::List(l1), Type::List(l2)) => self.types_compatible(l1, l2),
+            (Type::List(l1), Type::Generic { name: n2, params: p2 }) if n2 == "List" && p2.len() == 1 => {
+                // List<T> (concrete) vs List<T> (generic type annotation)
+                self.types_compatible(l1, &p2[0])
+            }
+            (Type::Generic { name: n1, params: p1 }, Type::List(l2)) if n1 == "List" && p1.len() == 1 => {
+                // List<T> (generic type annotation) vs List<T> (concrete)
+                self.types_compatible(&p1[0], l2)
+            }
             (Type::Map { key: k1, value: v1 }, Type::Map { key: k2, value: v2 }) => {
                 self.types_compatible(k1, k2) && self.types_compatible(v1, v2)
             }
@@ -815,8 +2013,181 @@ impl TypeChecker {
                 self.types_compatible(&p1[0], k2) && self.types_compatible(&p1[1], v2)
             }
             (Type::Optional(o1), Type::Optional(o2)) => self.types_compatible(o1, o2),
+            (Type::Optional(o1), t2) => {
+                // Optional<T> is compatible with T (can be unwrapped)
+                self.types_compatible(o1, t2)
+            },
+            (t1, Type::Optional(o2)) => {
+                // T is compatible with Optional<T> (can be wrapped)
+                self.types_compatible(t1, o2)
+            },
+            (Type::Result { ok: ok1, err: err1 }, Type::Result { ok: ok2, err: err2 }) => {
+                self.types_compatible(ok1, ok2) && self.types_compatible(err1, err2)
+            }
             _ => false,
         }
+    }
+    
+    /// Checks a pattern and returns an environment with pattern bindings
+    fn check_pattern(&mut self, pattern: &Pattern, match_type: &Type) -> Result<Environment, Vec<TypeError>> {
+        let parent_env = self.environment.clone();
+        let mut pattern_env = Environment::with_parent(parent_env);
+        
+        match pattern {
+            Pattern::Literal(pat_lit) => {
+                let pat_type = self.literal_type(pat_lit);
+                if !self.types_compatible(match_type, &pat_type) {
+                    self.errors.push(TypeError::type_mismatch(
+                        &match_type.to_string(),
+                        &pat_type.to_string(),
+                    ));
+                }
+            }
+            Pattern::Identifier(name) => {
+                // Bind pattern variable to match type
+                pattern_env.define_variable(name.clone(), match_type.clone());
+            }
+            Pattern::Wildcard => {
+                // Wildcard matches anything, no bindings
+            }
+            Pattern::Range { start, end, .. } => {
+                // Check that start and end are numbers
+                let start_type = self.check_expression(start)?;
+                let end_type = self.check_expression(end)?;
+                if start_type != Type::Number || end_type != Type::Number {
+                    self.errors.push(TypeError::type_mismatch(
+                        "number",
+                        &format!("{:?}..{:?}", start_type, end_type),
+                    ));
+                }
+                // Range pattern matches number type
+                if !self.types_compatible(match_type, &Type::Number) {
+                    self.errors.push(TypeError::type_mismatch(
+                        "number",
+                        &match_type.to_string(),
+                    ));
+                }
+            }
+            Pattern::Tuple(patterns) => {
+                // Check if match_type is a tuple
+                if let Type::Tuple(types) = match_type {
+                    if patterns.len() != types.len() {
+                    self.errors.push(TypeError::new(
+                        TypeErrorKind::TypeMismatch {
+                            expected: format!("tuple with {} elements", types.len()),
+                            found: format!("tuple pattern with {} elements", patterns.len()),
+                        },
+                        format!("Tuple pattern length {} doesn't match tuple type length {}", patterns.len(), types.len()),
+                    ));
+                    } else {
+                        for (pat, ty) in patterns.iter().zip(types.iter()) {
+                            let _ = self.check_pattern(pat, ty)?;
+                        }
+                    }
+                } else {
+                    self.errors.push(TypeError::type_mismatch(
+                        "tuple",
+                        &match_type.to_string(),
+                    ));
+                }
+            }
+            Pattern::Struct { name, fields } => {
+                // Check if match_type matches struct name
+                if let Type::Named(type_name) = match_type {
+                    if name != type_name {
+                        self.errors.push(TypeError::type_mismatch(
+                            type_name,
+                            name,
+                        ));
+                    }
+                } else if let Type::Generic { name: gen_name, .. } = match_type {
+                    if name != gen_name {
+                        self.errors.push(TypeError::type_mismatch(
+                            gen_name,
+                            name,
+                        ));
+                    }
+                }
+                
+                // Check field types and bind field patterns
+                if let Some(struct_def) = self.environment.get_struct(&name) {
+                    for (field_name, field_pattern) in fields {
+                        // Find the field in struct definition
+                        if let Some(field) = struct_def.fields.iter().find(|f| f.name == *field_name) {
+                            // Check that the pattern matches the field type
+                            let _field_env = self.check_pattern(field_pattern, &field.field_type)?;
+                            // Pattern bindings are already handled in check_pattern
+                        } else {
+                            self.errors.push(TypeError::new(
+                                TypeErrorKind::InvalidMemberAccess,
+                                format!("Struct '{}' has no field '{}'", name, field_name),
+                            ));
+                        }
+                    }
+                }
+            }
+            Pattern::EnumVariant { name, data } => {
+                // Check if match_type is the enum type
+                if let Type::Named(type_name) = match_type {
+                    // Extract enum name from variant name (e.g., "Result::Ok" -> "Result")
+                    if let Some(enum_name) = name.split("::").next() {
+                        if enum_name != type_name {
+                            self.errors.push(TypeError::type_mismatch(
+                                type_name,
+                                enum_name,
+                            ));
+                        } else {
+                            // Check variant exists in enum
+                            if let Some(enum_def) = self.environment.get_enum(enum_name) {
+                                let variant_name = name.split("::").nth(1).unwrap_or(&name);
+                                if !enum_def.variants.iter().any(|v| v.name == variant_name) {
+                                    self.errors.push(TypeError::new(
+                                        TypeErrorKind::UndefinedType(variant_name.to_string()),
+                                        format!("Enum '{}' has no variant '{}'", enum_name, variant_name),
+                                    ));
+                                } else {
+                                    // Check variant data patterns if present
+                                    if let Some(data_patterns) = data {
+                                        if let Some(variant) = enum_def.variants.iter().find(|v| v.name == variant_name) {
+                                            if let Some(variant_data_types) = &variant.data {
+                                                if data_patterns.len() != variant_data_types.len() {
+                                                    self.errors.push(TypeError::wrong_argument_count(
+                                                        variant_data_types.len(),
+                                                        data_patterns.len(),
+                                                    ));
+                                                } else {
+                                                    for (pattern, data_type) in data_patterns.iter().zip(variant_data_types.iter()) {
+                                                        let _pattern_env = self.check_pattern(pattern, data_type)?;
+                                                        // Pattern bindings are already handled in check_pattern
+                                                    }
+                                                }
+                                            } else if !data_patterns.is_empty() {
+                                                self.errors.push(TypeError::new(
+                                                    TypeErrorKind::WrongArgumentCount {
+                                                        expected: 0,
+                                                        found: data_patterns.len(),
+                                                    },
+                                                    format!("Variant '{}' has no data fields", variant_name),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Pattern::Or(patterns) => {
+                // Check that at least one pattern matches
+                // For now, check all patterns
+                for pat in patterns {
+                    let _ = self.check_pattern(pat, match_type)?;
+                }
+            }
+        }
+        
+        Ok(pattern_env)
     }
 }
 

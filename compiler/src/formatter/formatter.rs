@@ -39,6 +39,12 @@ impl Formatter {
             Item::TypeAlias(ta) => self.format_type_alias(ta),
             Item::Module(m) => self.format_module(m),
             Item::Use(u) => self.format_use(u),
+            Item::Trait(_t) => {
+                // Traits are formatted as-is for now
+            }
+            Item::Impl(_i) => {
+                // Impls are formatted as-is for now
+            }
         }
     }
     
@@ -360,6 +366,13 @@ impl Formatter {
             }
             self.indent();
             self.format_pattern(&arm.pattern);
+            
+            // Format guard if present
+            if let Some(ref guard) = arm.guard {
+                self.write(" if ");
+                self.format_expression(guard);
+            }
+            
             self.write(" => ");
             self.format_block(&arm.body);
             if i < match_stmt.arms.len() - 1 {
@@ -386,6 +399,37 @@ impl Formatter {
                     self.format_pattern(p);
                 }
                 self.write(")");
+            }
+            Pattern::Wildcard => self.write("_"),
+            Pattern::Range { start, end, inclusive } => {
+                self.format_expression(start);
+                if *inclusive {
+                    self.write("..=");
+                } else {
+                    self.write("..");
+                }
+                self.format_expression(end);
+            }
+            Pattern::EnumVariant { name, data } => {
+                self.write(name);
+                if let Some(ref patterns) = data {
+                    self.write("(");
+                    for (i, p) in patterns.iter().enumerate() {
+                        if i > 0 {
+                            self.write(", ");
+                        }
+                        self.format_pattern(p);
+                    }
+                    self.write(")");
+                }
+            }
+            Pattern::Or(patterns) => {
+                for (i, p) in patterns.iter().enumerate() {
+                    if i > 0 {
+                        self.write(" | ");
+                    }
+                    self.format_pattern(p);
+                }
             }
             Pattern::Struct { name, fields } => {
                 self.write(name);
@@ -474,6 +518,32 @@ impl Formatter {
                 self.indent();
                 self.write("}");
             }
+            Expression::Lambda { params, return_type, body } => {
+                self.write("(");
+                for (i, param) in params.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.format_parameter(param);
+                }
+                self.write(")");
+                
+                if let Some(ref ret_type) = return_type {
+                    self.write(": ");
+                    self.format_type(ret_type);
+                }
+                
+                self.write(" => ");
+                
+                match body.as_ref() {
+                    Expression::Block(_) => {
+                        self.format_expression(body);
+                    }
+                    _ => {
+                        self.format_expression(body);
+                    }
+                }
+            }
             Expression::GenericConstructor { name, type_params, args } => {
                 self.write(name);
                 if !type_params.is_empty() {
@@ -494,6 +564,24 @@ impl Formatter {
                     self.format_expression(arg);
                 }
                 self.write(")");
+            }
+            Expression::FormatString { parts } => {
+                self.write("\"");
+                for part in parts {
+                    match part {
+                        FormatStringPart::Text(text) => {
+                            // Escape quotes and backslashes
+                            let escaped = text.replace('\\', "\\\\").replace('"', "\\\"");
+                            self.write(&escaped);
+                        }
+                        FormatStringPart::Expression(expr) => {
+                            self.write("{");
+                            self.format_expression(expr);
+                            self.write("}");
+                        }
+                    }
+                }
+                self.write("\"");
             }
         }
     }

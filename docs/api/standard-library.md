@@ -146,11 +146,28 @@ fn testAddition() {
 let greeting = "Hello, " + name + "!";
 ```
 
-### String Interpolation (geplant)
+### String Interpolation
+
+Format-Strings ermöglichen die Interpolation von Ausdrücken:
 
 ```velin
-let message = "Hello, ${name}!";
+let name = "John";
+let message = "Hello, {name}!";
+// Ergebnis: "Hello, John!"
+
+let x = 10;
+let y = 20;
+let result = "Sum: {x + y}";
+// Ergebnis: "Sum: 30"
 ```
+
+**Syntax:**
+- Format-Strings verwenden geschweifte Klammern `{}` für Interpolation
+- Beliebige Ausdrücke können innerhalb der Klammern verwendet werden
+- Escaping: `\{` für literal `{`, `\}` für literal `}`
+
+**Kompilierung:**
+Format-Strings werden zu Rust `format!` Macros kompiliert.
 
 ## Collection Funktionen
 
@@ -364,13 +381,48 @@ let results = db.search("collection", [0.1, 0.2, 0.3], 10);
 
 ### TrainingService
 
-Model Training.
+Model Training mit ONNX Runtime und TensorFlow.
 
 ```velin
 let mut training = TrainingService::new();
 training.add_example("input", "output");
+
+// Basis-Training
 training.train("model-name");
+
+// ONNX Training
+let onnxConfig = ONNXTrainingConfig {
+    epochs: 100,
+    batch_size: 32,
+    learning_rate: 0.001,
+    optimizer: "Adam",
+    loss_function: "CrossEntropy"
+};
+let result = training.train_with_onnx("model", onnxConfig);
+
+// TensorFlow Training
+let tfConfig = TensorFlowTrainingConfig {
+    epochs: 100,
+    batch_size: 32,
+    learning_rate: 0.001,
+    optimizer: "Adam",
+    loss_function: "SparseCategoricalCrossentropy",
+    validation_split: 0.2
+};
+let result = training.train_with_tensorflow("model", tfConfig);
+
+// Model Evaluation
+let testData = [TrainingExample { input: "test", output: "expected" }];
+let evalResult = training.evaluate_model("model", testData);
 ```
+
+**Features:**
+- ONNX Runtime Integration
+- TensorFlow Integration
+- Hyperparameter Tuning
+- Model Evaluation & Metrics
+- Automatic Logging (VelinLogger)
+- Metrics Collection
 
 ## Best Practices
 

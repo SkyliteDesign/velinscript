@@ -16,13 +16,13 @@ fn login(email: string, password: string): JWTToken {
     }
     
     // Generiere Token
-    let auth = AuthService::new(getSecret());
+    let auth: AuthService = AuthService.new("secret-key");
     let claims = UserClaims {
         user_id: user.id,
         email: user.email,
         roles: user.roles,
     };
-    return auth.generate_token(claims);
+    return auth.generateToken(claims);
 }
 ```
 
@@ -32,8 +32,8 @@ fn login(email: string, password: string): JWTToken {
 @Auth
 @GET("/api/profile")
 fn getProfile(token: string): User {
-    let auth = AuthService::new(getSecret());
-    let claims = auth.verify_token(token);
+    let auth: AuthService = AuthService.new("secret-key");
+    let claims = auth.verifyToken(token);
     
     if (claims == null) {
         return HttpResponse::unauthorized("Invalid token");

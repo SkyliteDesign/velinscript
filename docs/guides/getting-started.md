@@ -38,7 +38,7 @@ curl https://velinscript.dev/install.sh | sh
 ### 1. Projekt initialisieren
 
 ```bash
-velin init my-first-api
+velin-compiler init my-first-api
 cd my-first-api
 ```
 
@@ -60,7 +60,7 @@ fn hello(): string {
 ### 3. Kompilieren
 
 ```bash
-velin compile -i main.velin -o main.rs
+velin-compiler compile -i main.velin -o main.rs
 ```
 
 Dies erstellt `main.rs` mit dem kompilierten Rust-Code.
@@ -68,7 +68,7 @@ Dies erstellt `main.rs` mit dem kompilierten Rust-Code.
 ### 4. Type Checking
 
 ```bash
-velin check -i main.velin
+velin-compiler check -i main.velin
 ```
 
 Prüft den Code auf Type-Fehler.
@@ -141,6 +141,13 @@ fn createUser(name: string, email: string): User {
 6. **Tutorial 6: Authentication** - [tutorial-6-authentication.md](tutorial-6-authentication.md)
 7. **Tutorial 7: ML Integration** - [tutorial-7-ml.md](tutorial-7-ml.md)
 
+## Entwickler-Tools
+
+- **Auto-Import Management** - [auto-imports.md](../guides/auto-imports.md)
+- **Dead Code Detector** - [../tools/dead-code-detector.md](../tools/dead-code-detector.md)
+- **API Documentation Generator** - [../tools/api-doc-generator.md](../tools/api-doc-generator.md)
+- **Package Manager** - Siehe `tools/package-manager/README.md`
+
 ## Beispiele
 
 Siehe [examples/](../../examples/) für vollständige Beispiel-Projekte.
@@ -165,10 +172,10 @@ export PATH=$PATH:$(pwd)/target/release
 
 ### Type Errors
 
-Nutze `velin check` um Type-Fehler zu finden:
+Nutze `velin-compiler check` um Type-Fehler zu finden:
 
 ```bash
-velin check -i main.velin
+velin-compiler check -i main.velin
 ```
 
 ### Parsing Errors

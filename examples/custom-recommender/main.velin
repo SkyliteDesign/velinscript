@@ -14,11 +14,11 @@
 // use async::*;
 
 // Initialisierung beim Start
-// In Production: Lade Daten aus Datenbank
-let mut allItems = List<Item>();
-let mut allUsers = List<User>();
-let mut allPreferences = List<UserPreference>();
-let mut allFeedback = List<Feedback>();
+// Lade Daten aus Datenbank
+let mut allItems = db.findAll(Item);
+let mut allUsers = db.findAll(User);
+let mut allPreferences = db.findAll(UserPreference);
+let mut allFeedback = db.findAll(Feedback);
 
 // Initialisiere Vector Database beim Start
 // initializeVectorDB(allItems);
@@ -315,7 +315,7 @@ fn createPreference(request: HttpRequest, userId: string, itemId: string, rating
         
         // Speichere in Datenbank
         allPreferences.push(preference);
-        // In Production: db.save(preference);
+        db.save(preference);
         
         // Invalidate Cache
         cacheInvalidate(generateUserEmbeddingCacheKey(userId));
@@ -504,7 +504,7 @@ fn createFeedback(request: HttpRequest, userId: string, itemId: string, feedback
         
         // Speichere in Datenbank
         allFeedback.push(feedback);
-        // In Production: db.save(feedback);
+        db.save(feedback);
         
         // Enqueue Analytics-Processing (asynchron)
         let analyticsData = Map<string, any>();

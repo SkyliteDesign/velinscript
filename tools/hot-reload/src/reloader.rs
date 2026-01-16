@@ -63,9 +63,60 @@ impl Reloader {
     }
     
     pub async fn restart_server(&self, mut old_process: Child) -> Result<Child> {
-        // Beende alten Prozess
-        let _ = old_process.kill();
-        let _ = old_process.wait();
+        use std::time::Duration;
+        use tokio::time::sleep;
+        
+        // Versuche graceful shutdown (SIGTERM auf Unix, CTRL_BREAK auf Windows)
+        #[cfg(unix)]
+        {
+            if let Err(e) = old_process.kill() {
+                eprintln!("⚠️  Warnung: Konnte Prozess nicht beenden: {}", e);
+            } else {
+                // Warte bis zu 5 Sekunden auf graceful shutdown
+                for _ in 0..50 {
+                    match old_process.try_wait() {
+                        Ok(Some(_)) => break,
+                        Ok(None) => sleep(Duration::from_millis(100)).await,
+                        Err(e) => {
+                            eprintln!("⚠️  Fehler beim Warten auf Prozess: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        #[cfg(not(unix))]
+        {
+            // Windows: Verwende kill() direkt
+            if let Err(e) = old_process.kill() {
+                eprintln!("⚠️  Warnung: Konnte Prozess nicht beenden: {}", e);
+            } else {
+                // Warte bis zu 5 Sekunden
+                for _ in 0..50 {
+                    match old_process.try_wait() {
+                        Ok(Some(_)) => break,
+                        Ok(None) => sleep(Duration::from_millis(100)).await,
+                        Err(e) => {
+                            eprintln!("⚠️  Fehler beim Warten auf Prozess: {}", e);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Falls Prozess noch läuft, force kill
+        if old_process.try_wait().is_ok() {
+            if let Ok(None) = old_process.try_wait() {
+                eprintln!("⚠️  Prozess reagiert nicht, erzwinge Beendigung...");
+                let _ = old_process.kill();
+                let _ = old_process.wait();
+            }
+        }
+        
+        // Kurze Pause vor Neustart
+        sleep(Duration::from_millis(500)).await;
         
         // Starte neuen Prozess
         self.start_server().await

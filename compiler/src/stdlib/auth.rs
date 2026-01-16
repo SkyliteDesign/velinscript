@@ -112,10 +112,13 @@ impl AuthService {
 #[cfg(feature = "oauth2")]
 pub mod oauth2_integration {
     use super::*;
-    use oauth2::{Client, AuthUrl, TokenUrl, ClientId, ClientSecret, RedirectUrl, Scope, AuthorizationCode, CsrfToken, PkceCodeChallenge, PkceCodeVerifier};
+    #[cfg(feature = "ml")]
+    use reqwest;
+    use oauth2::{AuthUrl, TokenUrl, ClientId, ClientSecret, RedirectUrl, Scope, AuthorizationCode, CsrfToken, PkceCodeChallenge, PkceCodeVerifier};
+    use oauth2::basic::BasicClient;
     
     pub struct OAuth2Provider {
-        pub client: Client,
+        pub client: BasicClient,
     }
     
     impl OAuth2Provider {
@@ -126,7 +129,7 @@ pub mod oauth2_integration {
             token_url: String,
             redirect_uri: String,
         ) -> Result<Self, Box<dyn std::error::Error>> {
-            let client = Client::new(
+            let client = BasicClient::new(
                 ClientId::new(client_id),
                 Some(ClientSecret::new(client_secret)),
                 AuthUrl::new(auth_url)?,
@@ -147,19 +150,20 @@ pub mod oauth2_integration {
                 .add_scope(Scope::new("email".to_string()))
                 .url();
             
-            (auth_url.to_string(), pkce_verifier)
+            (auth_url.as_str().to_string(), pkce_verifier)
         }
         
         pub async fn exchange_code(
             &self,
             code: AuthorizationCode,
             pkce_verifier: PkceCodeVerifier,
-        ) -> Result<oauth2::StandardTokenResponse<oauth2::EmptyExtraTokenFields, oauth2::basic::BasicTokenType>, oauth2::RequestTokenError> {
+        ) -> Result<oauth2::StandardTokenResponse<oauth2::EmptyExtraTokenFields, oauth2::basic::BasicTokenType>, Box<dyn std::error::Error>> {
             self.client
                 .exchange_code(code)
                 .set_pkce_verifier(pkce_verifier)
                 .request_async(oauth2::reqwest::async_http_client)
                 .await
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
         }
     }
 }

@@ -18,7 +18,15 @@ impl SecurityStdlib {
     /// Generiert Rust-Code für @Auth Decorator
     pub fn generate_auth_middleware() -> String {
         r#"#[derive(Clone)]
-pub struct AuthMiddleware;
+pub struct AuthMiddleware {
+    secret: String,
+}
+
+impl AuthMiddleware {
+    pub fn new(secret: String) -> Self {
+        AuthMiddleware { secret }
+    }
+}
 
 impl actix_web::dev::Transform<actix_web::dev::ServiceRequest> for AuthMiddleware {
     type Response = actix_web::dev::ServiceResponse;
@@ -28,11 +36,15 @@ impl actix_web::dev::Transform<actix_web::dev::ServiceRequest> for AuthMiddlewar
     type Future = futures::future::Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, _service: actix_web::dev::Service) -> Self::Future {
-        futures::future::ok(AuthMiddlewareService)
+        futures::future::ok(AuthMiddlewareService {
+            secret: self.secret.clone(),
+        })
     }
 }
 
-pub struct AuthMiddlewareService;
+pub struct AuthMiddlewareService {
+    secret: String,
+}
 
 impl actix_web::dev::Service<actix_web::dev::ServiceRequest> for AuthMiddlewareService {
     type Response = actix_web::dev::ServiceResponse;
@@ -42,9 +54,50 @@ impl actix_web::dev::Service<actix_web::dev::ServiceRequest> for AuthMiddlewareS
     actix_web::dev::forward_ready!(service);
 
     fn call(&self, req: actix_web::dev::ServiceRequest) -> Self::Future {
-        // Authentication check implementation
-        // Check for Authorization header, validate JWT, etc.
-        futures::future::ok(req.into_response(actix_web::HttpResponse::Ok().finish()))
+        use actix_web::http::header::HeaderValue;
+        use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
+        use serde_json::Value;
+        
+        // Extract Authorization header
+        let auth_header = req.headers().get("Authorization");
+        if auth_header.is_none() {
+            return futures::future::ok(
+                req.into_response(actix_web::HttpResponse::Unauthorized()
+                    .json(serde_json::json!({"error": "Missing Authorization header"}))
+                    .finish())
+            );
+        }
+        
+        let auth_value = auth_header.unwrap().to_str().unwrap_or("");
+        if !auth_value.starts_with("Bearer ") {
+            return futures::future::ok(
+                req.into_response(actix_web::HttpResponse::Unauthorized()
+                    .json(serde_json::json!({"error": "Invalid Authorization header format"}))
+                    .finish())
+            );
+        }
+        
+        let token = &auth_value[7..]; // Skip "Bearer "
+        
+        // Validate JWT
+        let decoding_key = DecodingKey::from_secret(self.secret.as_ref());
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["sub", "exp"]);
+        
+        match decode::<Value>(token, &decoding_key, &validation) {
+            Ok(token_data) => {
+                // Store user info in request extensions for use in handlers
+                req.extensions_mut().insert(token_data.claims);
+                futures::future::ok(req.into_response(actix_web::HttpResponse::Ok().finish()))
+            }
+            Err(e) => {
+                futures::future::ok(
+                    req.into_response(actix_web::HttpResponse::Unauthorized()
+                        .json(serde_json::json!({"error": format!("JWT validation failed: {}", e)}))
+                        .finish())
+                )
+            }
+        }
     }
 }"#.to_string()
     }
@@ -92,11 +145,72 @@ impl actix_web::dev::Service<actix_web::dev::ServiceRequest> for RoleMiddlewareS
     actix_web::dev::forward_ready!(service);
 
     fn call(&self, req: actix_web::dev::ServiceRequest) -> Self::Future {{
-        // Check user role from JWT or session
-        // if user.role != self.required_role {{
-        //     return Err(actix_web::Error::from(actix_web::HttpResponse::Forbidden()));
-        // }}
-        futures::future::ok(req.into_response(actix_web::HttpResponse::Ok().finish()))
+        use actix_web::http::header::HeaderValue;
+        use jsonwebtoken::{{decode, DecodingKey, Validation, Algorithm}};
+        use serde_json::Value;
+        
+        // Extract Authorization header
+        let auth_header = req.headers().get("Authorization");
+        if auth_header.is_none() {{
+            return futures::future::ok(
+                req.into_response(actix_web::HttpResponse::Unauthorized()
+                    .json(serde_json::json!({{"error": "Missing Authorization header"}}))
+                    .finish())
+            );
+        }}
+        
+        let auth_value = auth_header.unwrap().to_str().unwrap_or("");
+        if !auth_value.starts_with("Bearer ") {{
+            return futures::future::ok(
+                req.into_response(actix_web::HttpResponse::Unauthorized()
+                    .json(serde_json::json!({{"error": "Invalid Authorization header format"}}))
+                    .finish())
+            );
+        }}
+        
+        let token = &auth_value[7..]; // Skip "Bearer "
+        
+        // Validate JWT and extract claims
+        let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "default-secret".to_string());
+        let decoding_key = DecodingKey::from_secret(secret.as_ref());
+        let mut validation = Validation::new(Algorithm::HS256);
+        validation.set_required_spec_claims(&["sub", "exp"]);
+        
+        match decode::<Value>(token, &decoding_key, &validation) {{
+            Ok(token_data) => {{
+                // Check if user has required role
+                let claims = &token_data.claims;
+                let user_roles = claims.get("roles")
+                    .and_then(|r| r.as_array())
+                    .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
+                    .unwrap_or_default();
+                
+                if !user_roles.contains(&self.required_role.as_str()) {{
+                    let error_msg = format!("Required role: {{}}", self.required_role);
+                    return futures::future::ok(
+                        req.into_response(actix_web::HttpResponse::Forbidden()
+                            .json(serde_json::json!({{
+                                "error": error_msg
+                            }}))
+                            .finish())
+                    );
+                }}
+                
+                // Store user info in request extensions
+                req.extensions_mut().insert(claims.clone());
+                futures::future::ok(req.into_response(actix_web::HttpResponse::Ok().finish()))
+            }}
+            Err(e) => {{
+                let error_msg = format!("JWT validation failed: {{}}", e);
+                futures::future::ok(
+                    req.into_response(actix_web::HttpResponse::Unauthorized()
+                        .json(serde_json::json!({{
+                            "error": error_msg
+                        }}))
+                        .finish())
+                )
+            }}
+        }}
     }}
 }}"#
         )

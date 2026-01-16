@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
     
     if cli.watch {
         // Watch Mode: Überwacht Dateien und kompiliert
-        let mut watcher = FileWatcher::new(&cli.directory)?;
+        let watcher = FileWatcher::new(&cli.directory)?;
         let reloader = Reloader::new(&cli.compile_command);
         
         println!("🔍 Überwache Verzeichnis: {}", cli.directory.display());
@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
         }
     } else if cli.server {
         // Server Mode: Startet Server mit Hot Reload
-        let mut watcher = FileWatcher::new(&cli.directory)?;
+        let watcher = FileWatcher::new(&cli.directory)?;
         let reloader = Reloader::new(&cli.run_command);
         
         println!("🚀 Starte Development Server auf Port {}...", cli.port);

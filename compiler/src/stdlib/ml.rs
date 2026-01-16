@@ -4,6 +4,11 @@ use crate::stdlib::logging::VelinLogger;
 use crate::stdlib::metrics::{MetricsCollector, PerformanceMonitor, HealthCheck};
 use std::collections::HashMap;
 
+#[cfg(feature = "ml")]
+// use serde::{Deserialize, Serialize};  // Not currently used
+#[cfg(feature = "ml")]
+use serde_json::json;
+
 pub struct MLModel {
     pub name: String,
     pub model_type: ModelType,
@@ -142,32 +147,308 @@ impl LLMClient {
         logger.add_context("prompt_length".to_string(), prompt.len().to_string());
         logger.info("Generating LLM response");
         
-        // In production, call LLM API
-        let result = match self.provider {
-            LLMProvider::OpenAI => Ok(format!("OpenAI response to: {}", prompt)),
-            LLMProvider::Anthropic => Ok(format!("Anthropic Claude response to: {}", prompt)),
-            LLMProvider::GoogleGemini => Ok(format!("Google Gemini response to: {}", prompt)),
-            LLMProvider::Local => Ok(format!("Local model response to: {}", prompt)),
-        };
-        
-        if result.is_ok() {
-            logger.info("LLM response generated successfully");
-        } else {
-            logger.error("Failed to generate LLM response");
+        #[cfg(feature = "ml")]
+        {
+            let result = match self.provider {
+                LLMProvider::OpenAI => self.generate_openai(prompt),
+                LLMProvider::Anthropic => self.generate_anthropic(prompt),
+                LLMProvider::GoogleGemini => self.generate_gemini(prompt),
+                LLMProvider::Local => Ok(format!("Local model response to: {}", prompt)),
+            };
+            
+            if result.is_ok() {
+                logger.info("LLM response generated successfully");
+            } else {
+                logger.error("Failed to generate LLM response");
+            }
+            
+            return result;
         }
         
-        result
+        #[cfg(not(feature = "ml"))]
+        {
+            // Fallback to mock when ml feature is not enabled
+            let result = match self.provider {
+                LLMProvider::OpenAI => Ok(format!("OpenAI response to: {}", prompt)),
+                LLMProvider::Anthropic => Ok(format!("Anthropic Claude response to: {}", prompt)),
+                LLMProvider::GoogleGemini => Ok(format!("Google Gemini response to: {}", prompt)),
+                LLMProvider::Local => Ok(format!("Local model response to: {}", prompt)),
+            };
+            
+            if result.is_ok() {
+                logger.info("LLM response generated successfully (mock mode)");
+            } else {
+                logger.error("Failed to generate LLM response");
+            }
+            
+            result
+        }
     }
     
-    #[allow(unused_variables)]
+    #[cfg(feature = "ml")]
+    fn generate_openai(&self, prompt: &str) -> Result<String, String> {
+        use reqwest::blocking::Client;
+        
+        let client = Client::new();
+        let url = "https://api.openai.com/v1/chat/completions";
+        
+        let payload = json!({
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.7
+        });
+        
+        let response = client
+            .post(url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("OpenAI API request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("OpenAI API error: {} - {}", status, error_text));
+        }
+        
+        let json: serde_json::Value = response.json()
+            .map_err(|e| format!("Failed to parse OpenAI response: {}", e))?;
+        
+        let content = json["choices"][0]["message"]["content"]
+            .as_str()
+            .ok_or_else(|| "Invalid response format from OpenAI".to_string())?;
+        
+        Ok(content.to_string())
+    }
+    
+    #[cfg(feature = "ml")]
+    fn generate_anthropic(&self, prompt: &str) -> Result<String, String> {
+        use reqwest::blocking::Client;
+        
+        let client = Client::new();
+        let url = "https://api.anthropic.com/v1/messages";
+        
+        let payload = json!({
+            "model": "claude-3-sonnet-20240229",
+            "max_tokens": 1000,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        });
+        
+        let response = client
+            .post(url)
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", "2023-06-01")
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("Anthropic API request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("Anthropic API error: {} - {}", status, error_text));
+        }
+        
+        let json: serde_json::Value = response.json()
+            .map_err(|e| format!("Failed to parse Anthropic response: {}", e))?;
+        
+        let content = json["content"][0]["text"]
+            .as_str()
+            .ok_or_else(|| "Invalid response format from Anthropic".to_string())?;
+        
+        Ok(content.to_string())
+    }
+    
+    #[cfg(feature = "ml")]
+    fn generate_gemini(&self, prompt: &str) -> Result<String, String> {
+        use reqwest::blocking::Client;
+        
+        let client = Client::new();
+        let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}", self.api_key);
+        
+        let payload = json!({
+            "contents": [{
+                "parts": [{
+                    "text": prompt
+                }]
+            }],
+            "generationConfig": {
+                "maxOutputTokens": 1000,
+                "temperature": 0.7
+            }
+        });
+        
+        let response = client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("Google Gemini API request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("Google Gemini API error: {} - {}", status, error_text));
+        }
+        
+        let json: serde_json::Value = response.json()
+            .map_err(|e| format!("Failed to parse Google Gemini response: {}", e))?;
+        
+        let content = json["candidates"][0]["content"]["parts"][0]["text"]
+            .as_str()
+            .ok_or_else(|| "Invalid response format from Google Gemini".to_string())?;
+        
+        Ok(content.to_string())
+    }
+    
     pub fn embed(&self, text: &str) -> Result<Vec<f64>, String> {
         let mut logger = VelinLogger::new();
         logger.add_context("component".to_string(), "LLMClient".to_string());
         logger.add_context("text_length".to_string(), text.len().to_string());
         logger.debug("Generating embeddings");
         
-        // In production, generate embeddings
-        Ok(vec![0.1, 0.2, 0.3, 0.4, 0.5])
+        #[cfg(feature = "ml")]
+        {
+            let result = match self.provider {
+                LLMProvider::OpenAI => self.embed_openai(text),
+                LLMProvider::Anthropic => self.embed_anthropic(text),
+                LLMProvider::GoogleGemini => self.embed_gemini(text),
+                LLMProvider::Local => Ok(vec![0.1, 0.2, 0.3, 0.4, 0.5]),
+            };
+            
+            if result.is_ok() {
+                logger.debug("Embeddings generated successfully");
+            } else {
+                logger.error("Failed to generate embeddings");
+            }
+            
+            return result;
+        }
+        
+        #[cfg(not(feature = "ml"))]
+        {
+            // Fallback to mock when ml feature is not enabled
+            Ok(vec![0.1, 0.2, 0.3, 0.4, 0.5])
+        }
+    }
+    
+    #[cfg(feature = "ml")]
+    fn embed_openai(&self, text: &str) -> Result<Vec<f64>, String> {
+        use reqwest::blocking::Client;
+        
+        let client = Client::new();
+        let url = "https://api.openai.com/v1/embeddings";
+        
+        let payload = json!({
+            "model": "text-embedding-ada-002",
+            "input": text
+        });
+        
+        let response = client
+            .post(url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("OpenAI Embeddings API request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("OpenAI Embeddings API error: {} - {}", status, error_text));
+        }
+        
+        let json: serde_json::Value = response.json()
+            .map_err(|e| format!("Failed to parse OpenAI embeddings response: {}", e))?;
+        
+        let embedding = json["data"][0]["embedding"]
+            .as_array()
+            .ok_or_else(|| "Invalid embedding format from OpenAI".to_string())?;
+        
+        let result: Result<Vec<f64>, String> = embedding
+            .iter()
+            .map(|v| v.as_f64().ok_or_else(|| "Invalid embedding value".to_string()))
+            .collect();
+        
+        result
+    }
+    
+    #[cfg(feature = "ml")]
+    fn embed_anthropic(&self, text: &str) -> Result<Vec<f64>, String> {
+        // Anthropic doesn't have a public embeddings API yet
+        // Fallback to a simple hash-based embedding for now
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        
+        let mut hasher = DefaultHasher::new();
+        text.hash(&mut hasher);
+        let hash = hasher.finish();
+        
+        // Generate a deterministic embedding vector from hash
+        let mut embedding = Vec::with_capacity(1536);
+        let mut seed = hash;
+        for _ in 0..1536 {
+            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            embedding.push((seed as f64) / (u64::MAX as f64));
+        }
+        
+        Ok(embedding)
+    }
+    
+    #[cfg(feature = "ml")]
+    fn embed_gemini(&self, text: &str) -> Result<Vec<f64>, String> {
+        use reqwest::blocking::Client;
+        
+        let client = Client::new();
+        let url = format!("https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key={}", self.api_key);
+        
+        let payload = json!({
+            "model": "models/embedding-001",
+            "content": {
+                "parts": [{
+                    "text": text
+                }]
+            }
+        });
+        
+        let response = client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("Google Gemini Embeddings API request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("Google Gemini Embeddings API error: {} - {}", status, error_text));
+        }
+        
+        let json: serde_json::Value = response.json()
+            .map_err(|e| format!("Failed to parse Google Gemini embeddings response: {}", e))?;
+        
+        let embedding = json["embedding"]["values"]
+            .as_array()
+            .ok_or_else(|| "Invalid embedding format from Google Gemini".to_string())?;
+        
+        let result: Result<Vec<f64>, String> = embedding
+            .iter()
+            .map(|v| v.as_f64().ok_or_else(|| "Invalid embedding value".to_string()))
+            .collect();
+        
+        result
     }
 }
 
@@ -203,7 +484,6 @@ impl VectorDB {
         }
     }
     
-    #[allow(unused_variables)]
     pub fn upsert(&self, collection: &str, id: &str, vector: Vec<f64>) -> Result<(), String> {
         let mut logger = VelinLogger::new();
         logger.add_context("component".to_string(), "VectorDB".to_string());
@@ -212,11 +492,169 @@ impl VectorDB {
         logger.add_context("vector_size".to_string(), vector.len().to_string());
         logger.debug("Upserting vector to database");
         
-        // In production, upsert vector to database
+        #[cfg(feature = "ml")]
+        {
+            match self.provider {
+                VectorDBProvider::Pinecone => self.upsert_pinecone(collection, id, vector),
+                VectorDBProvider::Weaviate => self.upsert_weaviate(collection, id, vector),
+                VectorDBProvider::Qdrant => self.upsert_qdrant(collection, id, vector),
+                VectorDBProvider::Local => Ok(()), // Local mode - no-op
+            }
+        }
+        
+        #[cfg(not(feature = "ml"))]
+        {
+            // Fallback to mock when ml feature is not enabled
+            Ok(())
+        }
+    }
+    
+    #[cfg(feature = "ml")]
+    fn upsert_pinecone(&self, index_name: &str, id: &str, vector: Vec<f64>) -> Result<(), String> {
+        use reqwest::blocking::Client;
+        
+        // Parse connection string: format "api-key@environment"
+        let parts: Vec<&str> = self.connection_string.split('@').collect();
+        if parts.len() != 2 {
+            return Err("Invalid Pinecone connection string format. Expected: api-key@environment".to_string());
+        }
+        let api_key = parts[0];
+        let environment = parts[1];
+        
+        let client = Client::new();
+        let url = format!("https://{}.svc.{}.pinecone.io/vectors/upsert", index_name, environment);
+        
+        let payload = json!({
+            "vectors": [{
+                "id": id,
+                "values": vector
+            }]
+        });
+        
+        let response = client
+            .post(&url)
+            .header("Api-Key", api_key)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("Pinecone upsert request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("Pinecone upsert error: {} - {}", status, error_text));
+        }
+        
         Ok(())
     }
     
-    #[allow(unused_variables)]
+    #[cfg(feature = "ml")]
+    fn upsert_weaviate(&self, class_name: &str, id: &str, vector: Vec<f64>) -> Result<(), String> {
+        use reqwest::blocking::Client;
+        
+        // Parse connection string: format "http://host:port" or "https://host:port"
+        let base_url = if self.connection_string.starts_with("http") {
+            &self.connection_string
+        } else {
+            return Err("Invalid Weaviate connection string. Expected: http://host:port or https://host:port".to_string());
+        };
+        
+        let client = Client::new();
+        let url = format!("{}/v1/objects", base_url);
+        
+        let payload = json!({
+            "class": class_name,
+            "id": id,
+            "vector": vector
+        });
+        
+        let response = client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("Weaviate upsert request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("Weaviate upsert error: {} - {}", status, error_text));
+        }
+        
+        Ok(())
+    }
+    
+    #[cfg(feature = "ml")]
+    fn upsert_qdrant(&self, collection_name: &str, id: &str, vector: Vec<f64>) -> Result<(), String> {
+        #[cfg(all(feature = "ml", feature = "qdrant-client"))]
+        {
+            use qdrant_client::prelude::*;
+            use qdrant_client::qdrant::{PointStruct, vectors::Vectors, Vector};
+            
+            // Parse connection string: format "http://host:port" or "https://host:port"
+            let url = if self.connection_string.starts_with("http") {
+                &self.connection_string
+            } else {
+                return Err("Invalid Qdrant connection string. Expected: http://host:port or https://host:port".to_string());
+            };
+            
+            let config = QdrantClientConfig::from_url(url);
+            let client = QdrantClient::new(Some(config))
+                .map_err(|e| format!("Failed to create Qdrant client: {}", e))?;
+            
+            let point_id: u64 = id.parse()
+                .map_err(|_| format!("Invalid point ID format: {}", id))?;
+            
+            let point = PointStruct::new(
+                point_id,
+                Vectors::vector(vector),
+                HashMap::new(),
+            );
+            
+            client.upsert_points(collection_name, vec![point], None)
+                .map_err(|e| format!("Qdrant upsert failed: {}", e))?;
+            
+            Ok(())
+        }
+        
+        #[cfg(all(feature = "ml", not(feature = "qdrant-client")))]
+        {
+            // Fallback to REST API if qdrant-client is not available
+            use reqwest::blocking::Client;
+            
+            let base_url = if self.connection_string.starts_with("http") {
+                &self.connection_string
+            } else {
+                return Err("Invalid Qdrant connection string. Expected: http://host:port or https://host:port".to_string());
+            };
+            
+            let client = Client::new();
+            let url = format!("{}/collections/{}/points", base_url, collection_name);
+            
+            let payload = json!({
+                "points": [{
+                    "id": id,
+                    "vector": vector
+                }]
+            });
+            
+            let response = client
+                .put(&url)
+                .header("Content-Type", "application/json")
+                .json(&payload)
+                .send()
+                .map_err(|e| format!("Qdrant upsert request failed: {}", e))?;
+            
+            let status = response.status();
+            if !status.is_success() {
+                let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+                return Err(format!("Qdrant upsert error: {} - {}", status, error_text));
+            }
+            
+            Ok(())
+        }
+    }
+    
     pub fn search(&self, collection: &str, query_vector: Vec<f64>, top_k: usize) -> Result<Vec<SearchResult>, String> {
         let mut logger = VelinLogger::new();
         logger.add_context("component".to_string(), "VectorDB".to_string());
@@ -225,22 +663,273 @@ impl VectorDB {
         logger.add_context("query_vector_size".to_string(), query_vector.len().to_string());
         logger.info("Searching vectors");
         
-        // In production, search similar vectors
-        let results = vec![
-            SearchResult {
-                id: "result1".to_string(),
-                score: 0.95,
-            },
-            SearchResult {
-                id: "result2".to_string(),
-                score: 0.87,
-            },
-        ];
+        #[cfg(feature = "ml")]
+        {
+            let result = match self.provider {
+                VectorDBProvider::Pinecone => self.search_pinecone(collection, query_vector, top_k),
+                VectorDBProvider::Weaviate => self.search_weaviate(collection, query_vector, top_k),
+                VectorDBProvider::Qdrant => self.search_qdrant(collection, query_vector, top_k),
+                VectorDBProvider::Local => {
+                    // Local mode - return mock results
+                    Ok(vec![
+                        SearchResult { id: "result1".to_string(), score: 0.95 },
+                        SearchResult { id: "result2".to_string(), score: 0.87 },
+                    ])
+                },
+            };
+            
+            if let Ok(ref results) = result {
+                logger.add_context("results_count".to_string(), results.len().to_string());
+                logger.info("Vector search completed");
+            } else {
+                logger.error("Vector search failed");
+            }
+            
+            result
+        }
         
-        logger.add_context("results_count".to_string(), results.len().to_string());
-        logger.info("Vector search completed");
+        #[cfg(not(feature = "ml"))]
+        {
+            // Fallback to mock when ml feature is not enabled
+            let results = vec![
+                SearchResult { id: "result1".to_string(), score: 0.95 },
+                SearchResult { id: "result2".to_string(), score: 0.87 },
+            ];
+            logger.add_context("results_count".to_string(), results.len().to_string());
+            logger.info("Vector search completed (mock mode)");
+            Ok(results)
+        }
+    }
+    
+    #[cfg(feature = "ml")]
+    fn search_pinecone(&self, index_name: &str, query_vector: Vec<f64>, top_k: usize) -> Result<Vec<SearchResult>, String> {
+        use reqwest::blocking::Client;
         
-        Ok(results)
+        // Parse connection string: format "api-key@environment"
+        let parts: Vec<&str> = self.connection_string.split('@').collect();
+        if parts.len() != 2 {
+            return Err("Invalid Pinecone connection string format. Expected: api-key@environment".to_string());
+        }
+        let api_key = parts[0];
+        let environment = parts[1];
+        
+        let client = Client::new();
+        let url = format!("https://{}.svc.{}.pinecone.io/query", index_name, environment);
+        
+        let payload = json!({
+            "vector": query_vector,
+            "topK": top_k,
+            "includeMetadata": false
+        });
+        
+        let response = client
+            .post(&url)
+            .header("Api-Key", api_key)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("Pinecone search request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("Pinecone search error: {} - {}", status, error_text));
+        }
+        
+        let json: serde_json::Value = response.json()
+            .map_err(|e| format!("Failed to parse Pinecone response: {}", e))?;
+        
+        let matches = json["matches"]
+            .as_array()
+            .ok_or_else(|| "Invalid response format from Pinecone".to_string())?;
+        
+        let results: Result<Vec<SearchResult>, String> = matches
+            .iter()
+            .map(|m| {
+                let id = m["id"].as_str()
+                    .ok_or_else(|| "Missing id in match".to_string())?
+                    .to_string();
+                let score = m["score"].as_f64()
+                    .ok_or_else(|| "Missing score in match".to_string())?;
+                Ok(SearchResult { id, score })
+            })
+            .collect();
+        
+        results
+    }
+    
+    #[cfg(feature = "ml")]
+    fn search_weaviate(&self, class_name: &str, query_vector: Vec<f64>, top_k: usize) -> Result<Vec<SearchResult>, String> {
+        use reqwest::blocking::Client;
+        
+        let base_url = if self.connection_string.starts_with("http") {
+            &self.connection_string
+        } else {
+            return Err("Invalid Weaviate connection string. Expected: http://host:port or https://host:port".to_string());
+        };
+        
+        let client = Client::new();
+        let url = format!("{}/v1/graphql", base_url);
+        
+        // GraphQL query for similarity search
+        let query = format!(
+            r#"{{
+                Get {{
+                    {}(
+                        nearVector: {{
+                            vector: {:?}
+                        }}
+                        limit: {}
+                    ) {{
+                        _additional {{
+                            id
+                            distance
+                        }}
+                    }}
+                }}
+            }}"#,
+            class_name, query_vector, top_k
+        );
+        
+        let payload = json!({
+            "query": query
+        });
+        
+        let response = client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .map_err(|e| format!("Weaviate search request failed: {}", e))?;
+        
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(format!("Weaviate search error: {} - {}", status, error_text));
+        }
+        
+        let json: serde_json::Value = response.json()
+            .map_err(|e| format!("Failed to parse Weaviate response: {}", e))?;
+        
+        let objects = json["data"]["Get"][class_name]
+            .as_array()
+            .ok_or_else(|| "Invalid response format from Weaviate".to_string())?;
+        
+        let results: Result<Vec<SearchResult>, String> = objects
+            .iter()
+            .map(|obj| {
+                let additional = &obj["_additional"];
+                let id = additional["id"].as_str()
+                    .ok_or_else(|| "Missing id".to_string())?
+                    .to_string();
+                let distance = additional["distance"].as_f64()
+                    .ok_or_else(|| "Missing distance".to_string())?;
+                // Convert distance to similarity score (1 - normalized distance)
+                let score = 1.0 - (distance / 2.0).min(1.0);
+                Ok(SearchResult { id, score })
+            })
+            .collect();
+        
+        results
+    }
+    
+    #[cfg(feature = "ml")]
+    fn search_qdrant(&self, collection_name: &str, query_vector: Vec<f64>, top_k: usize) -> Result<Vec<SearchResult>, String> {
+        #[cfg(all(feature = "ml", feature = "qdrant-client"))]
+        {
+            use qdrant_client::prelude::*;
+            use qdrant_client::qdrant::{SearchPoints, WithPayloadSelector, with_payload_selector::SelectorOptions};
+            
+            let url = if self.connection_string.starts_with("http") {
+                &self.connection_string
+            } else {
+                return Err("Invalid Qdrant connection string. Expected: http://host:port or https://host:port".to_string());
+            };
+            
+            let config = QdrantClientConfig::from_url(url);
+            let client = QdrantClient::new(Some(config))
+                .map_err(|e| format!("Failed to create Qdrant client: {}", e))?;
+            
+            let search_points = SearchPoints {
+                collection_name: collection_name.to_string(),
+                vector: query_vector,
+                limit: top_k as u64,
+                with_payload: Some(WithPayloadSelector {
+                    selector_options: Some(SelectorOptions::Enable(true)),
+                }),
+                ..Default::default()
+            };
+            
+            let search_result = client.search_points(&search_points)
+                .map_err(|e| format!("Qdrant search failed: {}", e))?;
+            
+            let results: Vec<SearchResult> = search_result.result
+                .iter()
+                .map(|point| {
+                    SearchResult {
+                        id: point.id.to_string(),
+                        score: point.score,
+                    }
+                })
+                .collect();
+            
+            Ok(results)
+        }
+        
+        #[cfg(all(feature = "ml", not(feature = "qdrant-client")))]
+        {
+            // Fallback to REST API if qdrant-client is not available
+            use reqwest::blocking::Client;
+            
+            let base_url = if self.connection_string.starts_with("http") {
+                &self.connection_string
+            } else {
+                return Err("Invalid Qdrant connection string. Expected: http://host:port or https://host:port".to_string());
+            };
+            
+            let client = Client::new();
+            let url = format!("{}/collections/{}/points/search", base_url, collection_name);
+            
+            let payload = json!({
+                "vector": query_vector,
+                "limit": top_k,
+                "with_payload": false
+            });
+            
+            let response = client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .json(&payload)
+                .send()
+                .map_err(|e| format!("Qdrant search request failed: {}", e))?;
+            
+            let status = response.status();
+            if !status.is_success() {
+                let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+                return Err(format!("Qdrant search error: {} - {}", status, error_text));
+            }
+            
+            let json: serde_json::Value = response.json()
+                .map_err(|e| format!("Failed to parse Qdrant response: {}", e))?;
+            
+            let results_array = json["result"]
+                .as_array()
+                .ok_or_else(|| "Invalid response format from Qdrant".to_string())?;
+            
+            let results: Result<Vec<SearchResult>, String> = results_array
+                .iter()
+                .map(|r| {
+                    let id = r["id"].as_str()
+                        .ok_or_else(|| "Missing id".to_string())?
+                        .to_string();
+                    let score = r["score"].as_f64()
+                        .ok_or_else(|| "Missing score".to_string())?;
+                    Ok(SearchResult { id, score })
+                })
+                .collect();
+            
+            results
+        }
     }
 }
 

@@ -4,12 +4,13 @@
 use anyhow::Result;
 use notify::{Watcher, RecommendedWatcher, RecursiveMode, Event, EventKind};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::sync::mpsc;
 use tokio::sync::oneshot;
 
 pub struct FileWatcher {
     watcher: RecommendedWatcher,
-    receiver: mpsc::Receiver<notify::Result<Event>>,
+    receiver: Arc<Mutex<mpsc::Receiver<notify::Result<Event>>>>,
     watched_dir: PathBuf,
 }
 
@@ -23,24 +24,25 @@ impl FileWatcher {
         
         Ok(FileWatcher {
             watcher,
-            receiver: rx,
+            receiver: Arc::new(Mutex::new(rx)),
             watched_dir: dir,
         })
     }
     
-    pub async fn wait_for_changes(&mut self) -> Result<Option<Vec<PathBuf>>> {
+    pub async fn wait_for_changes(&self) -> Result<Option<Vec<PathBuf>>> {
         use tokio::task;
         
         let (tx, rx) = oneshot::channel();
-        let receiver = std::mem::replace(&mut self.receiver, {
-            // Erstelle einen neuen Receiver (wird nicht verwendet, aber benötigt für replace)
-            let (_, new_rx) = mpsc::channel();
-            new_rx
-        });
+        let receiver = Arc::clone(&self.receiver);
         
         task::spawn_blocking(move || {
             loop {
-                match receiver.recv() {
+                let recv_result = {
+                    let guard = receiver.lock().unwrap();
+                    guard.recv()
+                };
+                
+                match recv_result {
                     Ok(Ok(event)) => {
                         if let EventKind::Modify(_) | EventKind::Create(_) | EventKind::Remove(_) = event.kind {
                             // Filtere nur .velin Dateien
@@ -73,10 +75,6 @@ impl FileWatcher {
             let _ = tx.send(None);
         });
         
-        // Stelle den Receiver wieder her (vereinfacht - in Produktion würde man einen besseren Ansatz verwenden)
-        // Für jetzt akzeptieren wir, dass der Receiver nach dem ersten Aufruf nicht mehr funktioniert
-        // In einer vollständigen Implementierung würde man einen Arc<Mutex<Receiver>> verwenden
-        
-        rx.await.map_err(|e| anyhow::anyhow!("Receiver error: {}", e))?
+        rx.await.map_err(|e| anyhow::anyhow!("Receiver error: {}", e))
     }
 }

@@ -39,6 +39,12 @@ rustls-pemfile = { version = "1.0", optional = true }
 vaultrs = { version = "0.5", optional = true }
 zeroize = { version = "1.6", features = ["zeroize_derive"], optional = true }
 secrecy = { version = "0.8", features = ["serde", "alloc"], optional = true }
+reqwest = { version = "0.11", features = ["json", "blocking"], optional = true }
+qdrant-client = { version = "1.7", optional = true }
+bcrypt = { version = "0.15", optional = true }
+aes-gcm = { version = "0.10", optional = true }
+redis = { version = "0.24", features = ["tokio-comp"], optional = true }
+# ort = { version = "2.0.0-rc.11", optional = true }  # ONNX Runtime - nur RC verfügbar
 
 [features]
 default = ["dep:tokio", "dep:axum", "axum"]
@@ -50,6 +56,9 @@ oauth2 = ["dep:oauth2", "dep:openidconnect", "dep:jsonwebtoken"]
 vault = ["dep:vaultrs"]
 privacy = ["dep:zeroize", "dep:secrecy"]
 tls = ["dep:rustls", "dep:rustls-pemfile"]
+ml = ["dep:reqwest", "dep:qdrant-client"]
+security = ["dep:bcrypt", "dep:aes-gcm", "dep:redis"]
+qdrant-client = ["dep:qdrant-client"]
 
 [[test]]
 name = "parser_test"

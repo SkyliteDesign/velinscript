@@ -22,6 +22,7 @@ impl Optimizer {
                 Optimization::DeadCodeElimination,
                 Optimization::ConstantFolding,
                 Optimization::Inlining,
+                Optimization::LoopOptimization,
             ],
         }
     }

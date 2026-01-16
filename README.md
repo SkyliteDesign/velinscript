@@ -86,7 +86,7 @@ fn search(query: string): List<Item> {
 
 - **Native Rust Compilation**: VelinScript kompiliert zu optimiertem Rust-Code
 - **Zero-Cost Abstractions**: Moderne Sprachfeatures ohne Performance-Einbußen
-- **Advanced Optimizer**: Function Inlining, Loop Optimizations, Dead Code Elimination
+- **Advanced Optimizer**: ✅ Vollständig aktiviert - Function Inlining, Loop Optimizations, Dead Code Elimination, Constant Folding
 - **Type Safety**: Starke Typisierung mit Type Inference für bessere Entwicklererfahrung
 
 ### Standard Library
@@ -95,7 +95,10 @@ fn search(query: string): List<Item> {
 - **Database Integration**: Native Support für Datenbankoperationen (SeaORM, SQL)
 - **Collections Library**: Umfangreiche Collections (List, Map, Set) mit funktionalen Methoden
 - **HTTP Client Library**: Vollständige Client-Library für HTTP-Requests
-- **Rate Limiting**: Erweiterte Rate Limiting Library mit verschiedenen Strategien
+- **Rate Limiting**: Erweiterte Rate Limiting Library mit verschiedenen Strategien (inkl. @RateLimit Decorator) ✅
+- **DateTime Library**: Datum- und Zeit-Operationen (now, format, parse, etc.) ✅
+- **Regex Library**: Reguläre Ausdrücke für Pattern-Matching (find, replace, match, etc.) ✅
+- **Crypto Library**: Kryptografische Funktionen (SHA-256, UUID, Base64, etc.) ✅
 - **ML/LLM Library**: Native Unterstützung für Machine Learning und LLM-Integration
 - **Vector Database Library**: Integration für Vector Databases (Pinecone, Weaviate, Qdrant)
 - **VelinLogger**: Strukturiertes Logging mit Context, JSON-Format und File-Rotation
@@ -266,6 +269,9 @@ let result = "Sum: {x + y}";
 
 ### Rate Limiting
 
+- **@RateLimit Decorator**: Decorator-basierte Rate Limiting mit Type-Checker-Validierung ✅
+  - Unterstützte Argumente: `requests` (number), `window` (string), `strategy` (string), `key` (string, optional)
+  - Strategien: `fixed-window`, `sliding-window`, `token-bucket`
 - **Fixed Window Strategy**: Einfache Zeitfenster-basierte Begrenzung
 - **Sliding Window Strategy**: Gleitende Zeitfenster
 - **Token Bucket Strategy**: Token-basierte Rate Limiting
@@ -348,8 +354,12 @@ VelinScript 2.0 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Chec
   - Logging (`Logger.new()`, `VelinLogger.new()`, `logger.info()`, etc.) ✅
   - Metrics (`MetricsCollector.new()`, `collector.incrementCounter()`, etc.) ✅
   - ML/LLM (`LLMClient.new()`, `ModelLoader.new()`, `TrainingService.new()`, etc.) ✅
-- **Status**: ~25+ Funktionen von 36 Modulen sind im Type Checker registriert und vollständig getestet ✅
-- **Nicht registriert**: Rate Limiting (Decorator-basiert), einige erweiterte Funktionen ✅
+- **Status**: ~35+ Funktionen von 36 Modulen sind im Type Checker registriert und vollständig getestet ✅
+- **Neu registriert**: 
+  - Rate Limiting Decorator (`@RateLimit`) mit vollständiger Validierung ✅
+  - DateTime Module (`datetime.now()`, `datetime.format()`, `datetime.parse()`, etc.) ✅
+  - Regex Module (`regex.find()`, `regex.replace()`, `regex.findAll()`, etc.) ✅
+  - Crypto Module (`crypto.sha256()`, `crypto.uuid()`, `crypto.base64Encode()`, etc.) ✅
 
 #### ML/LLM Features
 - **Funktioniert und getestet**: `LLMClient.new()`, `ModelLoader.new()`, `TrainingService.new()` sind registriert und getestet ✅
@@ -394,7 +404,7 @@ VelinScript 2.0 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Chec
 
 #### Langfristig
 - **Production-Ready Status**: Beta-Release mit vollständiger Standard Library und getesteten Tools
-- **Performance-Optimierung**: Advanced Optimizer vollständig aktivieren
+- **Performance-Optimierung**: ✅ Advanced Optimizer vollständig aktiviert (inkl. LoopOptimization)
 - **Dokumentation**: Vollständige API-Dokumentation für alle Features
 
 **Für Production-Use wird Beta-Status empfohlen.**
@@ -458,14 +468,33 @@ fn hello(): string {
 // Mit Parametern und Validation
 @POST("/api/users")
 @Auth
-@RateLimit(requests: 100, window: 60)
+@RateLimit(requests: 100, window: "1m", strategy: "fixed-window")
 fn createUser(name: string, email: string): User {
     let user = User {
         id: generateId(),
         name: name,
         email: email,
+        createdAt: datetime.now(),
     };
     return user;
+}
+
+// DateTime, Regex und Crypto Beispiele
+@GET("/api/timestamp")
+fn getTimestamp(): string {
+    let now = datetime.now();
+    return datetime.formatISO8601(now);
+}
+
+@POST("/api/validate-email")
+fn validateEmail(email: string): boolean {
+    let result = regex.find("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", email);
+    return result.isOk();
+}
+
+@POST("/api/hash")
+fn hashPassword(password: string): string {
+    return crypto.sha256(password);
 }
 
 // Struct-Definition

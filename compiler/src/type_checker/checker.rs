@@ -1,6 +1,7 @@
 use crate::parser::ast::*;
 use crate::type_checker::environment::{Environment, FunctionSignature};
 use crate::type_checker::errors::{TypeError, TypeErrorKind};
+use crate::stdlib::rate_limit::{is_rate_limit_decorator, parse_rate_limit_config};
 
 pub struct TypeChecker {
     environment: Environment,
@@ -119,6 +120,21 @@ impl TypeChecker {
         // Register 'db' as a special object that has methods
         // This allows db.find(), db.save(), etc. to work
         env.define_variable("db".to_string(), Type::Named("Database".to_string()));
+        
+        // Register 'file' as a special object for file operations
+        env.define_variable("file".to_string(), Type::Named("File".to_string()));
+        
+        // Register 'json' as a special object for JSON operations
+        env.define_variable("json".to_string(), Type::Named("Json".to_string()));
+        
+        // Register 'datetime' as a special object for date/time operations
+        env.define_variable("datetime".to_string(), Type::Named("DateTime".to_string()));
+        
+        // Register 'regex' as a special object for regex operations
+        env.define_variable("regex".to_string(), Type::Named("Regex".to_string()));
+        
+        // Register 'crypto' as a special object for crypto operations
+        env.define_variable("crypto".to_string(), Type::Named("Crypto".to_string()));
         
         // Standard Library: File I/O functions
         // file.read(path: string) -> Result<string, string>
@@ -301,6 +317,215 @@ impl TypeChecker {
             return_type: Some(Type::Named("TrainingService".to_string())),
         });
         
+        // Standard Library: DateTime functions
+        // datetime.now() -> number
+        env.define_function("datetime.now".to_string(), FunctionSignature {
+            name: "datetime.now".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Number),
+        });
+        
+        // datetime.nowMillis() -> number
+        env.define_function("datetime.nowMillis".to_string(), FunctionSignature {
+            name: "datetime.nowMillis".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Number),
+        });
+        
+        // datetime.formatISO8601(timestamp: number) -> string
+        env.define_function("datetime.formatISO8601".to_string(), FunctionSignature {
+            name: "datetime.formatISO8601".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "timestamp".to_string(),
+                    param_type: Type::Number,
+                },
+            ],
+            return_type: Some(Type::String),
+        });
+        
+        // datetime.format(timestamp: number, format: string) -> string
+        env.define_function("datetime.format".to_string(), FunctionSignature {
+            name: "datetime.format".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "timestamp".to_string(),
+                    param_type: Type::Number,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "format".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::String),
+        });
+        
+        // datetime.parse(isoString: string) -> Result<number, string>
+        env.define_function("datetime.parse".to_string(), FunctionSignature {
+            name: "datetime.parse".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "isoString".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::Number),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // Standard Library: Regex functions
+        // regex.match(pattern: string, text: string) -> Result<boolean, string>
+        env.define_function("regex.match".to_string(), FunctionSignature {
+            name: "regex.match".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "pattern".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "text".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::Boolean),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // regex.find(pattern: string, text: string) -> Result<Option<string>, string>
+        env.define_function("regex.find".to_string(), FunctionSignature {
+            name: "regex.find".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "pattern".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "text".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::Optional(Box::new(Type::String))),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // regex.findAll(pattern: string, text: string) -> Result<List<string>, string>
+        env.define_function("regex.findAll".to_string(), FunctionSignature {
+            name: "regex.findAll".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "pattern".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "text".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::List(Box::new(Type::String))),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // regex.replace(pattern: string, text: string, replacement: string) -> Result<string, string>
+        env.define_function("regex.replace".to_string(), FunctionSignature {
+            name: "regex.replace".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "pattern".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "text".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "replacement".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::String),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // regex.replaceAll(pattern: string, text: string, replacement: string) -> Result<string, string>
+        env.define_function("regex.replaceAll".to_string(), FunctionSignature {
+            name: "regex.replaceAll".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "pattern".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "text".to_string(),
+                    param_type: Type::String,
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "replacement".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::String),
+                err: Box::new(Type::String),
+            }),
+        });
+        
+        // Standard Library: Crypto functions
+        // crypto.sha256(input: string) -> string
+        env.define_function("crypto.sha256".to_string(), FunctionSignature {
+            name: "crypto.sha256".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "input".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::String),
+        });
+        
+        // crypto.uuid() -> string
+        env.define_function("crypto.uuid".to_string(), FunctionSignature {
+            name: "crypto.uuid".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::String),
+        });
+        
+        // crypto.base64Encode(input: string) -> string
+        env.define_function("crypto.base64Encode".to_string(), FunctionSignature {
+            name: "crypto.base64Encode".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "input".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::String),
+        });
+        
+        // crypto.base64Decode(input: string) -> Result<string, string>
+        env.define_function("crypto.base64Decode".to_string(), FunctionSignature {
+            name: "crypto.base64Decode".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "input".to_string(),
+                    param_type: Type::String,
+                },
+            ],
+            return_type: Some(Type::Result {
+                ok: Box::new(Type::String),
+                err: Box::new(Type::String),
+            }),
+        });
+        
         TypeChecker {
             environment: env,
             errors: Vec::new(),
@@ -428,6 +653,13 @@ impl TypeChecker {
     }
     
     fn check_function(&mut self, function: &Function) -> Result<(), Vec<TypeError>> {
+        // Validate decorators
+        for decorator in &function.decorators {
+            if is_rate_limit_decorator(&decorator.name) {
+                self.validate_rate_limit_decorator(decorator)?;
+            }
+        }
+        
         let mut env = Environment::with_parent(self.environment.clone());
         
         // Add parameters to environment
@@ -468,6 +700,103 @@ impl TypeChecker {
         } else if return_type != Type::Void {
             // Function has return type but no explicit return type annotation
             // This is okay for inference
+        }
+        
+        Ok(())
+    }
+    
+    /// Validiert @RateLimit Decorator Argumente
+    fn validate_rate_limit_decorator(&mut self, decorator: &Decorator) -> Result<(), Vec<TypeError>> {
+        // Prüfe ob Konfiguration geparst werden kann
+        if parse_rate_limit_config(&decorator.args).is_none() {
+            self.errors.push(TypeError::invalid_operation(
+                "@RateLimit",
+                "Invalid decorator arguments",
+            ));
+            return Ok(());
+        }
+        
+        // Validiere einzelne Argumente
+        for arg in &decorator.args {
+            match arg {
+                DecoratorArg::Named { name, value } => {
+                    match name.as_str() {
+                        "requests" => {
+                            if !matches!(value.as_ref(), DecoratorArg::Number(_)) {
+                                self.errors.push(TypeError::type_mismatch(
+                                    "number",
+                                    match value.as_ref() {
+                                        DecoratorArg::String(_) => "string",
+                                        DecoratorArg::Boolean(_) => "boolean",
+                                        DecoratorArg::Identifier(_) => "identifier",
+                                        _ => "unknown",
+                                    },
+                                ));
+                            }
+                        }
+                        "window" => {
+                            if !matches!(value.as_ref(), DecoratorArg::String(_)) {
+                                self.errors.push(TypeError::type_mismatch(
+                                    "string",
+                                    match value.as_ref() {
+                                        DecoratorArg::Number(_) => "number",
+                                        DecoratorArg::Boolean(_) => "boolean",
+                                        DecoratorArg::Identifier(_) => "identifier",
+                                        _ => "unknown",
+                                    },
+                                ));
+                            }
+                        }
+                        "strategy" => {
+                            if !matches!(value.as_ref(), DecoratorArg::String(_)) {
+                                self.errors.push(TypeError::type_mismatch(
+                                    "string",
+                                    match value.as_ref() {
+                                        DecoratorArg::Number(_) => "number",
+                                        DecoratorArg::Boolean(_) => "boolean",
+                                        DecoratorArg::Identifier(_) => "identifier",
+                                        _ => "unknown",
+                                    },
+                                ));
+                            } else if let DecoratorArg::String(s) = value.as_ref() {
+                                let valid_strategies = ["fixed-window", "fixedWindow", "sliding-window", "slidingWindow", "token-bucket", "tokenBucket"];
+                                if !valid_strategies.contains(&s.as_str()) {
+                                    self.errors.push(TypeError::invalid_operation(
+                                        "@RateLimit",
+                                        &format!("Invalid strategy '{}'. Must be one of: fixed-window, sliding-window, token-bucket", s),
+                                    ));
+                                }
+                            }
+                        }
+                        "key" => {
+                            if !matches!(value.as_ref(), DecoratorArg::String(_)) {
+                                self.errors.push(TypeError::type_mismatch(
+                                    "string",
+                                    match value.as_ref() {
+                                        DecoratorArg::Number(_) => "number",
+                                        DecoratorArg::Boolean(_) => "boolean",
+                                        DecoratorArg::Identifier(_) => "identifier",
+                                        _ => "unknown",
+                                    },
+                                ));
+                            }
+                        }
+                        _ => {
+                            self.errors.push(TypeError::invalid_operation(
+                                "@RateLimit",
+                                &format!("Unknown argument '{}'. Valid arguments are: requests, window, strategy, key", name),
+                            ));
+                        }
+                    }
+                }
+                _ => {
+                    // Positionale Argumente werden nicht unterstützt
+                    self.errors.push(TypeError::invalid_operation(
+                        "@RateLimit",
+                        "Only named arguments are supported (e.g., requests: 100, window: \"1m\")",
+                    ));
+                }
+            }
         }
         
         Ok(())
@@ -1328,80 +1657,73 @@ impl TypeChecker {
                         }
                     }
                     
-                    // Handle db method calls
+                    // Handle Standard Library method calls (db, file, json, datetime, regex, crypto)
                     if let Type::Named(ref name) = obj_type {
-                        if name == "Database" {
-                            // db.find(), db.save(), etc. are handled via function lookup
-                            let method_name = format!("db.{}", member);
-                            if let Some(sig) = self.environment.get_function(&method_name) {
-                                // Special handling for db.find(User, id) and db.findAll(User)
-                                // First argument can be a type identifier (User), not a value
-                                if member == "find" {
-                                    // db.find(User, id) - first arg is type, second is id
-                                    if args.len() == 2 {
-                                        // Check if first argument is a type identifier
-                                        if let Expression::Identifier(type_name) = &args[0] {
-                                            if self.environment.has_type(type_name) {
-                                                // Check second argument (id) is a string
-                                                let id_type = self.check_expression(&args[1])?;
-                                                if id_type != Type::String {
-                                                    self.errors.push(TypeError::type_mismatch("string", &id_type.to_string()));
-                                                }
-                                                // Return Optional<T> where T is the type passed
-                                                return Ok(Type::Optional(Box::new(Type::Named(type_name.clone()))));
-                                            } else {
-                                                self.errors.push(TypeError::undefined_type(type_name));
-                                            }
-                                        }
-                                    } else {
-                                        self.errors.push(TypeError::wrong_argument_count(2, args.len()));
-                                    }
-                                    return Ok(Type::Optional(Box::new(Type::Named("User".to_string()))));
-                                } else if member == "findAll" {
-                                    // db.findAll(User) - first arg is type
-                                    if args.len() == 1 {
-                                        if let Expression::Identifier(type_name) = &args[0] {
-                                            if self.environment.has_type(type_name) {
-                                                // Return List<T> where T is the type passed
-                                                return Ok(Type::List(Box::new(Type::Named(type_name.clone()))));
-                                            } else {
-                                                self.errors.push(TypeError::undefined_type(type_name));
-                                            }
-                                        }
-                                    } else {
-                                        self.errors.push(TypeError::wrong_argument_count(1, args.len()));
-                                    }
-                                    return Ok(Type::List(Box::new(Type::Named("User".to_string()))));
-                                } else {
-                                    // Normal method call handling
-                                    if args.len() != sig.params.len() {
-                                        self.errors.push(TypeError::wrong_argument_count(
-                                            sig.params.len(),
-                                            args.len(),
+                        let method_name = match name.as_str() {
+                            "Database" => format!("db.{}", member),
+                            "File" => format!("file.{}", member),
+                            "Json" => format!("json.{}", member),
+                            "DateTime" => format!("datetime.{}", member),
+                            "Regex" => format!("regex.{}", member),
+                            "Crypto" => format!("crypto.{}", member),
+                            _ => return Ok(Type::Void),
+                        };
+                        
+                        if let Some(sig) = self.environment.get_function(&method_name) {
+                            // Check arguments
+                            if sig.params.len() != args.len() {
+                                self.errors.push(TypeError::wrong_argument_count(sig.params.len(), args.len()));
+                            } else {
+                                for (_i, (param, arg)) in sig.params.iter().zip(args.iter()).enumerate() {
+                                    let arg_type = self.check_expression(arg)?;
+                                    if !self.types_compatible(&arg_type, &param.param_type) {
+                                        self.errors.push(TypeError::type_mismatch(
+                                            &param.param_type.to_string(),
+                                            &arg_type.to_string(),
                                         ));
-                                    } else {
-                                        for (i, (arg, param)) in args.iter().zip(sig.params.iter()).enumerate() {
-                                            let arg_type = self.check_expression(arg)?;
-                                            if !self.types_compatible(&arg_type, &param.param_type) {
-                                                self.errors.push(TypeError::new(
-                                                    TypeErrorKind::InvalidArgumentType {
-                                                        position: i,
-                                                        expected: param.param_type.to_string(),
-                                                        found: arg_type.to_string(),
-                                                    },
-                                                    format!(
-                                                        "Argument {}: expected {}, found {}",
-                                                        i + 1,
-                                                        param.param_type.to_string(),
-                                                        arg_type.to_string()
-                                                    ),
-                                                ));
-                                            }
-                                        }
                                     }
-                                    return Ok(sig.return_type.unwrap_or(Type::Void));
                                 }
                             }
+                            return Ok(sig.return_type.unwrap_or(Type::Void));
+                        }
+                        
+                        // Special handling for db.find() and db.findAll() when function not found via normal lookup
+                        if name == "Database" && member == "find" {
+                            // db.find(User, id) - first arg is type, second is id
+                            if args.len() == 2 {
+                                // Check if first argument is a type identifier
+                                if let Expression::Identifier(type_name) = &args[0] {
+                                    if self.environment.has_type(type_name) {
+                                        // Check second argument (id) is a string
+                                        let id_type = self.check_expression(&args[1])?;
+                                        if id_type != Type::String {
+                                            self.errors.push(TypeError::type_mismatch("string", &id_type.to_string()));
+                                        }
+                                        // Return Optional<T> where T is the type passed
+                                        return Ok(Type::Optional(Box::new(Type::Named(type_name.clone()))));
+                                    } else {
+                                        self.errors.push(TypeError::undefined_type(type_name));
+                                    }
+                                }
+                            } else {
+                                self.errors.push(TypeError::wrong_argument_count(2, args.len()));
+                            }
+                            return Ok(Type::Optional(Box::new(Type::Named("User".to_string()))));
+                        } else if name == "Database" && member == "findAll" {
+                            // db.findAll(User) - first arg is type
+                            if args.len() == 1 {
+                                if let Expression::Identifier(type_name) = &args[0] {
+                                    if self.environment.has_type(type_name) {
+                                        // Return List<T> where T is the type passed
+                                        return Ok(Type::List(Box::new(Type::Named(type_name.clone()))));
+                                    } else {
+                                        self.errors.push(TypeError::undefined_type(type_name));
+                                    }
+                                }
+                            } else {
+                                self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                            }
+                            return Ok(Type::List(Box::new(Type::Named("User".to_string()))));
                         }
                     }
                 }
@@ -1557,6 +1879,51 @@ impl TypeChecker {
                                         Ok(Type::Void)
                                     }
                                     _ => Ok(Type::Void)
+                                }
+                            }
+                            "DateTime" => {
+                                // Handle datetime function calls via function lookup
+                                let func_name = format!("datetime.{}", member);
+                                if let Some(sig) = self.environment.get_function(&func_name) {
+                                    Ok(sig.return_type.unwrap_or(Type::Void))
+                                } else {
+                                    Ok(Type::Void)
+                                }
+                            }
+                            "Regex" => {
+                                // Handle regex function calls via function lookup
+                                let func_name = format!("regex.{}", member);
+                                if let Some(sig) = self.environment.get_function(&func_name) {
+                                    Ok(sig.return_type.unwrap_or(Type::Void))
+                                } else {
+                                    Ok(Type::Void)
+                                }
+                            }
+                            "Crypto" => {
+                                // Handle crypto function calls via function lookup
+                                let func_name = format!("crypto.{}", member);
+                                if let Some(sig) = self.environment.get_function(&func_name) {
+                                    Ok(sig.return_type.unwrap_or(Type::Void))
+                                } else {
+                                    Ok(Type::Void)
+                                }
+                            }
+                            "File" => {
+                                // Handle file function calls via function lookup
+                                let func_name = format!("file.{}", member);
+                                if let Some(sig) = self.environment.get_function(&func_name) {
+                                    Ok(sig.return_type.unwrap_or(Type::Void))
+                                } else {
+                                    Ok(Type::Void)
+                                }
+                            }
+                            "Json" => {
+                                // Handle json function calls via function lookup
+                                let func_name = format!("json.{}", member);
+                                if let Some(sig) = self.environment.get_function(&func_name) {
+                                    Ok(sig.return_type.unwrap_or(Type::Void))
+                                } else {
+                                    Ok(Type::Void)
                                 }
                             }
                             "MetricsCollector" => {

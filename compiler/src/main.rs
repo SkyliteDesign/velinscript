@@ -3,6 +3,7 @@ use velin_compiler::parser::parser::Parser;
 use velin_compiler::type_checker::TypeChecker;
 use velin_compiler::codegen::{RustCodeGenerator, OpenAPIGenerator, BoilerplateGenerator, ClientGenerator};
 use velin_compiler::formatter::{Formatter, FormatConfig};
+use velin_compiler::optimizer::Optimizer;
 use std::fs;
 use std::path::PathBuf;
 use anyhow::{Context, Result as AnyhowResult};
@@ -140,7 +141,7 @@ fn compile_command(input: PathBuf, output: Option<PathBuf>, no_type_check: bool,
     let code = fs::read_to_string(&input)
         .with_context(|| format!("Failed to read file: {}", input.display()))?;
     
-    let program = Parser::parse(&code)
+    let mut program = Parser::parse(&code)
         .map_err(|e| anyhow::anyhow!("Parse error: {}", e.message))?;
     
     tracing::info!("Parsing successful");
@@ -163,6 +164,11 @@ fn compile_command(input: PathBuf, output: Option<PathBuf>, no_type_check: bool,
             }
         }
         tracing::info!("Type checking successful");
+        
+        // Run optimizer after type checking and before code generation
+        let optimizer = Optimizer::new();
+        optimizer.optimize(&mut program);
+        tracing::info!("Optimization complete");
     }
     
     let mut codegen = RustCodeGenerator::new();

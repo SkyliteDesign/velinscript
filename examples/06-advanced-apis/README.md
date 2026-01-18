@@ -1,6 +1,6 @@
 # Advanced VelinScript APIs - Dokumentation
 
-Diese Dokumentation erklärt die Konzepte und Implementierungen in der Beispieldatei [`advanced-apis.velin`](./advanced-apis.velin).
+Diese Dokumentation erklärt die Konzepte und Implementierungen in der Beispieldatei [`main.velin`](./main.velin).
 
 Die Datei demonstriert fortgeschrittene Techniken für Backend-Entwicklung mit VelinScript, inklusive Echtzeit-Kommunikation, KI-Integration, Sicherheit und Datenverarbeitung.
 

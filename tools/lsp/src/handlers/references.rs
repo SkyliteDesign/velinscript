@@ -117,8 +117,6 @@ fn find_references_in_statement(
         Statement::Let(let_stmt) => {
             if let Expression::Identifier(name) = &let_stmt.value {
                 if name == symbol {
-                    // TODO: Position-Tracking für exakte Referenz-Position
-                    // Aktuell wird Position (0,0) verwendet als Placeholder
                 }
             }
         }
@@ -150,6 +148,11 @@ fn find_references_in_statement(
             for arm in &match_stmt.arms {
                 find_references_in_block(&arm.body, symbol, uri, references);
             }
+        }
+        Statement::Throw(throw_stmt) => {
+            find_references_in_expression(&throw_stmt.expression, symbol, uri, references);
+        }
+        Statement::Break(_) => {
         }
     }
 }

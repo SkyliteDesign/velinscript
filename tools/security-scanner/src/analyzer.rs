@@ -100,6 +100,11 @@ fn analyze_block(block: &Block, rules: &[crate::rules::SecurityRule]) -> Vec<Sec
                     findings.extend(analyze_block(&arm.body, rules));
                 }
             }
+            Statement::Throw(throw_stmt) => {
+                findings.extend(SecurityRules::check_expression(&throw_stmt.expression, rules));
+            }
+            Statement::Break(_) => {
+            }
         }
     }
 

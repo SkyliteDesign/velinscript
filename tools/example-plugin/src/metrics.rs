@@ -40,11 +40,9 @@ pub fn analyze_program(program: &Program) -> CodeMetrics {
                 metrics.function_count += 1;
                 
                 // Schätze Zeilen-Anzahl (vereinfacht)
-                if let Some(ref body) = func.body {
-                    let body_str = format!("{:?}", body);
-                    let lines = body_str.matches('\n').count() + 1;
-                    metrics.function_lines += lines;
-                }
+                let body_str = format!("{:?}", func.body);
+                let lines = body_str.matches('\n').count() + 1;
+                metrics.function_lines += lines;
             }
             Item::Struct(_) => {
                 metrics.struct_count += 1;

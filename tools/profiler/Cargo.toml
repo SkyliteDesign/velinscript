@@ -1,0 +1,18 @@
+[package]
+name = "velin-profiler"
+version = "0.1.0"
+edition = "2021"
+description = "VelinScript Profiler - CPU- und Memory-Profiling mit Flame Graphs"
+
+[[bin]]
+name = "velin-profile"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+velin-compiler = { path = "../../compiler" }
+inferno = "0.11"
+dhat = "0.3"

@@ -244,6 +244,12 @@ impl DeadCodeAnalyzer {
                     Self::track_usages_in_block(&arm.body, used);
                 }
             }
+            Statement::Throw(throw_stmt) => {
+                Self::track_usages_in_expression(&throw_stmt.expression, used);
+            }
+            Statement::Break(_) => {
+                // Break hat keinen Ausdruck, daher keine zusätzlichen Usages
+            }
         }
     }
 

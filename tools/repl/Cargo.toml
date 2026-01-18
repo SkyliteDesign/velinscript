@@ -1,0 +1,17 @@
+[package]
+name = "velin-repl"
+version = "0.1.0"
+edition = "2021"
+description = "VelinScript REPL - Interaktive Shell zum Testen von VelinScript-Code"
+
+[[bin]]
+name = "velin-repl"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+anyhow = "1.0"
+velin-compiler = { path = "../../compiler" }
+rustyline = "14.0"
+evalexpr = "10.0"
+tempfile = "3.8"

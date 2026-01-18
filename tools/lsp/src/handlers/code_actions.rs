@@ -73,7 +73,7 @@ fn create_quick_fix(
     diagnostic: &Diagnostic,
     uri: &tower_lsp::lsp_types::Url,
     program: &velin_compiler::parser::ast::Program,
-    _text: &str,
+    text: &str,
 ) -> Option<CodeAction> {
     let message = diagnostic.message.as_str();
     
@@ -87,10 +87,8 @@ fn create_quick_fix(
             tracker.track_usages(program);
             
             if let Some(module_path) = find_import_for_symbol(&type_name, &tracker) {
-                // Use symbol info to get better context
-                if let Some(symbols) = tracker.defined_symbols.get(&type_name) {
-                    if let Some(symbol_info) = symbols.first() {
-                        // Use symbol info fields (name, kind, location)
+                if let Some(symbols) = tracker.get_defined_symbols().get(&type_name) {
+                    for symbol_info in symbols.iter().take(1) {
                         let _symbol_name = &symbol_info.name;
                         let _symbol_kind = &symbol_info.kind;
                         let _symbol_location = &symbol_info.location;
@@ -98,7 +96,6 @@ fn create_quick_fix(
                 }
                 let import_stmt = generate_import_statement(&module_path, &type_name);
                 
-                // Find insertion point (after last use statement or at top)
                 let insert_position = find_import_insertion_point(program, text);
                 
                 let edit = TextEdit {

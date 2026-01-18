@@ -1,7 +1,7 @@
 // Package Registry - Verwaltet Package-Veröffentlichung und -Abruf
 
 use anyhow::Result;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PackageMetadata {

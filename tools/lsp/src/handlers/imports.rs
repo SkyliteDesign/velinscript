@@ -194,6 +194,11 @@ impl SymbolTracker {
                     self.track_usages_in_block(&arm.body);
                 }
             }
+            Statement::Throw(throw_stmt) => {
+                self.track_usages_in_expression(&throw_stmt.expression);
+            }
+            Statement::Break(_) => {
+            }
         }
     }
 

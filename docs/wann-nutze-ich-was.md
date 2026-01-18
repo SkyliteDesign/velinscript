@@ -9,12 +9,14 @@ Diese Dokumentation hilft Ihnen dabei, das richtige Tool oder Feature für Ihre 
 1. [Entscheidungsfluss-Diagramm](#entscheidungsfluss-diagramm)
 2. [Entwicklung & Code-Qualität](#entwicklung--code-qualität)
 3. [Debugging & Entwicklung](#debugging--entwicklung)
-4. [Code-Generierung & Automatisierung](#code-generierung--automatisierung)
-5. [Security & Sicherheit](#security--sicherheit)
-6. [Package Management](#package-management)
-7. [Intelligence Features](#intelligence-features)
-8. [API-Entwicklung](#api-entwicklung)
-9. [KI & Machine Learning](#ki--machine-learning)
+4. [Testing & Qualitätssicherung](#testing--qualitätssicherung)
+5. [Performance & Optimierung](#performance--optimierung)
+6. [Code-Generierung & Automatisierung](#code-generierung--automatisierung)
+7. [Security & Sicherheit](#security--sicherheit)
+8. [Package Management](#package-management)
+9. [Intelligence Features](#intelligence-features)
+10. [API-Entwicklung](#api-entwicklung)
+11. [KI & Machine Learning](#ki--machine-learning)
 
 ---
 
@@ -43,7 +45,9 @@ Diese Dokumentation hilft Ihnen dabei, das richtige Tool oder Feature für Ihre 
    ┌─────────┐          ┌──────────┐          ┌──────────┐
    │ LSP     │          │ Linter   │          │ generate │
    │ Hot Reload│        │ Formatter│          │ api/crud │
-   │ Debugger│          │ AutoFix  │          │ client   │
+   │ REPL    │          │ AutoFix  │          │ client   │
+   │ Debugger│          │ Deps Graph│         │          │
+   │ Inspector│         │ Bundle   │          │          │
    └─────────┘          └──────────┘          └──────────┘
         │                     │                     │
         └─────────────────────┼─────────────────────┘
@@ -52,8 +56,10 @@ Diese Dokumentation hilft Ihnen dabei, das richtige Tool oder Feature für Ihre 
         │                     │                     │
         ▼                     ▼                     ▼
    ┌─────────┐          ┌──────────┐          ┌──────────┐
-   │ Security│          │ Package  │          │ Docs     │
-   │ Scanner │          │ Manager  │          │ Generator│
+   │ Test    │          │ Security │          │ Package  │
+   │ Runner  │          │ Scanner  │          │ Manager  │
+   │ Profiler│          │          │          │          │
+   │ Benchmark│         │          │          │          │
    └─────────┘          └──────────┘          └──────────┘
 ```
 
@@ -133,6 +139,62 @@ velin check -i main.velin --autofix
 
 ---
 
+### Wann nutze ich den **Dependency Graph** (`velin-deps`)?
+
+**Nutzen Sie den Dependency Graph, wenn:**
+- ✅ Sie Modul-Abhängigkeiten visualisieren möchten
+- ✅ Sie zirkuläre Imports finden wollen
+- ✅ Sie die Projekt-Struktur verstehen möchten
+- ✅ Sie Refactoring planen und Abhängigkeiten analysieren müssen
+- ✅ Sie Onboarding für neue Teammitglieder unterstützen wollen
+
+**Beispiel:**
+```bash
+# Dependency-Graph generieren
+velin-deps graph
+
+# Nur zirkuläre Abhängigkeiten anzeigen
+velin-deps graph --circular
+
+# JSON-Output für CI/CD
+velin-deps graph --format json --output deps.json
+```
+
+**Wann NICHT:**
+- ❌ Bei sehr kleinen Projekten ohne Module
+- ❌ Bei einmaligen Skripten ohne Imports
+
+---
+
+### Wann nutze ich den **Bundle Analyzer** (`velin-bundle`)?
+
+**Nutzen Sie den Bundle Analyzer, wenn:**
+- ✅ Sie Bundle-Größe optimieren möchten
+- ✅ Sie Tree-Shaking-Potenzial identifizieren wollen
+- ✅ Sie Code-Splitting-Strategien planen
+- ✅ Sie ungenutzten Code finden möchten
+- ✅ Sie vor einem Release die Bundle-Größe prüfen wollen
+
+**Beispiel:**
+```bash
+# Bundle analysieren
+velin-bundle analyze
+
+# Mit Tree-Shaking-Analyse
+velin-bundle analyze --tree-shaking
+
+# Code-Splitting-Vorschläge
+velin-bundle analyze --code-splitting
+```
+
+**Wann NICHT:**
+- ❌ Bei sehr kleinen Projekten
+- ❌ Bei experimentellem Code (zu früh)
+
+---
+
+## Debugging & Entwicklung
+
 ## Debugging & Entwicklung
 
 ### Wann nutze ich den **Debugger** (`velin-debugger`)?
@@ -199,6 +261,191 @@ velin-hot-reload --server --run-command "velin run main.velin"
 - Vim (mit vim-lsp)
 
 ---
+
+### Wann nutze ich den **REPL** (`velin-repl`)?
+
+**Nutzen Sie den REPL, wenn:**
+- ✅ Sie Code schnell testen möchten
+- ✅ Sie Ausdrücke interaktiv evaluieren wollen
+- ✅ Sie Prototyping betreiben
+- ✅ Sie API-Funktionen live testen möchten
+- ✅ Sie Debugging mit interaktiven Experimenten kombinieren wollen
+
+**Beispiel:**
+```bash
+# REPL starten
+velin-repl
+
+# Datei in REPL laden
+velin-repl --file main.velin
+
+# Im REPL:
+velin> 2 + 3
+5
+velin> sqrt(16)
+4.0
+```
+
+**Wann NICHT:**
+- ❌ Bei komplexen, mehrteiligen Programmen (nutzen Sie stattdessen Tests)
+- ❌ Bei Production-Code (REPL ist für Experimente)
+
+---
+
+### Wann nutze ich den **Runtime Inspector** (`velin-inspect`)?
+
+**Nutzen Sie den Runtime Inspector, wenn:**
+- ✅ Sie Variablen zur Laufzeit inspizieren möchten
+- ✅ Sie Memory-Usage überwachen wollen
+- ✅ Sie State während der Ausführung analysieren müssen
+- ✅ Sie Live-Debugging ohne Breakpoints durchführen möchten
+- ✅ Sie Performance-Probleme während der Ausführung identifizieren wollen
+
+**Beispiel:**
+```bash
+# Code inspizieren
+velin-inspect inspect main.velin --variables
+
+# Memory-Usage anzeigen
+velin-inspect inspect main.velin --memory
+
+# Watch-Mode (kontinuierliche Überwachung)
+velin-inspect inspect main.velin --watch
+```
+
+**Wann NICHT:**
+- ❌ Bei statischer Code-Analyse (nutzen Sie Linter)
+- ❌ Bei sehr einfachen Programmen (unnötig)
+
+---
+
+## Testing & Qualitätssicherung
+
+### Wann nutze ich den **Test Runner** (`velin-test`)?
+
+**Nutzen Sie den Test Runner, wenn:**
+- ✅ Sie Unit-Tests ausführen möchten
+- ✅ Sie Integration-Tests durchführen wollen
+- ✅ Sie Test-Coverage messen möchten
+- ✅ Sie vor einem Commit alle Tests prüfen wollen
+- ✅ Sie CI/CD-Pipelines mit Tests einrichten
+- ✅ Sie Mocking für Tests benötigen
+
+**Beispiel:**
+```bash
+# Alle Tests ausführen
+velin-test run
+
+# Nur Unit-Tests
+velin-test run --unit
+
+# Mit Coverage-Report
+velin-test run --coverage
+
+# Mit Mocking
+velin-test run --mock
+```
+
+**Test-Syntax:**
+```velin
+@test
+fn testAdd() {
+    let result = add(2, 3);
+    assert(result == 5);
+}
+
+@before
+fn setup() {
+    db.connect();
+}
+
+@after
+fn teardown() {
+    db.disconnect();
+}
+```
+
+**Wann NICHT:**
+- ❌ Bei sehr einfachen, selbsterklärenden Funktionen (optional)
+- ❌ Bei experimentellem Code (zu früh)
+
+**Best Practice:** Führen Sie Tests vor jedem Commit aus!
+
+---
+
+## Performance & Optimierung
+
+### Wann nutze ich den **Profiler** (`velin-profile`)?
+
+**Nutzen Sie den Profiler, wenn:**
+- ✅ Sie Performance-Probleme identifizieren möchten
+- ✅ Sie CPU-Auslastung analysieren wollen
+- ✅ Sie Memory-Leaks finden müssen
+- ✅ Sie Bottlenecks in Ihrem Code lokalisieren wollen
+- ✅ Sie Flame Graphs für visuelle Analyse benötigen
+
+**Beispiel:**
+```bash
+# CPU-Profiling
+velin-profile cpu main.velin
+
+# CPU-Profiling mit Flame Graph
+velin-profile cpu main.velin --flamegraph
+
+# Memory-Profiling
+velin-profile memory main.velin --output memory-report.json
+```
+
+**Wann NICHT:**
+- ❌ Bei sehr einfachen, schnellen Funktionen (unnötig)
+- ❌ Bei experimentellem Code (zu früh)
+
+**Best Practice:** Profilen Sie immer Release-Builds, nicht Debug-Builds!
+
+---
+
+### Wann nutze ich den **Benchmark Runner** (`velin-bench`)?
+
+**Nutzen Sie den Benchmark Runner, wenn:**
+- ✅ Sie Performance-Metriken messen möchten
+- ✅ Sie Performance-Regressionen erkennen wollen
+- ✅ Sie verschiedene Implementierungen vergleichen müssen
+- ✅ Sie vor einem Release Performance prüfen wollen
+- ✅ Sie statistisch signifikante Performance-Daten benötigen
+
+**Beispiel:**
+```bash
+# Benchmarks ausführen
+velin-bench run
+
+# Mit mehr Iterationen für Genauigkeit
+velin-bench run --iterations 1000
+
+# Mit Vergleich zu vorherigen Runs
+velin-bench run --compare
+
+# Ergebnisse speichern
+velin-bench run --output benchmark.json
+```
+
+**Benchmark-Syntax:**
+```velin
+@benchmark
+fn benchmarkSort() {
+    let data = generateLargeArray(10000);
+    sort(data);
+}
+```
+
+**Wann NICHT:**
+- ❌ Bei sehr einfachen Operationen (Messfehler zu groß)
+- ❌ Bei nicht-kritischen Code-Pfaden
+
+**Best Practice:** Führen Sie Benchmarks regelmäßig durch, um Performance-Regressionen früh zu erkennen!
+
+---
+
+## Code-Generierung & Automatisierung
 
 ## Code-Generierung & Automatisierung
 
@@ -524,9 +771,16 @@ let results = await vectorDB.search(embeddings, limit: 10);
 | **Linter** | Code-Qualität prüfen | Vor jedem Commit |
 | **Formatter** | Code formatieren | Vor jedem Commit |
 | **AutoFix** | Syntax-Fehler beheben | Bei Kompilierungsfehlern |
+| **Dependency Graph** | Modul-Abhängigkeiten visualisieren | Bei Refactoring, Onboarding |
+| **Bundle Analyzer** | Bundle-Größe optimieren | Vor Releases, bei Performance-Problemen |
 | **Debugger** | Bugs analysieren | Bei komplexen Fehlern |
 | **Hot Reload** | Development Server | Während der Entwicklung |
+| **REPL** | Code interaktiv testen | Während der Entwicklung, Prototyping |
+| **Runtime Inspector** | Variablen/Memory inspizieren | Bei Runtime-Problemen |
 | **LSP** | IDE-Unterstützung | Immer (automatisch) |
+| **Test Runner** | Tests ausführen | Vor jedem Commit, in CI/CD |
+| **Profiler** | Performance-Probleme finden | Bei Performance-Issues |
+| **Benchmark Runner** | Performance messen | Regelmäßig, vor Releases |
 | **Code Generation** | Boilerplate generieren | Bei neuen Features |
 | **API Doc Generator** | Dokumentation erstellen | Vor Releases |
 | **Security Scanner** | Security prüfen | Vor Releases, in CI/CD |
@@ -544,31 +798,38 @@ let results = await vectorDB.search(embeddings, limit: 10);
 
 1. **VS Code Extension** aktivieren (LSP, Syntax Highlighting)
 2. **Hot Reload** starten für schnelles Feedback
-3. **Linter** vor jedem Commit ausführen
-4. **Formatter** auf Save aktivieren
+3. **REPL** für schnelle Code-Tests nutzen
+4. **Linter** vor jedem Commit ausführen
+5. **Formatter** auf Save aktivieren
 
 ### Vor einem Commit
 
-1. `velin-lint check` - Code-Qualität prüfen
-2. `velin format` - Code formatieren
-3. `velin check` - Type Checking
-4. `velin-security scan` - Security prüfen (optional)
+1. `velin-test run` - Tests ausführen
+2. `velin-lint check` - Code-Qualität prüfen
+3. `velin format` - Code formatieren
+4. `velin check` - Type Checking
+5. `velin-security scan` - Security prüfen (optional)
 
 ### Vor einem Release
 
-1. `velin-lint check` - Code-Qualität
-2. `velin-security scan` - Security-Vulnerabilities
-3. `velin-security audit` - Dependency-Audit
-4. `velin-api-doc generate` - API-Dokumentation
-5. `velin-compiler insight` - Code-Analyse
+1. `velin-test run --coverage` - Tests mit Coverage
+2. `velin-lint check` - Code-Qualität
+3. `velin-bundle analyze` - Bundle-Größe prüfen
+4. `velin-bench run` - Performance-Benchmarks
+5. `velin-security scan` - Security-Vulnerabilities
+6. `velin-security audit` - Dependency-Audit
+7. `velin-api-doc generate` - API-Dokumentation
+8. `velin-compiler insight` - Code-Analyse
 
 ### Bei neuen Features
 
 1. `velin generate api/crud` - Boilerplate generieren
 2. Code schreiben mit LSP-Unterstützung
-3. `velin-hot-reload` - Entwicklung mit Hot Reload
-4. `velin-debugger` - Bei komplexen Bugs
-5. Tests schreiben und ausführen
+3. `velin-repl` - Schnelle Tests während der Entwicklung
+4. `velin-hot-reload` - Entwicklung mit Hot Reload
+5. `velin-test run` - Tests schreiben und ausführen
+6. `velin-debugger` oder `velin-inspect` - Bei komplexen Bugs
+7. `velin-bench run` - Performance prüfen (bei kritischen Pfaden)
 
 ---
 
@@ -583,10 +844,12 @@ let results = await vectorDB.search(embeddings, limit: 10);
 
 ### "Ich habe einen Bug, den ich nicht verstehe"
 
-1. `velin-debugger start` oder F5 in VS Code
-2. Breakpoints setzen
-3. Schritt für Schritt debuggen
-4. Variablen inspizieren
+1. `velin-repl` - Code interaktiv testen
+2. `velin-inspect inspect --watch` - Runtime-Variablen überwachen
+3. `velin-debugger start` oder F5 in VS Code
+4. Breakpoints setzen
+5. Schritt für Schritt debuggen
+6. Variablen inspizieren
 
 ### "Ich möchte Code-Qualität sicherstellen"
 
@@ -602,13 +865,42 @@ let results = await vectorDB.search(embeddings, limit: 10);
 3. Gefundene Vulnerabilities beheben
 4. In CI/CD integrieren
 
+### "Ich möchte Performance optimieren"
+
+1. `velin-bench run` - Baseline-Performance messen
+2. `velin-profile cpu` - CPU-Bottlenecks finden
+3. `velin-profile memory` - Memory-Leaks identifizieren
+4. `velin-profile cpu --flamegraph` - Flame Graph für visuelle Analyse
+5. Optimierungen durchführen
+6. `velin-bench run --compare` - Performance-Vergleich
+
+### "Ich möchte Modul-Abhängigkeiten verstehen"
+
+1. `velin-deps graph` - Dependency-Graph generieren
+2. `velin-deps graph --circular` - Zirkuläre Abhängigkeiten finden
+3. `velin-deps graph --format json` - Für CI/CD-Integration
+4. Refactoring planen basierend auf Graph
+
+### "Ich möchte Bundle-Größe optimieren"
+
+1. `velin-bundle analyze` - Aktuelle Bundle-Größe prüfen
+2. `velin-bundle analyze --tree-shaking` - Ungenutzten Code finden
+3. `velin-bundle analyze --code-splitting` - Code-Splitting-Vorschläge
+4. Optimierungen durchführen
+5. Erneut analysieren für Vergleich
+
 ---
 
 ## Fazit
 
 VelinScript bietet eine umfassende Toolchain für moderne API-Entwicklung. Die meisten Tools sind **automatisch aktiv** (LSP, VS Code Extension) oder werden **bei Bedarf** genutzt (Debugger, Security Scanner).
 
-**Goldene Regel:** Nutzen Sie die Tools, die Ihren Workflow verbessern, aber lassen Sie sich nicht von zu vielen Tools ablenken. Starten Sie mit den Basics (LSP, Hot Reload, Linter) und erweitern Sie nach Bedarf.
+**Goldene Regel:** Nutzen Sie die Tools, die Ihren Workflow verbessern, aber lassen Sie sich nicht von zu vielen Tools ablenken. Starten Sie mit den Basics (LSP, Hot Reload, Linter, Test Runner) und erweitern Sie nach Bedarf.
+
+**Tool-Prioritäten:**
+- **Essentiell:** LSP, Hot Reload, Linter, Test Runner, Formatter
+- **Wichtig:** Debugger, Security Scanner, Dependency Graph
+- **Bei Bedarf:** Profiler, Benchmark Runner, Bundle Analyzer, REPL, Runtime Inspector
 
 ---
 

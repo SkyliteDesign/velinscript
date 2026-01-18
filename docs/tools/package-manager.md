@@ -2,6 +2,25 @@
 
 Der VelinScript Package Manager verwaltet Dependencies und Packages für VelinScript-Projekte.
 
+## Wofür ist der Package Manager ideal?
+
+Der Package Manager ist ideal für:
+- ✅ **Dependency-Management** - Verwaltet Projekt-Abhängigkeiten
+- ✅ **Version-Resolution** - Löst Dependency-Konflikte automatisch
+- ✅ **Security-Audits** - Prüft Dependencies auf Vulnerabilities
+- ✅ **Workspace-Management** - Verwaltet Multi-Package-Projekte
+- ✅ **Lock-Files** - Stellt reproduzierbare Builds sicher
+- ✅ **SemVer-Support** - Unterstützt semantische Versionierung
+
+## Wofür ist der Package Manager NICHT gedacht?
+
+Der Package Manager ist NICHT gedacht für:
+- ❌ **Code-Qualität** - Für Code-Qualität nutzen Sie den Linter
+- ❌ **Dependency-Visualisierung** - Für Dependency-Graphen nutzen Sie den Dependency Graph
+- ❌ **Bundle-Analyse** - Für Bundle-Größen nutzen Sie den Bundle Analyzer
+- ❌ **Performance-Analyse** - Für Performance nutzen Sie den Profiler
+- ❌ **Code-Generierung** - Für Code-Generierung nutzen Sie `velin generate`
+
 ## Installation
 
 ```bash
@@ -127,6 +146,34 @@ velin-pkg publish 1.0.0
 
 ```bash
 velin-pkg audit
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Package Manager                           │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-pkg add github.com/user/repo --version ^1.0.0 │
+│                                                         │
+│  📦 Füge Dependency hinzu...                          │
+│  ✓ Dependency hinzugefügt: github.com/user/repo@1.0.0 │
+│  ✓ velin.toml aktualisiert                             │
+│                                                         │
+│  $ velin-pkg install                                    │
+│                                                         │
+│  📥 Installiere Dependencies...                        │
+│  ✓ 5 Dependencies installiert                          │
+│  ✓ velin.lock generiert                                │
+│                                                         │
+│  $ velin-pkg list                                       │
+│                                                         │
+│  📋 Installierte Dependencies:                         │
+│    github.com/user/repo      v1.0.0                    │
+│    github.com/user/auth      v2.1.0                    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 Prüft Dependencies auf bekannte Vulnerabilities.

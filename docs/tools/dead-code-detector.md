@@ -2,6 +2,25 @@
 
 Der VelinScript Dead Code Detector findet automatisch ungenutzten Code in deinem Projekt.
 
+## Wofür ist der Dead Code Detector ideal?
+
+Der Dead Code Detector ist ideal für:
+- ✅ **Code-Bereinigung** - Findet ungenutzten Code automatisch
+- ✅ **Refactoring-Vorbereitung** - Identifiziert Code, der entfernt werden kann
+- ✅ **Bundle-Optimierung** - Unterstützt Tree-Shaking durch Dead Code-Entfernung
+- ✅ **Code-Wartung** - Hält Codebase sauber und wartbar
+- ✅ **CI/CD-Integration** - Kann Dead Code in Pipelines erkennen
+- ✅ **Onboarding** - Hilft neuen Entwicklern, ungenutzten Code zu finden
+
+## Wofür ist der Dead Code Detector NICHT gedacht?
+
+Der Dead Code Detector ist NICHT gedacht für:
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Bundle-Analyse** - Für detaillierte Bundle-Analyse nutzen Sie den Bundle Analyzer
+- ❌ **Performance-Analyse** - Für Performance nutzen Sie den Profiler
+- ❌ **Security-Checks** - Für Security nutzen Sie den Security Scanner
+- ❌ **Dependency-Analyse** - Für Dependencies nutzen Sie den Dependency Graph
+
 ## Installation
 
 Der Dead Code Detector ist Teil des VelinScript Toolchains. Baue ihn mit:
@@ -69,6 +88,34 @@ Gefundener Dead Code: 3
 [Import] unused::module
   File: src/main.velin
   Suggestion: Entferne ungenutzten Import 'module'
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Dead Code Detector                        │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-dead-code scan                                 │
+│                                                         │
+│  🔍 VelinScript Dead Code Report                       │
+│  ============================                           │
+│  Gefundener Dead Code: 3                               │
+│                                                         │
+│  [Function] oldFunction                                 │
+│    File: src/main.velin                                │
+│    Suggestion: Entferne Funktion 'oldFunction'         │
+│                                                         │
+│  [Variable] unusedVar                                   │
+│    File: src/utils.velin                                │
+│    Suggestion: Entferne Variable 'unusedVar'           │
+│                                                         │
+│  [Import] unused::module                               │
+│    File: src/main.velin                                │
+│    Suggestion: Entferne ungenutzten Import             │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Best Practices

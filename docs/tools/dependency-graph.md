@@ -2,6 +2,25 @@
 
 Das Dependency Graph Tool visualisiert Modul-Abhängigkeiten und erkennt zirkuläre Imports in VelinScript-Projekten.
 
+## Wofür ist der Dependency Graph ideal?
+
+Der Dependency Graph ist ideal für:
+- ✅ **Projekt-Verständnis** - Visualisiert die gesamte Modul-Struktur auf einen Blick
+- ✅ **Refactoring-Planung** - Identifiziert Abhängigkeiten vor größeren Änderungen
+- ✅ **Onboarding** - Hilft neuen Teammitgliedern, die Projekt-Struktur zu verstehen
+- ✅ **Zirkuläre Abhängigkeiten** - Findet automatisch problematische Import-Zyklen
+- ✅ **Architektur-Dokumentation** - Generiert visuelle Dokumentation der Abhängigkeiten
+- ✅ **CI/CD-Integration** - Kann zirkuläre Abhängigkeiten in Pipelines erkennen
+
+## Wofür ist der Dependency Graph NICHT gedacht?
+
+Der Dependency Graph ist NICHT gedacht für:
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Performance-Analyse** - Für Performance-Optimierung nutzen Sie den Profiler
+- ❌ **Bundle-Optimierung** - Für Bundle-Größen-Analyse nutzen Sie den Bundle Analyzer
+- ❌ **Security-Checks** - Für Security-Vulnerabilities nutzen Sie den Security Scanner
+- ❌ **Live-Debugging** - Für Runtime-Analyse nutzen Sie den Runtime Inspector
+
 ## Installation
 
 Das Tool ist Teil der VelinScript Toolchain. Baue es mit:
@@ -162,6 +181,38 @@ digraph Dependencies {
   "a" -> "b";
   "b" -> "a";
 }
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Dependency Graph                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-deps graph --format json                      │
+│                                                         │
+│  🔍 Analysiere Dependencies...                         │
+│                                                         │
+│  ✓ Keine zirkulären Abhängigkeiten gefunden            │
+│                                                         │
+│  {                                                      │
+│    "nodes": ["main", "models", "services"],            │
+│    "edges": [                                          │
+│      ["main", "models"],                               │
+│      ["main", "services"]                              │
+│    ],                                                   │
+│    "circular_dependencies": [],                        │
+│    "total_nodes": 3,                                   │
+│    "total_edges": 2                                    │
+│  }                                                      │
+│                                                         │
+│  Dependency Graph:                                     │
+│    main ──┐                                            │
+│           ├──> models                                  │
+│           └──> services ──> models                      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Integration

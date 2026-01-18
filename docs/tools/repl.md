@@ -2,6 +2,25 @@
 
 Das REPL (Read-Eval-Print Loop) ist eine interaktive Shell zum Testen von VelinScript-Code in Echtzeit.
 
+## Wofür ist der REPL ideal?
+
+Der REPL ist ideal für:
+- ✅ **Schnelles Prototyping** - Testen Sie Code-Ideen sofort ohne Dateien zu erstellen
+- ✅ **Interaktives Lernen** - Perfekt zum Erlernen von VelinScript-Syntax
+- ✅ **API-Testing** - Testen Sie Funktionen und Ausdrücke live
+- ✅ **Debugging-Hilfe** - Experimentieren Sie mit Code-Fragmenten während des Debuggings
+- ✅ **Mathematische Berechnungen** - Evaluieren Sie Ausdrücke schnell
+- ✅ **Code-Exploration** - Erkunden Sie die Standardbibliothek interaktiv
+
+## Wofür ist der REPL NICHT gedacht?
+
+Der REPL ist NICHT gedacht für:
+- ❌ **Komplexe Programme** - Für vollständige Programme nutzen Sie normale Dateien
+- ❌ **Strukturierte Tests** - Für organisierte Tests nutzen Sie den Test Runner
+- ❌ **Performance-Messung** - Für Benchmarks nutzen Sie den Benchmark Runner
+- ❌ **Production-Code** - Der REPL ist nur für Entwicklung und Experimente
+- ❌ **CI/CD-Integration** - Für automatisierte Tests nutzen Sie den Test Runner
+
 ## Installation
 
 Das Tool ist Teil der VelinScript Toolchain. Baue es mit:
@@ -97,6 +116,38 @@ Verfügbare Befehle:
 
 velin> exit
 Auf Wiedersehen!
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript REPL                                      │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-repl                                           │
+│                                                         │
+│  VelinScript REPL                                       │
+│  Tippe 'exit' oder 'quit' zum Beenden                  │
+│                                                         │
+│  velin> 2 + 3                                           │
+│  5                                                      │
+│                                                         │
+│  velin> sqrt(16)                                        │
+│  4.0                                                    │
+│                                                         │
+│  velin> fn add(a: number, b: number): number {          │
+│      return a + b;                                      │
+│  }                                                      │
+│  Code kompiliert erfolgreich                           │
+│                                                         │
+│  velin> add(5, 3)                                       │
+│  8                                                      │
+│                                                         │
+│  velin> exit                                            │
+│  Auf Wiedersehen!                                       │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Integration

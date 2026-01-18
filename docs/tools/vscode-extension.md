@@ -9,6 +9,24 @@
 
 Die VS Code Extension bietet vollständige IDE-Unterstützung für VelinScript mit Syntax-Highlighting, IntelliSense, Debugging und Code-Generierung.
 
+## Wofür ist die VS Code Extension ideal?
+
+Die VS Code Extension ist ideal für:
+- ✅ **Vollständige IDE-Erfahrung** - All-in-One-Lösung für VelinScript-Entwicklung
+- ✅ **Syntax-Highlighting** - Farbige Syntax-Hervorhebung für bessere Lesbarkeit
+- ✅ **IntelliSense** - Auto-Completion, Hover-Info, Go-to-Definition
+- ✅ **Debugging** - Integrierter Debugger mit Breakpoints
+- ✅ **Code-Generierung** - Templates und Code-Snippets
+- ✅ **Format-on-Save** - Automatische Code-Formatierung
+
+## Wofür ist die VS Code Extension NICHT gedacht?
+
+Die VS Code Extension ist NICHT gedacht für:
+- ❌ **CLI-Tools** - Für Command-Line-Tools nutzen Sie die separaten Tools
+- ❌ **CI/CD-Integration** - Für Pipelines nutzen Sie die CLI-Tools direkt
+- ❌ **Alternative IDEs** - Für andere IDEs nutzen Sie den LSP direkt
+- ❌ **Headless-Umgebungen** - Für Server ohne GUI nutzen Sie CLI-Tools
+
 ## Features
 
 ### Syntax-Highlighting
@@ -180,6 +198,35 @@ code --install-extension velinscript-0.1.0.vsix
 
 2. Setze Breakpoints
 3. Starte Debugging (`F5`)
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VS Code mit VelinScript Extension                      │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  [Editor]                                               │
+│    fn processOrder(order: Order) {                     │
+│        let user = db.findUser(order.userId)?;          │
+│        let payment = processPayment(order)?;            │
+│        return Ok(order);                                │
+│    }                                                    │
+│                                                         │
+│  [Syntax Highlighting aktiv]                            │
+│  [Auto-Completion aktiv]                                │
+│  [Error Highlighting: Keine Fehler]                     │
+│                                                         │
+│  [Status Bar]                                           │
+│    VelinScript ✓ | LSP: Ready | Debug: Ready           │
+│                                                         │
+│  [Command Palette]                                      │
+│    VelinScript: Compile                                 │
+│    VelinScript: Generate API                            │
+│    VelinScript: Run Tests                              │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
 
 ---
 

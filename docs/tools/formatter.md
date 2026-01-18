@@ -2,6 +2,25 @@
 
 Der VelinScript Code Formatter sorgt für konsistente Code-Formatierung in Ihren Projekten. Er ist direkt in den Compiler integriert und kann über die CLI oder die VS Code Extension verwendet werden.
 
+## Wofür ist der Formatter ideal?
+
+Der Formatter ist ideal für:
+- ✅ **Konsistente Formatierung** - Stellt einheitliche Code-Formatierung sicher
+- ✅ **Team-Kollaboration** - Eliminiert Formatierungs-Diskussionen im Code Review
+- ✅ **Pre-Commit-Hooks** - Automatische Formatierung vor jedem Commit
+- ✅ **Code-Migration** - Formatiert Legacy-Code auf neue Standards
+- ✅ **Format-on-Save** - Automatische Formatierung beim Speichern (VS Code)
+- ✅ **CI/CD-Integration** - Kann Formatierungs-Checks in Pipelines durchführen
+
+## Wofür ist der Formatter NICHT gedacht?
+
+Der Formatter ist NICHT gedacht für:
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Syntax-Fehler** - Für Syntax-Korrektur nutzen Sie AutoFix
+- ❌ **Code-Optimierung** - Für Performance-Optimierung nutzen Sie den Profiler
+- ❌ **Security-Checks** - Für Security-Vulnerabilities nutzen Sie den Security Scanner
+- ❌ **Funktionale Änderungen** - Der Formatter ändert nur Formatierung, nicht Logik
+
 ## Installation
 
 Der Formatter ist Teil des VelinScript Compilers. Keine separate Installation nötig.
@@ -133,6 +152,32 @@ fn createUser(name: string, email: string): User {
     };
     return user;
 }
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Formatter                                  │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin format -i main.velin --in-place               │
+│                                                         │
+│  ✓ Formatiere: main.velin                              │
+│  ✓ Formatierung erfolgreich                            │
+│                                                         │
+│  Vorher:                                                │
+│    fn getUsers():List<User>{                            │
+│    let users=db.findAll(User);                          │
+│    return users;}                                       │
+│                                                         │
+│  Nachher:                                               │
+│    fn getUsers(): List<User> {                          │
+│        let users = db.findAll(User);                    │
+│        return users;                                    │
+│    }                                                    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Was wird formatiert?

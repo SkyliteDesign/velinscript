@@ -2,6 +2,25 @@
 
 Der Profiler führt CPU- und Memory-Profiling durch und generiert Flame Graphs.
 
+## Wofür ist der Profiler ideal?
+
+Der Profiler ist ideal für:
+- ✅ **Performance-Bottlenecks** - Findet langsame Code-Stellen
+- ✅ **CPU-Analyse** - Identifiziert CPU-intensive Funktionen
+- ✅ **Memory-Leaks** - Erkennt Memory-Probleme und übermäßige Allokationen
+- ✅ **Flame Graphs** - Visualisiert Performance-Daten für einfache Analyse
+- ✅ **Optimierungs-Planung** - Zeigt, wo Optimierungen den größten Effekt haben
+- ✅ **Production-Debugging** - Analysiert Performance-Probleme in Production-ähnlichen Umgebungen
+
+## Wofür ist der Profiler NICHT gedacht?
+
+Der Profiler ist NICHT gedacht für:
+- ❌ **Statische Code-Analyse** - Für Code-Qualität nutzen Sie den Linter
+- ❌ **Unit-Tests** - Für Tests nutzen Sie den Test Runner
+- ❌ **Benchmark-Vergleiche** - Für statistische Benchmarks nutzen Sie den Benchmark Runner
+- ❌ **Security-Checks** - Für Security-Vulnerabilities nutzen Sie den Security Scanner
+- ❌ **Code-Generierung** - Für Boilerplate nutzen Sie Code Generation
+
 ## Installation
 
 Das Tool ist Teil der VelinScript Toolchain. Baue es mit:
@@ -73,6 +92,32 @@ velin-profile cpu main.velin --flamegraph
 ```
 
 Generiert `flamegraph.svg` mit visueller Darstellung der Funktion-Performance.
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Profiler                                  │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-profile cpu main.velin --flamegraph           │
+│                                                         │
+│  ⚡ CPU-Profiling für: main.velin                      │
+│                                                         │
+│  📊 CPU-Profiling-Ergebnisse:                          │
+│    Gesamt-Zeit: 125.45ms                               │
+│    Funktionen: 5                                        │
+│                                                         │
+│  🔥 Generiere Flame Graph...                          │
+│  ✓ Flame Graph gespeichert: flamegraph.svg            │
+│                                                         │
+│  [Flame Graph Visualisierung]                          │
+│    ████████████ processOrder (45ms)                    │
+│    ████████ validatePayment (32ms)                     │
+│    ████ createShipment (18ms)                         │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## Integration
 

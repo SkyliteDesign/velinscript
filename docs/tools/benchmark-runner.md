@@ -2,6 +2,25 @@
 
 Der Benchmark Runner führt Performance-Benchmarks aus mit statistischer Auswertung.
 
+## Wofür ist der Benchmark Runner ideal?
+
+Der Benchmark Runner ist ideal für:
+- ✅ **Performance-Messung** - Misst Ausführungszeiten mit statistischer Genauigkeit
+- ✅ **Regression-Erkennung** - Erkennt Performance-Verschlechterungen über Zeit
+- ✅ **Implementierungs-Vergleich** - Vergleicht verschiedene Algorithmen oder Implementierungen
+- ✅ **CI/CD-Integration** - Kann Performance-Regressionen in Pipelines erkennen
+- ✅ **Release-Qualitätssicherung** - Prüft Performance vor Releases
+- ✅ **Statistische Analyse** - Bietet Mittelwert, Min, Max, Standardabweichung
+
+## Wofür ist der Benchmark Runner NICHT gedacht?
+
+Der Benchmark Runner ist NICHT gedacht für:
+- ❌ **CPU-Profiling** - Für detaillierte CPU-Analyse nutzen Sie den Profiler
+- ❌ **Memory-Profiling** - Für Memory-Analyse nutzen Sie den Profiler
+- ❌ **Unit-Tests** - Für Funktionalitätstests nutzen Sie den Test Runner
+- ❌ **Live-Debugging** - Für Runtime-Inspection nutzen Sie den Runtime Inspector
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+
 ## Installation
 
 Das Tool ist Teil der VelinScript Toolchain. Baue es mit:
@@ -94,6 +113,30 @@ Der Benchmark Runner berechnet:
     Min: 11.23ms, Max: 14.67ms, StdDev: 0.89ms
   benchmarkSearch: 8.32ms (100 Iterationen)
     Min: 7.91ms, Max: 9.12ms, StdDev: 0.34ms
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Benchmark Runner                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-bench run --iterations 100                    │
+│                                                         │
+│  ⚡ Führe Benchmarks aus...                            │
+│                                                         │
+│  🔍 Benchmarke: benchmarks/sort.velin                  │
+│                                                         │
+│  📊 Benchmark-Ergebnisse:                              │
+│    benchmarkSort: 12.45ms (100 Iterationen)            │
+│      Min: 11.23ms, Max: 14.67ms, StdDev: 0.89ms        │
+│    benchmarkSearch: 8.32ms (100 Iterationen)          │
+│      Min: 7.91ms, Max: 9.12ms, StdDev: 0.34ms          │
+│                                                         │
+│  ✓ Benchmarks erfolgreich abgeschlossen                │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## JSON-Format

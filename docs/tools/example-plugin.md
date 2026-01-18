@@ -2,6 +2,25 @@
 
 Ein Beispiel-Plugin für VelinScript, das Code-Metriken analysiert. Dieses Plugin dient als Vorlage für die Entwicklung eigener VelinScript-Plugins.
 
+## Wofür ist das Example Plugin ideal?
+
+Das Example Plugin ist ideal für:
+- ✅ **Plugin-Entwicklung** - Vorlage für eigene VelinScript-Plugins
+- ✅ **Compiler-API-Lernen** - Zeigt, wie die Compiler-API genutzt wird
+- ✅ **Code-Metriken** - Analysiert Code-Metriken als Beispiel
+- ✅ **Erweiterbarkeit** - Basis für eigene Tool-Entwicklung
+- ✅ **Best Practices** - Zeigt Best Practices für Plugin-Entwicklung
+- ✅ **Integration** - Beispiel für Tool-Integration in VelinScript
+
+## Wofür ist das Example Plugin NICHT gedacht?
+
+Das Example Plugin ist NICHT gedacht für:
+- ❌ **Production-Analyse** - Für detaillierte Code-Analyse nutzen Sie den Linter
+- ❌ **Code-Qualität** - Für Code-Qualität nutzen Sie den Linter
+- ❌ **Performance-Analyse** - Für Performance nutzen Sie den Profiler
+- ❌ **Security-Checks** - Für Security nutzen Sie den Security Scanner
+- ❌ **Direkte Nutzung** - Primär als Vorlage, nicht für direkte Nutzung
+
 ## Installation
 
 ```bash
@@ -73,6 +92,27 @@ velin-example-plugin metrics -i examples/ --verbose
   "total_lines": 1200,
   "files_analyzed": 23
 }
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Example Plugin                             │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-example-plugin metrics -i examples/            │
+│                                                         │
+│  📊 Code-Metriken für examples/:                        │
+│    Funktionen: 45                                       │
+│    Structs: 12                                          │
+│    Enums: 3                                             │
+│    Durchschnittliche Funktion-Länge: 15 Zeilen         │
+│    Gesamt-Zeilen: 1200                                  │
+│                                                         │
+│  ✓ Analyse abgeschlossen                               │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Plugin-Entwicklung

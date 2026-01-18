@@ -2,6 +2,25 @@
 
 Der VelinScript Debugger (`velin-debugger`) ist ein vollwertiger DAP (Debug Adapter Protocol) Server. Das bedeutet, er integriert sich nahtlos in moderne IDEs wie VS Code, NeoVim oder IntelliJ, ohne dass spezielle Plugins nötig sind (abgesehen von der Basis-Integration).
 
+## Wofür ist der Debugger ideal?
+
+Der Debugger ist ideal für:
+- ✅ **Komplexe Bugs** - Analysiert schwierige Fehler Schritt für Schritt
+- ✅ **Variable-Inspection** - Inspiziert Variablen zur Laufzeit mit Breakpoints
+- ✅ **Call Stack-Analyse** - Verfolgt den Programmablauf durch Funktionsaufrufe
+- ✅ **Conditional Debugging** - Setzt Breakpoints mit Bedingungen
+- ✅ **IDE-Integration** - Nahtlose Integration in VS Code, NeoVim, etc.
+- ✅ **Async-Debugging** - Debuggt asynchrone Tasks und Worker
+
+## Wofür ist der Debugger NICHT gedacht?
+
+Der Debugger ist NICHT gedacht für:
+- ❌ **Einfache Print-Statements** - Für einfaches Logging nutzen Sie Print-Statements
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Performance-Analyse** - Für Performance-Messung nutzen Sie den Profiler
+- ❌ **Unit-Tests** - Für Tests nutzen Sie den Test Runner
+- ❌ **Schnelle Experimente** - Für interaktive Tests nutzen Sie den REPL
+
 ---
 
 ## Inhaltsverzeichnis
@@ -116,3 +135,30 @@ velin run main.velin --debug --debug-port 4711 --debug-host 0.0.0.0
 ```
 
 VelinScript mappt die Dateipfade automatisch, sodass Sie lokal Breakpoints setzen können, die remote greifen.
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Debugger (VS Code)                        │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  [Breakpoint gesetzt bei Zeile 42]                     │
+│                                                         │
+│  fn processOrder(order: Order): Result<Order, Error> { │
+│      let user = db.findUser(order.userId)?;            │
+│  ▶   let payment = processPayment(order)?;  [BREAK]    │
+│      let shipment = createShipment(order)?;            │
+│      return Ok(order);                                  │
+│  }                                                      │
+│                                                         │
+│  [Variables Panel]                                      │
+│    order: Order { id: "123", userId: "456" }          │
+│    user: User { name: "John", email: "..." }          │
+│                                                         │
+│  [Call Stack]                                           │
+│    1. processOrder (main.velin:42)                      │
+│    2. main (main.velin:15)                             │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```

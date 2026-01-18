@@ -2,6 +2,25 @@
 
 Die Entwicklererfahrung (DX) steht bei VelinScript im Fokus. Das `velin-hot-reload` Tool ermöglicht extrem schnelle Feedback-Zyklen, indem es Code-Änderungen sofort kompiliert und die laufende Anwendung aktualisiert.
 
+## Wofür ist Hot Reload ideal?
+
+Hot Reload ist ideal für:
+- ✅ **Schnelle Entwicklung** - Sofortiges Feedback bei Code-Änderungen
+- ✅ **Development Server** - Kontinuierliche Entwicklung mit Live-Updates
+- ✅ **API-Entwicklung** - Testen Sie API-Endpunkte sofort nach Änderungen
+- ✅ **Inkrementelle Kompilierung** - Kompiliert nur geänderte Module
+- ✅ **State Preservation** - Versucht, Anwendungs-State zu erhalten
+- ✅ **VS Code Integration** - Nahtlose Integration in den Development-Workflow
+
+## Wofür ist Hot Reload NICHT gedacht?
+
+Hot Reload ist NICHT gedacht für:
+- ❌ **Production-Builds** - Nur für Development, nicht für Production
+- ❌ **Einmalige Kompilierung** - Für normale Builds nutzen Sie `velin compile`
+- ❌ **Performance-Tests** - Für Performance-Messung nutzen Sie den Benchmark Runner
+- ❌ **Strukturierte Tests** - Für Tests nutzen Sie den Test Runner
+- ❌ **Security-Checks** - Für Security nutzen Sie den Security Scanner
+
 ---
 
 ## Inhaltsverzeichnis
@@ -86,3 +105,27 @@ Die VelinScript VS Code Extension nutzt `velin-hot-reload` im Hintergrund.
 *   **Status Bar:** Zeigt "Watching..." an.
 *   **On Save:** Bei jedem Speichern (`Ctrl+S`) wird eine schnelle Prüfung ausgelöst. Fehler werden direkt im "Problems"-Tab angezeigt.
 *   **Debugging:** Wenn Sie den Debugger starten (F5), wird automatisch der Hot-Reload-Modus aktiviert, sodass Sie Breakpoints auch nach Code-Änderungen weiter nutzen können.
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Hot Reload                                 │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-hot-reload --server                            │
+│                                                         │
+│  🔥 Hot Reload aktiviert                                │
+│  📁 Überwache: ./src                                     │
+│                                                         │
+│  [Watching for changes...]                              │
+│                                                         │
+│  ✓ main.velin geändert                                  │
+│  ⚡ Inkrementelle Kompilierung...                       │
+│  ✓ Kompilierung erfolgreich (45ms)                     │
+│  🔄 Server neu gestartet                                │
+│                                                         │
+│  [Server läuft auf http://localhost:3000]               │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```

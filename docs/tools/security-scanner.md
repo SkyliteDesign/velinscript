@@ -2,6 +2,25 @@
 
 Der VelinScript Security Scanner analysiert Code auf Security-Vulnerabilities und Sicherheitsprobleme.
 
+## Wofür ist der Security Scanner ideal?
+
+Der Security Scanner ist ideal für:
+- ✅ **Security-Audits** - Findet Security-Vulnerabilities vor Releases
+- ✅ **CI/CD-Integration** - Automatische Security-Checks in Pipelines
+- ✅ **Dependency-Audits** - Prüft Dependencies auf bekannte Vulnerabilities
+- ✅ **Compliance** - Unterstützt Security-Compliance-Anforderungen
+- ✅ **SQL Injection/XSS** - Erkennt häufige Web-Security-Probleme
+- ✅ **Hardcoded Secrets** - Findet versehentlich committete Secrets
+
+## Wofür ist der Security Scanner NICHT gedacht?
+
+Der Security Scanner ist NICHT gedacht für:
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Performance-Analyse** - Für Performance-Optimierung nutzen Sie den Profiler
+- ❌ **Unit-Tests** - Für Tests nutzen Sie den Test Runner
+- ❌ **Runtime-Debugging** - Für Live-Debugging nutzen Sie den Debugger
+- ❌ **Code-Formatierung** - Für Formatierung nutzen Sie den Formatter
+
 ## Installation
 
 Der Security Scanner ist Teil des VelinScript Toolchains. Baue ihn mit:
@@ -106,6 +125,37 @@ velin-security audit --config custom-velin.toml
   Recommendation: Verwende Environment-Variablen oder Secrets-Management
 
 ⚠ 3 Vulnerabilities gefunden
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Security Scanner                           │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-security scan                                  │
+│                                                         │
+│  🔍 VelinScript Security Scanner                       │
+│  ===============================                       │
+│                                                         │
+│  [CRITICAL] SQL Injection                               │
+│    Location: src/api/users.velin:42                     │
+│    Message: Ungeprüfte SQL-Query mit User-Input         │
+│    Recommendation: Verwende Prepared Statements         │
+│                                                         │
+│  [HIGH] XSS Vulnerability                               │
+│    Location: src/templates/render.velin:15              │
+│    Message: User-Input ohne Escaping                    │
+│    Recommendation: Verwende html::escape()             │
+│                                                         │
+│  [MEDIUM] Hardcoded Secret                             │
+│    Location: src/config.velin:8                        │
+│    Message: API-Key ist im Code hardcodiert            │
+│                                                         │
+│  ⚠ 3 Vulnerabilities gefunden                          │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ### JSON-Format

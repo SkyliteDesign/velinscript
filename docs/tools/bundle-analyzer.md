@@ -2,6 +2,25 @@
 
 Das Bundle Analyzer Tool analysiert Bundle-Größe, Tree-Shaking-Potenzial und Code-Splitting-Möglichkeiten in VelinScript-Projekten.
 
+## Wofür ist der Bundle Analyzer ideal?
+
+Der Bundle Analyzer ist ideal für:
+- ✅ **Bundle-Optimierung** - Identifiziert Möglichkeiten zur Größenreduzierung
+- ✅ **Tree-Shaking-Analyse** - Findet ungenutzten Code, der entfernt werden kann
+- ✅ **Code-Splitting-Planung** - Schlägt vor, welche Dateien aufgeteilt werden sollten
+- ✅ **Performance-Optimierung** - Hilft bei der Reduzierung der initialen Ladezeit
+- ✅ **Release-Vorbereitung** - Prüft Bundle-Größe vor Production-Releases
+- ✅ **CI/CD-Integration** - Kann Bundle-Größen-Limits in Pipelines durchsetzen
+
+## Wofür ist der Bundle Analyzer NICHT gedacht?
+
+Der Bundle Analyzer ist NICHT gedacht für:
+- ❌ **Runtime-Performance** - Für Performance-Messungen nutzen Sie den Profiler oder Benchmark Runner
+- ❌ **Dependency-Analyse** - Für Modul-Abhängigkeiten nutzen Sie den Dependency Graph
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Security-Checks** - Für Security-Vulnerabilities nutzen Sie den Security Scanner
+- ❌ **Live-Debugging** - Für Runtime-Inspection nutzen Sie den Runtime Inspector
+
 ## Installation
 
 Das Tool ist Teil der VelinScript Toolchain. Baue es mit:
@@ -127,6 +146,36 @@ Große Dateien (könnten aufgeteilt werden):
   - src/main.velin (450 Zeilen)
   - src/services.velin (380 Zeilen)
   - src/utils.velin (320 Zeilen)
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Bundle Analyzer                           │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-bundle analyze --tree-shaking                 │
+│                                                         │
+│  📦 Analysiere Bundle-Größe...                        │
+│                                                         │
+│  📦 Bundle-Analyse Report                              │
+│  ==================================================     │
+│                                                         │
+│  ## Übersicht                                          │
+│  Dateien: 15                                           │
+│  Gesamt-Zeilen: 3240                                   │
+│  Funktionen: 87                                        │
+│  Structs: 23                                           │
+│  Enums: 5                                              │
+│                                                         │
+│  ## Tree-Shaking-Potenzial                             │
+│  Ungenutzte Funktionen: 12                            │
+│  Ungenutzte Structs: 3                                 │
+│  Ungenutzte Enums: 1                                   │
+│  Potenzielle Einsparungen: 14.29%                      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## JSON-Format

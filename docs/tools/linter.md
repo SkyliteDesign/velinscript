@@ -2,6 +2,25 @@
 
 Der VelinScript Linter analysiert Code auf Qualität, Best Practices und potenzielle Probleme.
 
+## Wofür ist der Linter ideal?
+
+Der Linter ist ideal für:
+- ✅ **Code-Qualitätssicherung** - Findet Code-Smells und Qualitätsprobleme automatisch
+- ✅ **Best Practices** - Enforced Coding-Standards und Konventionen
+- ✅ **Ungenutzten Code** - Identifiziert ungenutzte Variablen, Funktionen und Imports
+- ✅ **Komplexitäts-Analyse** - Erkennt zu komplexe Funktionen und verschachtelte Strukturen
+- ✅ **Pre-Commit-Checks** - Perfekt für Git Hooks und CI/CD-Pipelines
+- ✅ **Team-Konsistenz** - Stellt sicher, dass alle Teammitglieder den gleichen Standards folgen
+
+## Wofür ist der Linter NICHT gedacht?
+
+Der Linter ist NICHT gedacht für:
+- ❌ **Syntax-Fehler** - Für Syntax-Korrektur nutzen Sie AutoFix
+- ❌ **Type-Checking** - Für Type-Validation nutzen Sie den Compiler (`velin check`)
+- ❌ **Security-Checks** - Für Security-Vulnerabilities nutzen Sie den Security Scanner
+- ❌ **Performance-Analyse** - Für Performance-Optimierung nutzen Sie den Profiler
+- ❌ **Runtime-Debugging** - Für Live-Debugging nutzen Sie den Debugger oder Runtime Inspector
+
 ## Installation
 
 Der Linter ist Teil des VelinScript Toolchains. Baue ihn mit:
@@ -111,6 +130,33 @@ src/api.velin:8:1 [info] missing-docs: Öffentliche Funktion 'createUser' hat ke
   ],
   "total": 1
 }
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Linter                                     │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-lint check                                     │
+│                                                         │
+│  🔍 Analysiere 5 Datei(en)...                          │
+│                                                         │
+│  📊 Gefundene Probleme: 3                              │
+│                                                         │
+│  src/main.velin:15:3 [warning] unused-variable         │
+│    Ungenutzte Variable: 'temp'                          │
+│    💡 Vorschlag: Entferne die Variable 'temp'          │
+│                                                         │
+│  src/utils.velin:42:1 [warning] long-function          │
+│    Funktion 'processData' ist zu lang (67 Zeilen)      │
+│    💡 Vorschlag: Teile die Funktion auf                │
+│                                                         │
+│  src/api.velin:8:1 [info] missing-docs                 │
+│    Öffentliche Funktion 'createUser' hat keine Docs    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Konfiguration

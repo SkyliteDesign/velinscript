@@ -6,6 +6,25 @@ Das Backup-System ist zweigeteilt:
 1.  **Daten-Backup:** Sichert Datenbanken und persistente Dateien.
 2.  **Code-Rollback:** Ermöglicht das Zurückspringen auf vorherige Versionen der Anwendung.
 
+## Wofür sind Backup & Rollback ideal?
+
+Backup & Rollback sind ideal für:
+- ✅ **Production-Sicherheit** - Schnelle Wiederherstellung bei Fehlern
+- ✅ **Deployment-Rollback** - Zurückspringen auf vorherige Versionen
+- ✅ **Daten-Sicherung** - Automatische Datenbank-Backups
+- ✅ **Disaster Recovery** - Wiederherstellung nach Systemfehlern
+- ✅ **Version-Management** - Verwaltung von Deployment-Versionen
+- ✅ **Transaktionale Deployments** - Atomare Deployment-Operationen
+
+## Wofür sind Backup & Rollback NICHT gedacht?
+
+Backup & Rollback sind NICHT gedacht für:
+- ❌ **Code-Versionierung** - Für Code-Versionierung nutzen Sie Git
+- ❌ **Code-Qualität** - Für Code-Qualität nutzen Sie den Linter
+- ❌ **Development** - Primär für Production-Umgebungen
+- ❌ **Performance-Analyse** - Für Performance nutzen Sie den Profiler
+- ❌ **Security-Checks** - Für Security nutzen Sie den Security Scanner
+
 ---
 
 ## Inhaltsverzeichnis
@@ -126,3 +145,31 @@ Wenn `commit` nicht innerhalb eines Timeouts aufgerufen wird (z.B. weil der Serv
 2.  **Offsite Backups:** Speichern Sie Backups nicht auf demselben Server. Nutzen Sie Plugins für S3 oder FTP.
 3.  **Automatisierung:** Integrieren Sie `backup create` in einen Cronjob.
 4.  **Database Migrations:** Seien Sie vorsichtig bei Rollbacks, wenn Datenbank-Schema-Änderungen im Spiel sind. VelinScript kann Code zurückrollen, aber Datenbank-Migrationen müssen oft manuell rückgängig gemacht werden (VelinScript bietet hierfür `db migrate down` Integration).
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Backup & Rollback                          │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin backup create                                  │
+│                                                         │
+│  💾 Erstelle Backup...                                  │
+│  ✓ Datenbank-Backup erstellt                           │
+│  ✓ Datei-Backup erstellt                               │
+│  ✓ Backup komprimiert (gzip)                           │
+│  ✓ Backup-ID: 20260130-1430-full                       │
+│                                                         │
+│  $ velin rollback list                                  │
+│                                                         │
+│  📋 Verfügbare Versionen:                               │
+│    v1.2.0 - Feature X Release                          │
+│    v1.1.9 - Bugfix Release                              │
+│    v1.1.8 - Initial Release                             │
+│                                                         │
+│  $ velin rollback to-version v1.1.9                     │
+│  ✓ Rollback zu v1.1.9 durchgeführt                     │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```

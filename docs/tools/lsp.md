@@ -2,6 +2,25 @@
 
 Der VelinScript Language Server implementiert das Language Server Protocol (LSP) für vollständige IDE-Unterstützung.
 
+## Wofür ist der LSP ideal?
+
+Der LSP ist ideal für:
+- ✅ **IDE-Unterstützung** - Vollständige IDE-Features in VS Code, NeoVim, etc.
+- ✅ **Auto-Completion** - Intelligente Code-Vervollständigung
+- ✅ **Go-to-Definition** - Springt zu Funktions- und Typ-Definitionen
+- ✅ **Error Highlighting** - Zeigt Fehler direkt im Editor
+- ✅ **Hover-Informationen** - Zeigt Dokumentation beim Hovern
+- ✅ **Refactoring** - Unterstützt Code-Refactoring-Operationen
+
+## Wofür ist der LSP NICHT gedacht?
+
+Der LSP ist NICHT gedacht für:
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Code-Formatierung** - Für Formatierung nutzen Sie den Formatter
+- ❌ **Debugging** - Für Debugging nutzen Sie den Debugger
+- ❌ **Performance-Analyse** - Für Performance nutzen Sie den Profiler
+- ❌ **Security-Checks** - Für Security nutzen Sie den Security Scanner
+
 ## Installation
 
 Der LSP Server ist Teil des VelinScript Toolchains. Baue ihn mit:
@@ -304,6 +323,35 @@ cargo test
 ```
 
 Der LSP Server hat umfangreiche Tests für alle Features.
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript LSP (VS Code)                             │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  [Editor mit Auto-Completion]                           │
+│                                                         │
+│  fn processOrder(order: Order): Result<Order, Error> { │
+│      let user = db.findUser(order.userId)?;            │
+│      let payment = processPayment(order)?;              │
+│      let shipment = createShipment(order)?;            │
+│      return Ok(order);                                  │
+│  }                                                      │
+│                                                         │
+│  [Hover über 'processPayment']:                        │
+│    ┌─────────────────────────────────────┐            │
+│    │ fn processPayment(order: Order)      │            │
+│    │   -> Result<Payment, Error>          │            │
+│    │                                       │            │
+│    │ Verarbeitet Zahlung für Bestellung   │            │
+│    └─────────────────────────────────────┘            │
+│                                                         │
+│  [Auto-Completion aktiv]                               │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
 
 ## Best Practices
 

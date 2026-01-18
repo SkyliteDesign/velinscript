@@ -2,6 +2,25 @@
 
 Der Test Runner führt Unit- und Integrationstests aus, unterstützt Assertions, Mocking und Coverage-Reports.
 
+## Wofür ist der Test Runner ideal?
+
+Der Test Runner ist ideal für:
+- ✅ **Automatisierte Test-Ausführung** - Führt alle Tests mit einem Befehl aus
+- ✅ **CI/CD-Integration** - Perfekt für kontinuierliche Integration
+- ✅ **Coverage-Messung** - Misst Code-Coverage für Qualitätssicherung
+- ✅ **Test-Organisation** - Unterstützt Unit- und Integration-Tests getrennt
+- ✅ **Mocking** - Ermöglicht isolierte Tests mit Mock-Objekten
+- ✅ **Regressions-Tests** - Verhindert, dass bestehende Features brechen
+
+## Wofür ist der Test Runner NICHT gedacht?
+
+Der Test Runner ist NICHT gedacht für:
+- ❌ **Manuelle Tests** - Für interaktive, manuelle Tests nutzen Sie den Debugger oder REPL
+- ❌ **Performance-Tests** - Für Performance-Messungen nutzen Sie den Benchmark Runner
+- ❌ **Security-Tests** - Für Security-Checks nutzen Sie den Security Scanner
+- ❌ **Code-Analyse** - Für statische Code-Analyse nutzen Sie den Linter
+- ❌ **Live-Debugging** - Für Runtime-Inspection nutzen Sie den Runtime Inspector
+
 ## Installation
 
 Das Tool ist Teil der VelinScript Toolchain. Baue es mit:
@@ -151,6 +170,35 @@ Mit `--coverage` werden Coverage-Reports generiert:
 📈 Coverage-Report:
   Zeilen-Coverage: 87.5%
   Funktionen-Coverage: 92.3%
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Test Runner                                │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-test run --coverage                           │
+│                                                         │
+│  🧪 Führe Tests aus...                                 │
+│                                                         │
+│  🔍 Teste: tests/unit/main_test.velin                  │
+│    ✓ testAdd                                           │
+│    ✓ testUserCreation                                  │
+│                                                         │
+│  📊 Test-Ergebnisse:                                    │
+│    ✓ Bestanden: 2                                      │
+│    ✗ Fehlgeschlagen: 0                                 │
+│    ⏭️  Übersprungen: 0                                 │
+│                                                         │
+│  📈 Coverage-Report:                                   │
+│    Zeilen-Coverage: 87.5%                              │
+│    Funktionen-Coverage: 92.3%                           │
+│                                                         │
+│  ✓ Alle Tests bestanden!                                │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Integration

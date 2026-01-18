@@ -2,6 +2,25 @@
 
 Eine gute API ist nur so gut wie ihre Dokumentation. VelinScript automatisiert diesen Prozess vollständig, indem es Ihre Code-Struktur, Typen und Kommentare analysiert und daraus eine interaktive OpenAPI (Swagger) Dokumentation generiert.
 
+## Wofür ist der API Doc Generator ideal?
+
+Der API Doc Generator ist ideal für:
+- ✅ **Automatische Dokumentation** - Generiert OpenAPI/Swagger aus Code
+- ✅ **Frontend-Integration** - Erstellt Dokumentation für Frontend-Teams
+- ✅ **Client-Generierung** - Basis für automatische Client-Generierung
+- ✅ **API-Versionierung** - Unterstützt Versionierung von APIs
+- ✅ **Interaktive Dokumentation** - Swagger UI für API-Exploration
+- ✅ **CI/CD-Integration** - Automatische Dokumentations-Updates in Pipelines
+
+## Wofür ist der API Doc Generator NICHT gedacht?
+
+Der API Doc Generator ist NICHT gedacht für:
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Security-Checks** - Für Security nutzen Sie den Security Scanner
+- ❌ **Performance-Analyse** - Für Performance nutzen Sie den Profiler
+- ❌ **Unit-Tests** - Für Tests nutzen Sie den Test Runner
+- ❌ **Code-Generierung** - Für Code-Generierung nutzen Sie `velin generate`
+
 ---
 
 ## Inhaltsverzeichnis
@@ -127,3 +146,29 @@ fn main() {
 ```
 
 Dies ist extrem nützlich für interne APIs, da die Dokumentation immer synchron mit dem deployten Code ist.
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript API Doc Generator                         │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-api-doc generate -i main.velin                │
+│                                                         │
+│  📚 Generiere API-Dokumentation...                     │
+│                                                         │
+│  ✓ 15 Endpunkte gefunden                               │
+│  ✓ 8 Models extrahiert                                 │
+│  ✓ OpenAPI 3.0 Spezifikation generiert                 │
+│                                                         │
+│  📄 openapi.json gespeichert                           │
+│  🌐 Swagger UI verfügbar unter /docs                   │
+│                                                         │
+│  [Swagger UI Preview]                                   │
+│    GET  /api/users          - Liste aller Benutzer     │
+│    POST /api/users          - Erstelle Benutzer        │
+│    GET  /api/users/:id      - Hole Benutzer            │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```

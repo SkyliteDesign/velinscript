@@ -2,6 +2,25 @@
 
 VelinScript geht einen Schritt weiter als klassische Compiler: Es sagt Ihnen nicht nur, was falsch ist, sondern versucht aktiv, es zu reparieren. Die **AutoFix Engine** ist tief in den Kompilierungsprozess integriert und kann eine Vielzahl von Syntax- und Flüchtigkeitsfehlern vollautomatisch beheben.
 
+## Wofür ist AutoFix ideal?
+
+AutoFix ist ideal für:
+- ✅ **Syntax-Fehler** - Behebt häufige Syntax-Fehler automatisch
+- ✅ **Fehlende Klammern** - Fügt fehlende `{}`, `()`, `[]` ein
+- ✅ **Flüchtigkeitsfehler** - Korrigiert Tippfehler in Keywords
+- ✅ **Schnelle Entwicklung** - Reduziert Zeit für Fehlerbehebung
+- ✅ **Lernhilfe** - Zeigt, wie Fehler korrekt behoben werden
+- ✅ **CI/CD-Integration** - Kann in Pipelines für automatische Fixes genutzt werden
+
+## Wofür ist AutoFix NICHT gedacht?
+
+AutoFix ist NICHT gedacht für:
+- ❌ **Logische Fehler** - Kann keine logischen Programmfehler beheben
+- ❌ **Type-Fehler** - Für Type-Checking nutzen Sie `velin check`
+- ❌ **Code-Qualität** - Für Code-Qualität nutzen Sie den Linter
+- ❌ **Security-Probleme** - Für Security nutzen Sie den Security Scanner
+- ❌ **Performance-Probleme** - Für Performance nutzen Sie den Profiler
+
 ---
 
 ## Inhaltsverzeichnis
@@ -115,3 +134,34 @@ Die AutoFix Engine ist **konservativ**. Sie wird niemals Logik ändern oder rate
 *   **Beispiel (Nicht reparierbar):** `let x = y +` (Hier fehlt ein Operand, der Compiler kann nicht wissen, was addiert werden soll).
 
 **Best Practice:** Nutzen Sie AutoFix als Lernwerkzeug. Schauen Sie sich die Änderungen an (z.B. via `git diff`), um zu verstehen, was falsch war.
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript AutoFix                                    │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin compile -i main.velin --autofix                │
+│                                                         │
+│  🔧 AutoFix aktiviert                                  │
+│                                                         │
+│  [AutoFix] 3 Fehler behoben:                           │
+│    ✓ main.velin:45 -> Fehlende '}' ergänzt             │
+│    ✓ main.velin:12 -> Typ 'List<String' korrigiert     │
+│    ✓ utils.velin:8 -> Semikolon eingefügt               │
+│                                                         │
+│  ✓ Kompilierung erfolgreich                            │
+│  ✓ Alle Fehler automatisch behoben                     │
+│                                                         │
+│  Vorher:                                                │
+│    fn process(data: List<string {                       │
+│        return data;                                     │
+│                                                         │
+│  Nachher:                                               │
+│    fn process(data: List<string>) {                     │
+│        return data;                                     │
+│    }                                                    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```

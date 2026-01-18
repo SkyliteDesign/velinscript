@@ -2,6 +2,25 @@
 
 Der Runtime Inspector ermöglicht Live-Inspection von Variablen, State und Memory während der Ausführung.
 
+## Wofür ist der Runtime Inspector ideal?
+
+Der Runtime Inspector ist ideal für:
+- ✅ **Live-Debugging** - Inspiziert Variablen während der Ausführung ohne Breakpoints
+- ✅ **Memory-Monitoring** - Überwacht Memory-Usage in Echtzeit
+- ✅ **State-Analyse** - Analysiert Programm-State zur Laufzeit
+- ✅ **Watch-Mode** - Kontinuierliche Überwachung von Variablen und Memory
+- ✅ **Production-Debugging** - Hilft bei Problemen in laufenden Systemen
+- ✅ **Performance-Investigation** - Kombiniert mit Profiler für umfassende Analyse
+
+## Wofür ist der Runtime Inspector NICHT gedacht?
+
+Der Runtime Inspector ist NICHT gedacht für:
+- ❌ **Statische Code-Analyse** - Für Code-Qualität nutzen Sie den Linter
+- ❌ **Strukturierte Tests** - Für Tests nutzen Sie den Test Runner
+- ❌ **Performance-Benchmarks** - Für Benchmarks nutzen Sie den Benchmark Runner
+- ❌ **CPU-Profiling** - Für CPU-Analyse nutzen Sie den Profiler
+- ❌ **Code-Generierung** - Für Boilerplate nutzen Sie Code Generation
+
 ## Installation
 
 Das Tool ist Teil der VelinScript Toolchain. Baue es mit:
@@ -74,6 +93,34 @@ Kontinuierliche Überwachung:
 📊 Variablen:
   x: 10
   y: 20
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Runtime Inspector                         │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin-inspect inspect main.velin --watch            │
+│                                                         │
+│  🔍 Runtime Inspector für: main.velin                  │
+│                                                         │
+│  👀 Watch-Mode aktiviert (CTRL-C zum Beenden)           │
+│                                                         │
+│  📊 Variablen:                                         │
+│    x: 10                                               │
+│    y: 20                                               │
+│    result: 30                                          │
+│                                                         │
+│  💾 Memory-Usage:                                      │
+│    Geschätzte Allokationen: 2048 bytes                 │
+│    Variablen: 5                                        │
+│    Funktionen: 3                                       │
+│                                                         │
+│  [Aktualisiert sich alle 2 Sekunden...]                │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Integration

@@ -2,6 +2,25 @@
 
 VelinScript verfügt über einen leistungsstarken Code-Generator (`velin generate`), der entwickelt wurde, um wiederkehrende Aufgaben zu automatisieren und Best Practices von Anfang an zu erzwingen. Anstatt Boilerplate-Code manuell zu schreiben, können Sie vollständige Module, Tests und Konfigurationen mit einem einzigen Befehl erstellen.
 
+## Wofür ist Code Generation ideal?
+
+Code Generation ist ideal für:
+- ✅ **Boilerplate-Reduktion** - Generiert CRUD-Module, APIs und Auth-Setup
+- ✅ **Schnelles Prototyping** - Erstellt vollständige Module mit einem Befehl
+- ✅ **Best Practices** - Erzwingt Best Practices von Anfang an
+- ✅ **Client-Generierung** - Generiert TypeScript/Python Clients aus OpenAPI
+- ✅ **Projekt-Initialisierung** - Erstellt Projekt-Struktur und Konfiguration
+- ✅ **Konsistenz** - Stellt konsistente Code-Struktur sicher
+
+## Wofür ist Code Generation NICHT gedacht?
+
+Code Generation ist NICHT gedacht für:
+- ❌ **Komplexe, spezifische Logik** - Für einmalige, komplexe Implementierungen
+- ❌ **Code-Qualität** - Für Code-Qualitätsprüfung nutzen Sie den Linter
+- ❌ **Security-Checks** - Für Security nutzen Sie den Security Scanner
+- ❌ **Performance-Analyse** - Für Performance nutzen Sie den Profiler
+- ❌ **Code-Optimierung** - Generierter Code muss manuell optimiert werden
+
 ---
 
 ## Inhaltsverzeichnis
@@ -104,6 +123,32 @@ struct User {
     
     active: boolean
 }
+```
+
+## Screenshot
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  VelinScript Code Generator                             │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  $ velin generate crud --name User                      │
+│                                                         │
+│  ⚡ Generiere CRUD-Modul...                            │
+│                                                         │
+│  ✓ src/models/user.velin erstellt                      │
+│  ✓ src/controllers/user.velin erstellt                 │
+│  ✓ src/services/user.velin erstellt                   │
+│  ✓ src/repositories/user.velin erstellt                 │
+│                                                         │
+│  📦 Vollständiges CRUD-Modul generiert!                │
+│     - GET    /api/users                                 │
+│     - GET    /api/users/:id                            │
+│     - POST   /api/users                                │
+│     - PUT    /api/users/:id                            │
+│     - DELETE /api/users/:id                            │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ---

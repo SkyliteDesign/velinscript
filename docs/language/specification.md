@@ -1,10 +1,17 @@
 # VelinScript Language Specification
 
-Version 0.1.0
+Version 2.5.0
 
 ## Übersicht
 
 VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die Einfachheit von modernen Sprachen mit leistungsstarken Features für API-Entwicklung, Security und KI/ML-Integration.
+
+**Neu in Version 2.5**: 
+- 13 neue Standard Library Module mit 117+ Funktionen
+- VelinAutoDoc für automatische Dokumentationsgenerierung
+- VelinPipeline für automatische Performance-Optimierung
+- VelinFlow Runtime für transaktionales Flow-Management
+- Erweiterte String-, Math-, Date-, FS-, LLM-, Embedding-, Agent-, Process-, Sandbox-, WebSocket-, Utils-, Log- und Config-Module
 
 ## Design-Prinzipien
 
@@ -25,7 +32,25 @@ VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die
  * Multi-line Kommentar
  * Kann mehrere Zeilen umfassen
  */
+
+/// Doc-Comment (für @VelinAutoDoc)
+/// Diese Kommentare werden vom Compiler erfasst
+/// und für automatische Dokumentationsgenerierung verwendet
+/// 
+/// @param name - Der Name des Parameters
+/// @returns Eine Beschreibung des Rückgabewerts
+@VelinAutoDoc
+fn example(name: string): string {
+    // ...
+}
 ```
+
+**Doc-Comments (`///`):**
+- Neu in Version 2.5 ✅
+- Werden als First-Class-Citizens im AST erfasst
+- Werden für automatische Dokumentationsgenerierung mit `@VelinAutoDoc` verwendet
+- Unterstützen Markdown-Formatierung
+- Können Parameter und Rückgabewerte dokumentieren
 
 ### Keywords
 

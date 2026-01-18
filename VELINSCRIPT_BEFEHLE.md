@@ -224,6 +224,20 @@ velin-lint check [<path>] [--fix] [--json] [--rules <regel1,regel2>]
 
 ---
 
+## 🧹 Dead Code Detector (velin-dead-code)
+
+```bash
+# Code auf Dead Code scannen
+velin-dead-code scan [<path>] [--fix] [--json]
+```
+
+**Features:**
+- Findet ungenutzten Code
+- JSON-Report
+- (Geplant) Automatisches Entfernen
+
+---
+
 ## 📚 API Documentation Generator (velin-api-doc)
 
 ```bash
@@ -356,6 +370,10 @@ Falls die VS Code Extension installiert ist, stehen folgende Commands zur Verfü
 ### Configuration
 - `VelinScript: Initialize Config File`
 - `VelinScript: Validate Config File`
+
+### Analysis & Documentation
+- `VelinScript: Generate Insight` - Code-Analyse und Insights
+- `VelinScript: Generate AutoDoc` - Automatische Dokumentationserstellung
 
 ---
 

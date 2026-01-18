@@ -1,11 +1,14 @@
 // Compiler Optimizer
 // Optimiert den generierten Code für bessere Performance
 
+pub mod pipeline;
 use crate::parser::ast::*;
 use std::collections::HashMap;
+use pipeline::PipelineOptimizer;
 
 pub struct Optimizer {
     pub optimizations: Vec<Optimization>,
+    pub pipeline_optimizer: PipelineOptimizer,
 }
 
 pub enum Optimization {
@@ -24,6 +27,7 @@ impl Optimizer {
                 Optimization::Inlining,
                 Optimization::LoopOptimization,
             ],
+            pipeline_optimizer: PipelineOptimizer::new(),
         }
     }
     
@@ -42,6 +46,13 @@ impl Optimizer {
                 Optimization::LoopOptimization => {
                     self.optimize_loops(program);
                 }
+            }
+        }
+        
+        // Run Pipeline Optimization
+        for item in &mut program.items {
+            if let Item::Module(m) = item {
+                self.pipeline_optimizer.analyze_module(m);
             }
         }
     }
@@ -64,7 +75,10 @@ impl Optimizer {
             match item {
                 Item::Function(f) => {
                     // Behalte öffentliche Funktionen und verwendete private Funktionen
-                    matches!(f.visibility, Visibility::Public) || used_symbols.contains(&f.name)
+                    // Sowie Funktionen mit Decorators (z.B. API Endpoints)
+                    matches!(f.visibility, Visibility::Public) 
+                        || used_symbols.contains(&f.name) 
+                        || !f.decorators.is_empty()
                 }
                 Item::Struct(s) => {
                     matches!(s.visibility, Visibility::Public) || used_symbols.contains(&s.name)
@@ -140,6 +154,10 @@ impl Optimizer {
                         self.collect_symbols_in_block(&arm.body, used);
                     }
                 }
+                Statement::Throw(throw_stmt) => {
+                    self.collect_symbols_in_expression(&throw_stmt.expression, used);
+                }
+                Statement::Break(_) => {}
             }
         }
     }
@@ -253,6 +271,10 @@ impl Optimizer {
                         self.fold_constants_in_block(&mut arm.body);
                     }
                 }
+                Statement::Throw(throw_stmt) => {
+                    throw_stmt.expression = self.fold_expression(&throw_stmt.expression);
+                }
+                Statement::Break(_) => {}
             }
         }
     }
@@ -510,45 +532,92 @@ impl Optimizer {
     }
     
     /// Inlined Funktionsaufrufe in einem Expression
-    /// 
-    /// **Hinweis**: Diese Methode ist für zukünftige Inlining-Optimierungen vorgesehen.
-    /// Aktuell wird sie nicht aufgerufen, da Inlining noch nicht vollständig implementiert ist.
-    #[allow(dead_code)]
-    fn inline_in_expression(&self, expr: &mut Expression, _candidates: &HashMap<String, &Function>) {
-        // TODO: Implementiere Expression-Inlining
-        // Für jetzt nur Platzhalter
+    fn inline_in_expression(&self, expr: &mut Expression, candidates: &HashMap<String, &Function>) {
+        // Rekursiver Abstieg für Unterausdrücke
         match expr {
-            Expression::Call { .. } => {
-                // Inlining von Funktionsaufrufen ist komplex
-                // und erfordert Parameter-Substitution
-            }
             Expression::BinaryOp { left, right, .. } => {
-                self.inline_in_expression(left, _candidates);
-                self.inline_in_expression(right, _candidates);
+                self.inline_in_expression(left, candidates);
+                self.inline_in_expression(right, candidates);
             }
             Expression::UnaryOp { expr, .. } => {
-                self.inline_in_expression(expr, _candidates);
+                self.inline_in_expression(expr, candidates);
             }
             Expression::Member { object, .. } => {
-                self.inline_in_expression(object, _candidates);
+                self.inline_in_expression(object, candidates);
             }
             Expression::Index { object, index, .. } => {
-                self.inline_in_expression(object, _candidates);
-                self.inline_in_expression(index, _candidates);
+                self.inline_in_expression(object, candidates);
+                self.inline_in_expression(index, candidates);
             }
             Expression::If { condition, then_expr, else_expr } => {
-                self.inline_in_expression(condition, _candidates);
-                self.inline_in_expression(then_expr, _candidates);
-                self.inline_in_expression(else_expr, _candidates);
+                self.inline_in_expression(condition, candidates);
+                self.inline_in_expression(then_expr, candidates);
+                self.inline_in_expression(else_expr, candidates);
             }
             Expression::Block(block) => {
-                self.inline_function_calls(block, _candidates);
+                self.inline_function_calls(block, candidates);
             }
             Expression::Await { expr } => {
-                self.inline_in_expression(expr, _candidates);
+                self.inline_in_expression(expr, candidates);
             }
             Expression::Lambda { body, .. } => {
-                self.inline_in_expression(body, _candidates);
+                self.inline_in_expression(body, candidates);
+            }
+            // Hauptlogik für Call Inlining
+            Expression::Call { callee, args } => {
+                // Zuerst Argumente optimieren
+                for arg in args.iter_mut() {
+                    self.inline_in_expression(arg, candidates);
+                }
+
+                if let Expression::Identifier(name) = callee.as_ref() {
+                    if let Some(func) = candidates.get(name) {
+                        // Prüfen ob Inlining sicher ist (nur 1 Return Statement oder simpler Body)
+                        // Vereinfachung: Wir inlinen nur Funktionen die aus einem Return bestehen
+                        // oder sehr einfach sind.
+                        
+                        let can_inline_safely = func.body.statements.len() == 1;
+                        
+                        if can_inline_safely {
+                             if let Some(Statement::Return(ret)) = func.body.statements.first() {
+                                if let Some(ret_val) = &ret.value {
+                                    // TODO: Parameter Substitution implementieren
+                                    // Hier müssten wir args in den ret_val einsetzen
+                                    // Da dies komplex ist (Variablennamen-Kollisionen etc.),
+                                    // lassen wir es für diesen Schritt bei dieser Struktur.
+                                    
+                                    // ECHTE IMPLEMENTIERUNG WÄRE:
+                                    // 1. Erstelle Block
+                                    // 2. Let arg_var = arg_val für alle Params
+                                    // 3. Füge ret_val als Expression hinzu
+                                    
+                                    let mut new_block_stmts = Vec::new();
+                                    
+                                    // Parameter binden
+                                    for (i, param) in func.params.iter().enumerate() {
+                                        if i < args.len() {
+                                            new_block_stmts.push(Statement::Let(LetStatement {
+                                                name: param.name.clone(),
+                                                mutable: false,
+                                                var_type: None,
+                                                value: args[i].clone(),
+                                            }));
+                                        }
+                                    }
+                                    
+                                    // Return Value Expression
+                                    new_block_stmts.push(Statement::Expression(ExpressionStatement {
+                                        expression: ret_val.clone(),
+                                    }));
+                                    
+                                    *expr = Expression::Block(Block {
+                                        statements: new_block_stmts
+                                    });
+                                }
+                             }
+                        }
+                    }
+                }
             }
             _ => {}
         }
@@ -621,9 +690,63 @@ impl Optimizer {
     }
     
     /// Unrolled eine Schleife
-    fn unroll_loop(&self, _for_stmt: &ForStatement) -> Option<Statement> {
-        // TODO: Implementiere Loop Unrolling
-        // Für jetzt nur Platzhalter
+    fn unroll_loop(&self, for_stmt: &ForStatement) -> Option<Statement> {
+        // Versuche Range zu extrahieren: 0..N
+        if let Expression::BinaryOp { left, op: BinaryOperator::Lt, right: _ } = &for_stmt.iterable {
+            // Dies ist ein Platzhalter, da VelinScript Ranges anders repräsentiert
+            // Normalerweise for i in 0..3 -> Range { start: 0, end: 3 }
+            // Aber hier vereinfachen wir die Annahme für das Beispiel
+        }
+        
+        // Prüfe auf Range Pattern: for i in 0..3
+        if let Expression::BinaryOp { 
+            left, 
+            op: _, // .. operator existiert im AST vielleicht als BinaryOp oder Range
+            right 
+        } = &for_stmt.iterable {
+            // Vereinfachte Logik: Wir nehmen an, iterable ist eine Range Expression
+            // Da wir keine volle Evaluierung haben, prüfen wir nur auf Literale
+            
+            if let (Expression::Literal(Literal::Number(start)), Expression::Literal(Literal::Number(end))) = (left.as_ref(), right.as_ref()) {
+                let start_int = *start as i64;
+                let end_int = *end as i64;
+                let count = end_int - start_int;
+                
+                if count > 0 && count <= 5 {
+                    // Erstelle Sequenz von Statements
+                    let mut unrolled_statements = Vec::new();
+                    
+                    for i in 0..count {
+                        let current_val = start_int + i;
+                        
+                        // Erstelle einen Block für jede Iteration um Scope zu simulieren
+                        // let loop_var = current_val;
+                        // body...
+                        
+                        let let_stmt = Statement::Let(LetStatement {
+                            name: for_stmt.variable.clone(),
+                            mutable: false,
+                            var_type: None,
+                            value: Expression::Literal(Literal::Number(current_val as f64)),
+                        });
+                        
+                        unrolled_statements.push(let_stmt);
+                        
+                        // Kopiere Body Statements
+                        for body_stmt in &for_stmt.body.statements {
+                            unrolled_statements.push(body_stmt.clone());
+                        }
+                    }
+                    
+                    return Some(Statement::Expression(ExpressionStatement {
+                        expression: Expression::Block(Block {
+                            statements: unrolled_statements,
+                        }),
+                    }));
+                }
+            }
+        }
+        
         None
     }
     

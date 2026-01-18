@@ -3,11 +3,12 @@ use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    variables: HashMap<String, Type>,
-    functions: HashMap<String, FunctionSignature>,
-    types: HashMap<String, Type>,
-    structs: HashMap<String, Struct>,
-    enums: HashMap<String, Enum>,
+    pub variables: HashMap<String, Type>,
+    pub functions: HashMap<String, FunctionSignature>,
+    pub types: HashMap<String, Type>,
+    pub structs: HashMap<String, Struct>,
+    pub enums: HashMap<String, Enum>,
+    pub modules: HashMap<String, Box<Environment>>, // Make public for debug
     parent: Option<Box<Environment>>,
 }
 
@@ -26,12 +27,25 @@ pub struct ParameterInfo {
 
 impl Environment {
     pub fn new() -> Self {
+        let mut functions = HashMap::new();
+        
+        // Add built-in Error function
+        functions.insert("Error".to_string(), FunctionSignature {
+            name: "Error".to_string(),
+            params: vec![ParameterInfo {
+                name: "message".to_string(),
+                param_type: Type::String,
+            }],
+            return_type: Some(Type::Named("Error".to_string())),
+        });
+
         Environment {
             variables: HashMap::new(),
-            functions: HashMap::new(),
+            functions,
             types: HashMap::new(),
             structs: HashMap::new(),
             enums: HashMap::new(),
+            modules: HashMap::new(),
             parent: None,
         }
     }
@@ -43,15 +57,40 @@ impl Environment {
             types: HashMap::new(),
             structs: HashMap::new(),
             enums: HashMap::new(),
+            modules: HashMap::new(),
             parent: Some(Box::new(parent)),
         }
     }
     
+    pub fn define_module(&mut self, name: String, env: Environment) {
+        self.modules.insert(name, Box::new(env));
+    }
+
+    pub fn get_module(&self, name: &str) -> Option<Environment> {
+        if let Some(env) = self.modules.get(name) {
+            Some(*env.clone())
+        } else if let Some(ref parent) = self.parent {
+            parent.get_module(name)
+        } else {
+            None
+        }
+    }
+
+    pub fn set_parent(&mut self, parent: Environment) {
+        self.parent = Some(Box::new(parent));
+    }
+
     pub fn define_variable(&mut self, name: String, var_type: Type) {
         self.variables.insert(name, var_type);
     }
     
     pub fn get_variable(&self, name: &str) -> Option<Type> {
+        if let Some((module_name, rest)) = name.split_once('.') {
+            if let Some(module_env) = self.get_module(module_name) {
+                return module_env.get_variable(rest);
+            }
+        }
+
         if let Some(var_type) = self.variables.get(name) {
             Some(var_type.clone())
         } else if let Some(ref parent) = self.parent {
@@ -66,6 +105,12 @@ impl Environment {
     }
     
     pub fn get_function(&self, name: &str) -> Option<FunctionSignature> {
+        if let Some((module_name, rest)) = name.split_once('.') {
+            if let Some(module_env) = self.get_module(module_name) {
+                return module_env.get_function(rest);
+            }
+        }
+        
         if let Some(sig) = self.functions.get(name) {
             Some(sig.clone())
         } else if let Some(ref parent) = self.parent {
@@ -80,6 +125,12 @@ impl Environment {
     }
     
     pub fn get_type(&self, name: &str) -> Option<Type> {
+        if let Some((module_name, rest)) = name.split_once('.') {
+            if let Some(module_env) = self.get_module(module_name) {
+                return module_env.get_type(rest);
+            }
+        }
+
         if let Some(type_def) = self.types.get(name) {
             Some(type_def.clone())
         } else if let Some(ref parent) = self.parent {
@@ -106,6 +157,12 @@ impl Environment {
     }
     
     pub fn get_struct(&self, name: &str) -> Option<Struct> {
+        if let Some((module_name, rest)) = name.split_once('.') {
+            if let Some(module_env) = self.get_module(module_name) {
+                return module_env.get_struct(rest);
+            }
+        }
+
         if let Some(struct_def) = self.structs.get(name) {
             Some(struct_def.clone())
         } else if let Some(ref parent) = self.parent {
@@ -120,6 +177,12 @@ impl Environment {
     }
     
     pub fn get_enum(&self, name: &str) -> Option<Enum> {
+        if let Some((module_name, rest)) = name.split_once('.') {
+            if let Some(module_env) = self.get_module(module_name) {
+                return module_env.get_enum(rest);
+            }
+        }
+
         if let Some(enum_def) = self.enums.get(name) {
             Some(enum_def.clone())
         } else if let Some(ref parent) = self.parent {
@@ -127,6 +190,9 @@ impl Environment {
         } else {
             None
         }
+    }
+    pub fn get_all_function_names(&self) -> Vec<String> {
+        self.functions.keys().cloned().collect()
     }
 }
 

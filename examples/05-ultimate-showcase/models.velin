@@ -1,0 +1,57 @@
+
+mod models {
+    /// Repräsentiert einen registrierten Benutzer im System
+    @VelinAutoDoc
+    struct User {
+        id: string,
+        
+        @Validate(min: 2, max: 50)
+        name: string,
+        
+        @Validate(email: true)
+        email: string,
+        
+        roles: List<string>,
+        
+        @Validate(min: 18)
+        age: number
+    }
+
+    /// Ein zum Kauf verfügbares Produkt
+    @VelinAutoDoc
+    struct Product {
+        id: string,
+        name: string,
+        description: string,
+        
+        @Validate(min: 0.01)
+        price: number,
+        
+        stock: number,
+        category: string
+    }
+
+    /// Eine von einem Benutzer getätigte Bestellung
+    @VelinAutoDoc
+    struct Order {
+        id: string,
+        userId: string,
+        items: List<OrderItem>,
+        totalAmount: number,
+        status: string, // "pending", "paid", "shipped"
+        createdAt: string
+    }
+
+    struct OrderItem {
+        productId: string,
+        quantity: number,
+        priceAtPurchase: number
+    }
+
+    /// Ergebnis eines Bestellverarbeitungs-Workflows
+    struct OrderResult {
+        success: boolean,
+        orderId: string,
+        message: string
+    }
+}

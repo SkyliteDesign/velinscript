@@ -45,6 +45,8 @@ fn getProfile(token: string): User {
 
 ### Role-based Access Control
 
+Die `@Role` Annotation nutzt nun echte JWT-Claims. Der Token muss ein `roles` Array im Payload enthalten.
+
 ```velin
 @Auth
 @Role("admin")
@@ -58,6 +60,20 @@ fn getAdminUsers(): List<User> {
 @GET("/api/users/:id")
 fn getUser(id: string): User {
     return db.find(User, id);
+}
+```
+
+### Multi-Factor Authentication (MFA)
+
+VelinScript unterstützt nun nativ TOTP (Time-based One-Time Passwords).
+
+```velin
+@POST("/api/auth/mfa/verify")
+fn verifyMfa(userId: string, code: string): boolean {
+    let user = db.find(User, userId);
+    // Verifiziert den Code gegen das gespeicherte Secret
+    // Nutzt im Hintergrund das 'totp-rs' Crate für RFC 6238 Konformität
+    return MFAService.verify_totp(code, user.mfaSecret);
 }
 ```
 

@@ -142,15 +142,19 @@
       "patterns": [
         {
           "name": "entity.name.tag.decorator.velin",
-          "match": "@[A-Z][a-zA-Z0-9_]*"
-        },
-        {
-          "name": "entity.name.tag.decorator.velin",
           "match": "@(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)"
         },
         {
           "name": "entity.name.tag.decorator.velin",
-          "match": "@(Auth|Secure|Role|RateLimit|Validate|Cache|Test)"
+          "match": "@(Auth|Secure|Role|RateLimit|Validate|Cache|Test|Flow|VelinAutoDoc|VelinPipeline|VelinAutoTest|VelinInsight)"
+        },
+        {
+          "name": "entity.name.tag.decorator.velin",
+          "match": "@(Flow|VelinAutoDoc|VelinPipeline|VelinAutoTest|VelinInsight|VelinOptimizeFlow|VelinKnowledgeBase)"
+        },
+        {
+          "name": "entity.name.tag.decorator.velin",
+          "match": "@[A-Z][a-zA-Z0-9_]*"
         }
       ]
     },

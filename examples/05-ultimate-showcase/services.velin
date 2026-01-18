@@ -1,0 +1,92 @@
+
+use models
+
+/// Kern-Geschäftslogik-Dienste
+/// Demonstriert Flow, Pipeline und AutoTest Features.
+@VelinInsight
+mod services {
+
+    /// Berechnet den Gesamtpreis für eine Liste von Artikeln
+    /// Dies ist eine reine Funktion, perfekt für AutoTest
+    @VelinAutoTest
+    @VelinAutoDoc
+    fn calculateTotal(items: List<OrderItem>): number {
+        let mut total = 0.0;
+        for (item in items) {
+            total = total + (item.priceAtPurchase * item.quantity);
+        }
+        return total;
+    }
+
+    /// Verarbeitet einen Checkout mit automatischer Rollback-Unterstützung
+    /// Wenn die Zahlung fehlschlägt, wird die Bestandsreservierung rückgängig gemacht.
+    @Flow
+    @VelinAutoDoc
+    fn processCheckout(user: User, items: List<OrderItem>): OrderResult {
+        // 1. Snapshot Input (Automatisch durch @Flow)
+        
+        // 2. Bestand reservieren (Mock DB Aufruf)
+        for (item in items) {
+            db.update("products", item.productId, { 
+                "stock": db.decrement(item.quantity) 
+            });
+        }
+        
+        // 3. Gesamtsumme berechnen
+        let total = calculateTotal(items);
+        
+        // 4. Bestellung erstellen
+        let order = Order {
+            id: generateId(),
+            userId: user.id,
+            items: items,
+            totalAmount: total,
+            status: "pending",
+            createdAt: getCurrentTime()
+        };
+        db.save(order);
+        
+        // 5. Zahlung belasten (Simulierter Fehlerpunkt)
+        if (total > 1000.0) {
+            // Simuliere Zahlungsfehler für hohe Beträge um Rollback zu testen
+            throw Error("Zahlungs-Gateway Zeitüberschreitung");
+        }
+        
+        // 6. Bestellung bestätigen
+        order.status = "paid";
+        db.update("orders", order.id, order);
+        
+        return OrderResult {
+            success: true,
+            orderId: order.id,
+            message: "Bestellung erfolgreich aufgegeben"
+        };
+    }
+
+    /// Lädt Dashboard-Daten parallel mit dem Pipeline Optimizer
+    /// Anstatt auf Benutzer, dann Bestellungen, dann Empfehlungen zu warten...
+    /// ...wird alles gleichzeitig abgerufen!
+    @VelinPipeline
+    @VelinAutoDoc
+    async fn loadUserDashboard(userId: string) {
+        // Diese Aufrufe sind unabhängig
+        let userProfile = await db.find(User, userId);
+        let recentOrders = await db.findMany(Order, { "userId": userId });
+        let recommendations = await fetchRecommendations(userId);
+        
+        return {
+            profile: userProfile,
+            orders: recentOrders,
+            suggested: recommendations
+        };
+    }
+    
+    // Stub für externen Service
+    async fn fetchRecommendations(userId: string): List<Product> {
+        return List<Product>();
+    }
+    
+    fn getCurrentTime(): string {
+        return "2023-01-01T12:00:00Z";
+    }
+}

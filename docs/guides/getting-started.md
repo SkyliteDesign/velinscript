@@ -140,17 +140,30 @@ fn createUser(name: string, email: string): User {
 5. **Tutorial 5: Validation** - [tutorial-5-validation.md](tutorial-5-validation.md)
 6. **Tutorial 6: Authentication** - [tutorial-6-authentication.md](tutorial-6-authentication.md)
 7. **Tutorial 7: ML Integration** - [tutorial-7-ml.md](tutorial-7-ml.md)
+8. **Tutorial 8: Intelligence** - [tutorial-8-intelligence.md](tutorial-8-intelligence.md)
 
 ## Entwickler-Tools
 
-- **Auto-Import Management** - [auto-imports.md](../guides/auto-imports.md)
+- **Auto-Import Management** - [auto-imports.md](auto-imports.md)
+- **AutoFix Engine** - Automatische Fehlerkorrektur mit `--autofix` Flag
+- **VelinAutoDoc** - Automatische Dokumentationsgenerierung
+- **VelinAutoTest** - Automatische Test-Generierung
+- **VelinInsight** - Code-Analyse und Qualitätsprüfung
+- **VelinPipeline** - Automatische Performance-Optimierung
 - **Dead Code Detector** - [../tools/dead-code-detector.md](../tools/dead-code-detector.md)
 - **API Documentation Generator** - [../tools/api-doc-generator.md](../tools/api-doc-generator.md)
+- **VS Code Extension** - [../tools/vscode-extension.md](../tools/vscode-extension.md) ✅
 - **Package Manager** - Siehe `tools/package-manager/README.md`
 
 ## Beispiele
 
 Siehe [examples/](../../examples/) für vollständige Beispiel-Projekte.
+
+**Empfohlene Beispiele:**
+- **[01-hello-api](../../examples/01-hello-api/)** - Einfaches Einstiegsbeispiel
+- **[02-llm-chat](../../examples/02-llm-chat/)** - LLM-Integration
+- **[05-ultimate-showcase](../../examples/05-ultimate-showcase/)** - Alle Features 2.5 (VelinAutoDoc, VelinPipeline, @Flow) ✅
+- **[Custom Recommender](../../examples/custom-recommender/)** - Production-Ready Recommendation System
 
 ## Hilfe
 

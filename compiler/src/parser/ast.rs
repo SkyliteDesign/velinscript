@@ -27,6 +27,7 @@ pub struct Function {
     pub body: Block,
     pub is_async: bool,
     pub is_const: bool,
+    pub documentation: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,7 +72,17 @@ pub enum Statement {
     For(ForStatement),
     While(WhileStatement),
     Match(MatchStatement),
+    Throw(ThrowStatement),
+    Break(BreakStatement),
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ThrowStatement {
+    pub expression: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BreakStatement;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetStatement {
@@ -174,6 +185,8 @@ pub enum Expression {
         name: String,
         fields: Vec<(String, Expression)>,
     },
+    MapLiteral(Vec<(String, Expression)>),
+    ListLiteral(Vec<Expression>),
     GenericConstructor {
         name: String,
         type_params: Vec<Type>,
@@ -183,6 +196,10 @@ pub enum Expression {
         params: Vec<Parameter>,
         return_type: Option<Type>,
         body: Box<Expression>, // Can be a Block or a single expression
+    },
+    Assignment {
+        target: Box<Expression>,
+        value: Box<Expression>,
     },
     FormatString {
         parts: Vec<FormatStringPart>,
@@ -233,6 +250,7 @@ pub struct Struct {
     pub fields: Vec<StructField>,
     pub visibility: Visibility,
     pub decorators: Vec<Decorator>,
+    pub documentation: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -240,6 +258,7 @@ pub struct StructField {
     pub name: String,
     pub field_type: Type,
     pub visibility: Visibility,
+    pub decorators: Vec<Decorator>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -247,6 +266,7 @@ pub struct Enum {
     pub name: String,
     pub variants: Vec<EnumVariant>,
     pub visibility: Visibility,
+    pub documentation: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -267,6 +287,7 @@ pub struct Module {
     pub name: String,
     pub items: Vec<Item>,
     pub visibility: Visibility,
+    pub documentation: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -318,6 +339,7 @@ pub enum Type {
     Boolean,
     Void,
     Null,
+    Any,
     
     // Named types
     Named(String),
@@ -362,6 +384,7 @@ impl Type {
             Type::Boolean => "boolean".to_string(),
             Type::Void => "void".to_string(),
             Type::Null => "null".to_string(),
+            Type::Any => "any".to_string(),
             Type::Named(name) => name.clone(),
             Type::Generic { name, params } => {
                 let params_str = params

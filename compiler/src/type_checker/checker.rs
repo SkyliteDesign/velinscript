@@ -2,6 +2,7 @@ use crate::parser::ast::*;
 use crate::type_checker::environment::{Environment, FunctionSignature};
 use crate::type_checker::errors::{TypeError, TypeErrorKind};
 use crate::stdlib::rate_limit::{is_rate_limit_decorator, parse_rate_limit_config};
+use crate::compiler::language::VELISCH_LANGUAGE_NAME;
 
 pub struct TypeChecker {
     environment: Environment,
@@ -10,6 +11,9 @@ pub struct TypeChecker {
 
 impl TypeChecker {
     pub fn new() -> Self {
+        // Velisch Identity Check - Fingerabdruck im Type Checker
+        let _velisch_check = VELISCH_LANGUAGE_NAME;
+        
         let mut env = Environment::new();
         
         // Built-in types
@@ -46,20 +50,14 @@ impl TypeChecker {
             params: vec![
                 crate::type_checker::environment::ParameterInfo {
                     name: "type".to_string(),
-                    param_type: Type::Generic {
-                        name: "T".to_string(),
-                        params: Vec::new(),
-                    },
+                    param_type: Type::Named("Type".to_string()),
                 },
                 crate::type_checker::environment::ParameterInfo {
                     name: "id".to_string(),
                     param_type: Type::String,
                 },
             ],
-            return_type: Some(Type::Optional(Box::new(Type::Generic {
-                name: "T".to_string(),
-                params: Vec::new(),
-            }))),
+            return_type: Some(Type::Named("any".to_string())),
         });
         
         // db.save<T>(T) -> T
@@ -68,16 +66,10 @@ impl TypeChecker {
             params: vec![
                 crate::type_checker::environment::ParameterInfo {
                     name: "entity".to_string(),
-                    param_type: Type::Generic {
-                        name: "T".to_string(),
-                        params: Vec::new(),
-                    },
+                    param_type: Type::Named("any".to_string()),
                 },
             ],
-            return_type: Some(Type::Generic {
-                name: "T".to_string(),
-                params: Vec::new(),
-            }),
+            return_type: Some(Type::Named("any".to_string())),
         });
         
         // db.findAll<T>(T) -> List<T>
@@ -86,16 +78,29 @@ impl TypeChecker {
             params: vec![
                 crate::type_checker::environment::ParameterInfo {
                     name: "type".to_string(),
-                    param_type: Type::Generic {
-                        name: "T".to_string(),
-                        params: Vec::new(),
+                    param_type: Type::Named("Type".to_string()),
+                },
+            ],
+            return_type: Some(Type::List(Box::new(Type::Named("any".to_string())))),
+        });
+        
+        // db.findMany<T>(T, Map) -> List<T>
+        env.define_function("db.findMany".to_string(), FunctionSignature {
+            name: "db.findMany".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo {
+                    name: "type".to_string(),
+                    param_type: Type::Named("Type".to_string()),
+                },
+                crate::type_checker::environment::ParameterInfo {
+                    name: "query".to_string(),
+                    param_type: Type::Map {
+                        key: Box::new(Type::String),
+                        value: Box::new(Type::Named("any".to_string())),
                     },
                 },
             ],
-            return_type: Some(Type::List(Box::new(Type::Generic {
-                name: "T".to_string(),
-                params: Vec::new(),
-            }))),
+            return_type: Some(Type::List(Box::new(Type::Named("any".to_string())))),
         });
         
         // db.delete<T>(T, string) -> boolean
@@ -104,10 +109,7 @@ impl TypeChecker {
             params: vec![
                 crate::type_checker::environment::ParameterInfo {
                     name: "type".to_string(),
-                    param_type: Type::Generic {
-                        name: "T".to_string(),
-                        params: Vec::new(),
-                    },
+                    param_type: Type::Named("Type".to_string()),
                 },
                 crate::type_checker::environment::ParameterInfo {
                     name: "id".to_string(),
@@ -526,12 +528,811 @@ impl TypeChecker {
             }),
         });
         
+        // --- Extended Standard Library Types ---
+        env.define_type("StringStdlib".to_string(), Type::Named("StringStdlib".to_string()));
+        env.define_type("MathStdlib".to_string(), Type::Named("MathStdlib".to_string()));
+        env.define_type("DateStdlib".to_string(), Type::Named("DateStdlib".to_string()));
+        env.define_type("FsStdlib".to_string(), Type::Named("FsStdlib".to_string()));
+        env.define_type("LLMStdlib".to_string(), Type::Named("LLMStdlib".to_string()));
+        env.define_type("EmbeddingStdlib".to_string(), Type::Named("EmbeddingStdlib".to_string()));
+        env.define_type("AgentStdlib".to_string(), Type::Named("AgentStdlib".to_string()));
+        env.define_type("ProcessStdlib".to_string(), Type::Named("ProcessStdlib".to_string()));
+        env.define_type("SandboxStdlib".to_string(), Type::Named("SandboxStdlib".to_string()));
+        env.define_type("WebSocketStdlib".to_string(), Type::Named("WebSocketStdlib".to_string()));
+        env.define_type("UtilsStdlib".to_string(), Type::Named("UtilsStdlib".to_string()));
+        env.define_type("LogStdlib".to_string(), Type::Named("LogStdlib".to_string()));
+        
+        env.define_type("Agent".to_string(), Type::Named("Agent".to_string()));
+        env.define_type("WebSocket".to_string(), Type::Named("WebSocket".to_string()));
+        env.define_type("SearchResult".to_string(), Type::Named("SearchResult".to_string()));
+
+        // --- Extended Standard Library Variables ---
+        env.define_variable("string".to_string(), Type::Named("StringStdlib".to_string()));
+        env.define_variable("math".to_string(), Type::Named("MathStdlib".to_string()));
+        env.define_variable("date".to_string(), Type::Named("DateStdlib".to_string()));
+        env.define_variable("fs".to_string(), Type::Named("FsStdlib".to_string()));
+        env.define_variable("llm".to_string(), Type::Named("LLMStdlib".to_string()));
+        env.define_variable("embedding".to_string(), Type::Named("EmbeddingStdlib".to_string()));
+        env.define_variable("agent".to_string(), Type::Named("AgentStdlib".to_string()));
+        env.define_variable("process".to_string(), Type::Named("ProcessStdlib".to_string()));
+        env.define_variable("sandbox".to_string(), Type::Named("SandboxStdlib".to_string()));
+        env.define_variable("websocket".to_string(), Type::Named("WebSocketStdlib".to_string()));
+        env.define_variable("utils".to_string(), Type::Named("UtilsStdlib".to_string()));
+        env.define_variable("log".to_string(), Type::Named("LogStdlib".to_string()));
+
+        // Register new functions (batch 1: String)
+        env.define_function("string.split".to_string(), FunctionSignature {
+            name: "string.split".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "delimiter".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::List(Box::new(Type::String))),
+        });
+        env.define_function("string.join".to_string(), FunctionSignature {
+            name: "string.join".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "list".to_string(), param_type: Type::List(Box::new(Type::String)) },
+                crate::type_checker::environment::ParameterInfo { name: "delimiter".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::String),
+        });
+        
+        // --- String Module Extensions ---
+        env.define_function("string.replace".to_string(), FunctionSignature {
+            name: "string.replace".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "old".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "new".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::String),
+        });
+        env.define_function("string.trim".to_string(), FunctionSignature {
+            name: "string.trim".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::String),
+        });
+        env.define_function("string.slugify".to_string(), FunctionSignature {
+            name: "string.slugify".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::String),
+        });
+        env.define_function("string.to_int".to_string(), FunctionSignature {
+            name: "string.to_int".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Number), err: Box::new(Type::String) }),
+        });
+        env.define_function("string.to_float".to_string(), FunctionSignature {
+            name: "string.to_float".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Number), err: Box::new(Type::String) }),
+        });
+        env.define_function("string.capitalize".to_string(), FunctionSignature {
+            name: "string.capitalize".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::String),
+        });
+        env.define_function("string.lowercase".to_string(), FunctionSignature {
+            name: "string.lowercase".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::String),
+        });
+        env.define_function("string.uppercase".to_string(), FunctionSignature {
+            name: "string.uppercase".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::String),
+        });
+        env.define_function("string.starts_with".to_string(), FunctionSignature {
+            name: "string.starts_with".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "prefix".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Boolean),
+        });
+        env.define_function("string.ends_with".to_string(), FunctionSignature {
+            name: "string.ends_with".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "suffix".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Boolean),
+        });
+
+        // --- Math Module ---
+        env.define_function("math.clamp".to_string(), FunctionSignature {
+            name: "math.clamp".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "value".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "min".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "max".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("math.lerp".to_string(), FunctionSignature {
+            name: "math.lerp".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "a".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "b".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "t".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("math.round_to".to_string(), FunctionSignature {
+            name: "math.round_to".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "value".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "decimals".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("math.random_range".to_string(), FunctionSignature {
+            name: "math.random_range".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "min".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "max".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("math.min".to_string(), FunctionSignature {
+            name: "math.min".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "a".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "b".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("math.max".to_string(), FunctionSignature {
+            name: "math.max".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "a".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "b".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("math.abs".to_string(), FunctionSignature {
+            name: "math.abs".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "value".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("math.floor".to_string(), FunctionSignature {
+            name: "math.floor".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "value".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("math.ceil".to_string(), FunctionSignature {
+            name: "math.ceil".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "value".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Number),
+        });
+
+        // --- Date Module ---
+        env.define_function("date.add_days".to_string(), FunctionSignature {
+            name: "date.add_days".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "timestamp".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "days".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("date.add_hours".to_string(), FunctionSignature {
+            name: "date.add_hours".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "timestamp".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "hours".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("date.add_minutes".to_string(), FunctionSignature {
+            name: "date.add_minutes".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "timestamp".to_string(), param_type: Type::Number },
+                crate::type_checker::environment::ParameterInfo { name: "minutes".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("date.format_relative".to_string(), FunctionSignature {
+            name: "date.format_relative".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "timestamp".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::String),
+        });
+        env.define_function("date.is_weekend".to_string(), FunctionSignature {
+            name: "date.is_weekend".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "timestamp".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Boolean),
+        });
+        env.define_function("date.is_weekday".to_string(), FunctionSignature {
+            name: "date.is_weekday".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "timestamp".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Boolean),
+        });
+
+        // --- FS Module ---
+        env.define_function("fs.read_json".to_string(), FunctionSignature {
+            name: "fs.read_json".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "path".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("fs.write_json".to_string(), FunctionSignature {
+            name: "fs.write_json".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "path".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "value".to_string(), param_type: Type::Named("any".to_string()) },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("fs.copy".to_string(), FunctionSignature {
+            name: "fs.copy".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "source".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "dest".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("fs.move_file".to_string(), FunctionSignature {
+            name: "fs.move_file".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "source".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "dest".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("fs.get_size".to_string(), FunctionSignature {
+            name: "fs.get_size".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "path".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Number), err: Box::new(Type::String) }),
+        });
+        env.define_function("fs.is_empty".to_string(), FunctionSignature {
+            name: "fs.is_empty".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "path".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Boolean),
+        });
+
+        // --- Config Module ---
+        env.define_variable("config".to_string(), Type::Void); // config module namespace
+        
+        env.define_function("config.get_env".to_string(), FunctionSignature {
+            name: "config.get_env".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "key".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        
+        env.define_function("config.get_or_default".to_string(), FunctionSignature {
+            name: "config.get_or_default".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "key".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "default".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::String),
+        });
+
+        env.define_function("config.load_dotenv".to_string(), FunctionSignature {
+            name: "config.load_dotenv".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+
+        // --- Flow Runtime ---
+        env.define_variable("flow".to_string(), Type::Void);
+        
+        env.define_function("flow.snapshot_input".to_string(), FunctionSignature {
+            name: "flow.snapshot_input".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "input".to_string(), param_type: Type::Named("any".to_string()) }],
+            return_type: Some(Type::Void),
+        });
+
+        // --- LLM Module ---
+        env.define_function("llm.summarize".to_string(), FunctionSignature {
+            name: "llm.summarize".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("llm.classify".to_string(), FunctionSignature {
+            name: "llm.classify".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "categories".to_string(), param_type: Type::List(Box::new(Type::String)) },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("llm.extract_entities".to_string(), FunctionSignature {
+            name: "llm.extract_entities".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::List(Box::new(Type::Map { key: Box::new(Type::String), value: Box::new(Type::String) }))), err: Box::new(Type::String) }),
+        });
+        env.define_function("llm.generate".to_string(), FunctionSignature {
+            name: "llm.generate".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "title".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "style".to_string(), param_type: Type::String }, // Optional param logic needed?
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("llm.translate".to_string(), FunctionSignature {
+            name: "llm.translate".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "target_lang".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("llm.sentiment".to_string(), FunctionSignature {
+            name: "llm.sentiment".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("llm.complete".to_string(), FunctionSignature {
+            name: "llm.complete".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "prompt".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "max_tokens".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("llm.embed".to_string(), FunctionSignature {
+            name: "llm.embed".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "text".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::List(Box::new(Type::Number))), err: Box::new(Type::String) }),
+        });
+        env.define_function("llm.chat".to_string(), FunctionSignature {
+            name: "llm.chat".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "messages".to_string(), param_type: Type::List(Box::new(Type::Named("any".to_string()))) }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+
+        // --- Embedding Module ---
+        env.define_function("embedding.compare".to_string(), FunctionSignature {
+            name: "embedding.compare".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "a".to_string(), param_type: Type::List(Box::new(Type::Number)) },
+                crate::type_checker::environment::ParameterInfo { name: "b".to_string(), param_type: Type::List(Box::new(Type::Number)) },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("embedding.similarity".to_string(), FunctionSignature {
+            name: "embedding.similarity".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "a".to_string(), param_type: Type::List(Box::new(Type::Number)) },
+                crate::type_checker::environment::ParameterInfo { name: "b".to_string(), param_type: Type::List(Box::new(Type::Number)) },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("embedding.cluster".to_string(), FunctionSignature {
+            name: "embedding.cluster".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "list".to_string(), param_type: Type::List(Box::new(Type::List(Box::new(Type::Number)))) },
+                crate::type_checker::environment::ParameterInfo { name: "k".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::List(Box::new(Type::List(Box::new(Type::List(Box::new(Type::Number))))))), err: Box::new(Type::String) }),
+        });
+        env.define_function("embedding.normalize".to_string(), FunctionSignature {
+            name: "embedding.normalize".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "embedding".to_string(), param_type: Type::List(Box::new(Type::Number)) }],
+            return_type: Some(Type::List(Box::new(Type::Number))),
+        });
+        env.define_function("embedding.distance".to_string(), FunctionSignature {
+            name: "embedding.distance".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "a".to_string(), param_type: Type::List(Box::new(Type::Number)) },
+                crate::type_checker::environment::ParameterInfo { name: "b".to_string(), param_type: Type::List(Box::new(Type::Number)) },
+            ],
+            return_type: Some(Type::Number),
+        });
+        env.define_function("embedding.find_nearest".to_string(), FunctionSignature {
+            name: "embedding.find_nearest".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "query".to_string(), param_type: Type::List(Box::new(Type::Number)) },
+                crate::type_checker::environment::ParameterInfo { name: "candidates".to_string(), param_type: Type::List(Box::new(Type::List(Box::new(Type::Number)))) },
+                crate::type_checker::environment::ParameterInfo { name: "k".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::List(Box::new(Type::List(Box::new(Type::Number))))),
+        });
+        env.define_function("embedding.average".to_string(), FunctionSignature {
+            name: "embedding.average".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "embeddings".to_string(), param_type: Type::List(Box::new(Type::List(Box::new(Type::Number)))) }],
+            return_type: Some(Type::List(Box::new(Type::Number))),
+        });
+        env.define_function("embedding.dimension".to_string(), FunctionSignature {
+            name: "embedding.dimension".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "embedding".to_string(), param_type: Type::List(Box::new(Type::Number)) }],
+            return_type: Some(Type::Number),
+        });
+
+        // --- Agent Module ---
+        env.define_function("agent.memory.store".to_string(), FunctionSignature {
+            name: "agent.memory.store".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "key".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "value".to_string(), param_type: Type::Named("any".to_string()) },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("agent.memory.search".to_string(), FunctionSignature {
+            name: "agent.memory.search".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "query".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::List(Box::new(Type::Named("any".to_string())))), err: Box::new(Type::String) }),
+        });
+        env.define_function("agent.task.run".to_string(), FunctionSignature {
+            name: "agent.task.run".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "description".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("agent.task.plan".to_string(), FunctionSignature {
+            name: "agent.task.plan".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "goal".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::List(Box::new(Type::String))), err: Box::new(Type::String) }),
+        });
+        env.define_function("agent.memory.get".to_string(), FunctionSignature {
+            name: "agent.memory.get".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "key".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("agent.memory.delete".to_string(), FunctionSignature {
+            name: "agent.memory.delete".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "key".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("agent.task.execute".to_string(), FunctionSignature {
+            name: "agent.task.execute".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "plan".to_string(), param_type: Type::List(Box::new(Type::String)) }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("agent.create".to_string(), FunctionSignature {
+            name: "agent.create".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "name".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Named("Agent".to_string())),
+        });
+        env.define_function("agent.think".to_string(), FunctionSignature {
+            name: "agent.think".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "context".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+
+        // --- Process Module ---
+        env.define_function("process.spawn".to_string(), FunctionSignature {
+            name: "process.spawn".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "command".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "args".to_string(), param_type: Type::List(Box::new(Type::String)) },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Number), err: Box::new(Type::String) }),
+        });
+        env.define_function("process.kill".to_string(), FunctionSignature {
+            name: "process.kill".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "pid".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("process.restart".to_string(), FunctionSignature {
+            name: "process.restart".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "pid".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("process.status".to_string(), FunctionSignature {
+            name: "process.status".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "pid".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("process.list".to_string(), FunctionSignature {
+            name: "process.list".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::List(Box::new(Type::Named("any".to_string())))),
+        });
+        env.define_function("process.wait".to_string(), FunctionSignature {
+            name: "process.wait".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "pid".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Number), err: Box::new(Type::String) }),
+        });
+        env.define_function("process.get_output".to_string(), FunctionSignature {
+            name: "process.get_output".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "pid".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("process.is_running".to_string(), FunctionSignature {
+            name: "process.is_running".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "pid".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Boolean),
+        });
+        env.define_function("process.get_memory".to_string(), FunctionSignature {
+            name: "process.get_memory".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "pid".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Number), err: Box::new(Type::String) }),
+        });
+
+        // --- Sandbox Module ---
+        env.define_function("sandbox.build".to_string(), FunctionSignature {
+            name: "sandbox.build".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "project_path".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("sandbox.test".to_string(), FunctionSignature {
+            name: "sandbox.test".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "project_path".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("sandbox.validate".to_string(), FunctionSignature {
+            name: "sandbox.validate".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "code".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("sandbox.run".to_string(), FunctionSignature {
+            name: "sandbox.run".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "code".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("sandbox.lint".to_string(), FunctionSignature {
+            name: "sandbox.lint".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "code".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::List(Box::new(Type::String))), err: Box::new(Type::String) }),
+        });
+        env.define_function("sandbox.format".to_string(), FunctionSignature {
+            name: "sandbox.format".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "code".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("sandbox.check_types".to_string(), FunctionSignature {
+            name: "sandbox.check_types".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "code".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("sandbox.optimize".to_string(), FunctionSignature {
+            name: "sandbox.optimize".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "code".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+
+        // --- Rollback Module Extensions ---
+        env.define_function("rollback.list_snapshots".to_string(), FunctionSignature {
+            name: "rollback.list_snapshots".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::List(Box::new(Type::Named("any".to_string())))),
+        });
+        env.define_function("rollback.delete_snapshot".to_string(), FunctionSignature {
+            name: "rollback.delete_snapshot".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "snapshot_id".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("rollback.compare".to_string(), FunctionSignature {
+            name: "rollback.compare".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "snapshot1".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "snapshot2".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("rollback.get_info".to_string(), FunctionSignature {
+            name: "rollback.get_info".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "snapshot_id".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("rollback.auto_snapshot".to_string(), FunctionSignature {
+            name: "rollback.auto_snapshot".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "interval_seconds".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+
+        // --- HTTP Module Extensions ---
+        env.define_function("http.patch".to_string(), FunctionSignature {
+            name: "http.patch".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "url".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "body".to_string(), param_type: Type::Named("any".to_string()) },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("HttpResponse".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("http.head".to_string(), FunctionSignature {
+            name: "http.head".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "url".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("HttpResponse".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("http.options".to_string(), FunctionSignature {
+            name: "http.options".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "url".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("HttpResponse".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("http.set_timeout".to_string(), FunctionSignature {
+            name: "http.set_timeout".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "client".to_string(), param_type: Type::Named("HttpClient".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "ms".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Named("HttpClient".to_string())),
+        });
+        env.define_function("http.set_headers".to_string(), FunctionSignature {
+            name: "http.set_headers".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "client".to_string(), param_type: Type::Named("HttpClient".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "headers".to_string(), param_type: Type::Named("any".to_string()) },
+            ],
+            return_type: Some(Type::Named("HttpClient".to_string())),
+        });
+
+        // --- WebSocket Module ---
+        env.define_function("websocket.connect".to_string(), FunctionSignature {
+            name: "websocket.connect".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "url".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("WebSocket".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("websocket.send".to_string(), FunctionSignature {
+            name: "websocket.send".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "ws".to_string(), param_type: Type::Named("WebSocket".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "message".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("websocket.receive".to_string(), FunctionSignature {
+            name: "websocket.receive".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "ws".to_string(), param_type: Type::Named("WebSocket".to_string()) }],
+            return_type: Some(Type::Result { ok: Box::new(Type::String), err: Box::new(Type::String) }),
+        });
+        env.define_function("websocket.close".to_string(), FunctionSignature {
+            name: "websocket.close".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "ws".to_string(), param_type: Type::Named("WebSocket".to_string()) }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("websocket.is_connected".to_string(), FunctionSignature {
+            name: "websocket.is_connected".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "ws".to_string(), param_type: Type::Named("WebSocket".to_string()) }],
+            return_type: Some(Type::Boolean),
+        });
+        env.define_function("websocket.ping".to_string(), FunctionSignature {
+            name: "websocket.ping".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "ws".to_string(), param_type: Type::Named("WebSocket".to_string()) }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("websocket.subscribe".to_string(), FunctionSignature {
+            name: "websocket.subscribe".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "ws".to_string(), param_type: Type::Named("WebSocket".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "topic".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("websocket.on_message".to_string(), FunctionSignature {
+            name: "websocket.on_message".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "ws".to_string(), param_type: Type::Named("WebSocket".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "callback".to_string(), param_type: Type::Named("any".to_string()) }, // Function type TODO
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+
+        // --- Utils Module ---
+        env.define_function("utils.uuid".to_string(), FunctionSignature {
+            name: "utils.uuid".to_string(),
+            params: Vec::new(),
+            return_type: Some(Type::String),
+        });
+        env.define_function("utils.sleep".to_string(), FunctionSignature {
+            name: "utils.sleep".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "ms".to_string(), param_type: Type::Number }],
+            return_type: Some(Type::Void),
+        });
+        env.define_function("utils.retry".to_string(), FunctionSignature {
+            name: "utils.retry".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "fn".to_string(), param_type: Type::Named("any".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "times".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("utils.debounce".to_string(), FunctionSignature {
+            name: "utils.debounce".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "fn".to_string(), param_type: Type::Named("any".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "ms".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Named("any".to_string())),
+        });
+        env.define_function("utils.throttle".to_string(), FunctionSignature {
+            name: "utils.throttle".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "fn".to_string(), param_type: Type::Named("any".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "ms".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Named("any".to_string())),
+        });
+        env.define_function("utils.memoize".to_string(), FunctionSignature {
+            name: "utils.memoize".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "fn".to_string(), param_type: Type::Named("any".to_string()) }],
+            return_type: Some(Type::Named("any".to_string())),
+        });
+        env.define_function("utils.timeout".to_string(), FunctionSignature {
+            name: "utils.timeout".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "fn".to_string(), param_type: Type::Named("any".to_string()) },
+                crate::type_checker::environment::ParameterInfo { name: "ms".to_string(), param_type: Type::Number },
+            ],
+            return_type: Some(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }),
+        });
+        env.define_function("utils.parallel".to_string(), FunctionSignature {
+            name: "utils.parallel".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "tasks".to_string(), param_type: Type::List(Box::new(Type::Named("any".to_string()))) }],
+            return_type: Some(Type::List(Box::new(Type::Result { ok: Box::new(Type::Named("any".to_string())), err: Box::new(Type::String) }))),
+        });
+        env.define_function("utils.cache".to_string(), FunctionSignature {
+            name: "utils.cache".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "key".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "fn".to_string(), param_type: Type::Named("any".to_string()) },
+            ],
+            return_type: Some(Type::Named("any".to_string())),
+        });
+
+        // --- Log Module ---
+        env.define_function("log.info".to_string(), FunctionSignature {
+            name: "log.info".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "message".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Void),
+        });
+        env.define_function("log.warn".to_string(), FunctionSignature {
+            name: "log.warn".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "message".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Void),
+        });
+        env.define_function("log.error".to_string(), FunctionSignature {
+            name: "log.error".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "message".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Void),
+        });
+        env.define_function("log.debug".to_string(), FunctionSignature {
+            name: "log.debug".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "message".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Void),
+        });
+        env.define_function("log.trace".to_string(), FunctionSignature {
+            name: "log.trace".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "message".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Void),
+        });
+        env.define_function("log.set_level".to_string(), FunctionSignature {
+            name: "log.set_level".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "level".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Void),
+        });
+        env.define_function("log.with_context".to_string(), FunctionSignature {
+            name: "log.with_context".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "key".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "value".to_string(), param_type: Type::String },
+            ],
+            return_type: Some(Type::Named("Logger".to_string())),
+        });
+        env.define_function("log.to_file".to_string(), FunctionSignature {
+            name: "log.to_file".to_string(),
+            params: vec![crate::type_checker::environment::ParameterInfo { name: "path".to_string(), param_type: Type::String }],
+            return_type: Some(Type::Result { ok: Box::new(Type::Void), err: Box::new(Type::String) }),
+        });
+        env.define_function("log.json".to_string(), FunctionSignature {
+            name: "log.json".to_string(),
+            params: vec![
+                crate::type_checker::environment::ParameterInfo { name: "message".to_string(), param_type: Type::String },
+                crate::type_checker::environment::ParameterInfo { name: "data".to_string(), param_type: Type::Named("any".to_string()) },
+            ],
+            return_type: Some(Type::Void),
+        });
+
+
+
+    
         TypeChecker {
             environment: env,
             errors: Vec::new(),
         }
     }
-    
+
+    fn flatten_member_access(&self, expr: &Expression) -> Option<String> {
+        match expr {
+            Expression::Identifier(name) => Some(name.clone()),
+            Expression::Member { object, member } => {
+                let obj_name = self.flatten_member_access(object)?;
+                Some(format!("{}.{}", obj_name, member))
+            }
+            _ => None,
+        }
+    }
+
     pub fn check_program(&mut self, program: &Program) -> Result<(), Vec<TypeError>> {
         // First pass: collect all type definitions
         for item in &program.items {
@@ -595,6 +1396,60 @@ impl TypeChecker {
             }
         }
         
+        // Debug: print registered functions
+        // println!("Registered functions: {:?}", self.environment.get_all_function_names());
+        
+        // Pass 2.5: Register modules and their contents (recursive Pass 1 & 2)
+        // This ensures modules are available before they are used in other modules
+        for item in &program.items {
+            if let Item::Module(m) = item {
+                 let mut module_env = Environment::with_parent(self.environment.clone());
+                 
+                 // Register types in module
+                 for item in &m.items {
+                     match item {
+                         Item::Struct(s) => {
+                             module_env.define_type(s.name.clone(), Type::Named(s.name.clone()));
+                             module_env.define_struct(s.name.clone(), s.clone());
+                         }
+                         Item::Enum(e) => {
+                             module_env.define_type(e.name.clone(), Type::Named(e.name.clone()));
+                             module_env.define_enum(e.name.clone(), e.clone());
+                         }
+                          Item::Trait(t) => {
+                             module_env.define_type(t.name.clone(), Type::Named(t.name.clone()));
+                         }
+                         Item::TypeAlias(ta) => {
+                             module_env.define_type(ta.name.clone(), ta.aliased_type.clone());
+                         }
+                         _ => {}
+                     }
+                 }
+                 
+                 // Register functions in module
+                 for item in &m.items {
+                     if let Item::Function(f) = item {
+                          let params: Vec<_> = f.params.iter().map(|p| {
+                             crate::type_checker::environment::ParameterInfo {
+                                 name: p.name.clone(),
+                                 param_type: p.param_type.clone(),
+                             }
+                         }).collect();
+                         
+                         let sig = crate::type_checker::environment::FunctionSignature {
+                              name: f.name.clone(),
+                              params,
+                              return_type: f.return_type.clone(),
+                          };
+                          module_env.define_function(f.name.clone(), sig);
+                     }
+                 }
+
+                 // Register module in parent environment
+                 self.environment.define_module(m.name.clone(), module_env);
+            }
+        }
+
         // Third pass: check functions and other items
         for item in &program.items {
             match item {
@@ -618,7 +1473,12 @@ impl TypeChecker {
                 }
                 Item::Module(m) => {
                     // Handle modules by checking their items recursively
-                    let module_env = Environment::with_parent(self.environment.clone());
+                    // Use the environment created in Pass 2.5
+                    let mut module_env = self.environment.get_module(&m.name).unwrap(); // Should exist
+                    
+                    // Update parent to current environment (containing all registered modules)
+                    module_env.set_parent(self.environment.clone());
+                    
                     let old_env = std::mem::replace(&mut self.environment, module_env);
                     
                     // Check all items in the module
@@ -633,14 +1493,50 @@ impl TypeChecker {
                             Item::Enum(e) => {
                                 self.check_enum(e)?;
                             }
+                             Item::Trait(t) => {
+                                self.check_trait(t)?;
+                            }
+                            Item::Impl(i) => {
+                                self.check_impl(i)?;
+                            }
+                            Item::Use(u) => {
+                                 // Import types/functions from module into current environment (module scope)
+                                 let module_name = u.path.join(".");
+                                 if let Some(module_env) = self.environment.get_module(&module_name) {
+                                     for (name, type_def) in &module_env.types { self.environment.define_type(name.clone(), type_def.clone()); }
+                                     for (name, struct_def) in &module_env.structs { self.environment.define_struct(name.clone(), struct_def.clone()); }
+                                     for (name, enum_def) in &module_env.enums { self.environment.define_enum(name.clone(), enum_def.clone()); }
+                                     for (name, func_sig) in &module_env.functions { self.environment.define_function(name.clone(), func_sig.clone()); }
+                                 }
+                            }
+                            // Recursive modules not fully supported here without refactoring
                             _ => {}
                         }
                     }
                     
                     self.environment = old_env;
                 }
-                Item::Use(_) => {
-                    // Use statements don't need type checking
+                Item::Use(u) => {
+                     // Import types/functions from module into current environment
+                     let module_name = u.path.join(".");
+                     if let Some(module_env) = self.environment.get_module(&module_name) {
+                         // Import types
+                         for (name, type_def) in &module_env.types {
+                             self.environment.define_type(name.clone(), type_def.clone());
+                         }
+                         // Import structs
+                         for (name, struct_def) in &module_env.structs {
+                             self.environment.define_struct(name.clone(), struct_def.clone());
+                         }
+                         // Import enums
+                         for (name, enum_def) in &module_env.enums {
+                             self.environment.define_enum(name.clone(), enum_def.clone());
+                         }
+                         // Import functions
+                         for (name, func_sig) in &module_env.functions {
+                             self.environment.define_function(name.clone(), func_sig.clone());
+                         }
+                     }
                 }
             }
         }
@@ -1009,12 +1905,45 @@ impl TypeChecker {
                         self.environment = old_env;
                     }
                 }
+                Statement::Throw(throw_stmt) => {
+                    let _ = self.check_expression(&throw_stmt.expression)?;
+                    // Treat throw as returning the expected type (since it never returns)
+                    if let Some(expected) = expected_return {
+                        return_type = expected.clone();
+                    }
+                }
+                Statement::Break(_) => {
+                    // Valid in loops
+                }
             }
         }
         
         Ok(return_type)
     }
     
+    fn check_struct_literal(&mut self, name: &str, fields: &[(String, Expression)]) -> Result<Type, Vec<TypeError>> {
+        if self.environment.get_type(name).is_some() {
+             for (_, expr) in fields {
+                 let _ = self.check_expression(expr)?;
+             }
+             Ok(Type::Named(name.to_string()))
+        } else {
+             self.errors.push(TypeError::undefined_type(name));
+             Ok(Type::Void)
+        }
+    }
+
+    fn check_list_literal(&mut self, elements: &[Expression]) -> Result<Type, Vec<TypeError>> {
+        if elements.is_empty() {
+            return Ok(Type::List(Box::new(Type::Void)));
+        }
+        let first_type = self.check_expression(&elements[0])?;
+        for expr in &elements[1..] {
+            let _ = self.check_expression(expr)?;
+        }
+        Ok(Type::List(Box::new(first_type)))
+    }
+
     fn check_expression(&mut self, expr: &Expression) -> Result<Type, Vec<TypeError>> {
         match expr {
             Expression::Literal(lit) => Ok(self.literal_type(lit)),
@@ -1025,6 +1954,12 @@ impl TypeChecker {
                     // Identifier is a function name - return its return type or Function type
                     // This allows functions to be referenced (though they should usually be called)
                     Ok(func_sig.return_type.unwrap_or(Type::Void))
+                } else if self.environment.get_type(name).is_some() {
+                    // Support using Type names as values (e.g. for reflection/DB calls)
+                    // We treat them as a special "Type" type or String for now
+                    Ok(Type::Named("Type".to_string()))
+                } else if self.environment.get_module(name).is_some() {
+                    Ok(Type::Named(format!("Module:{}", name)))
                 } else {
                     self.errors.push(TypeError::undefined_variable(name));
                     Ok(Type::Void) // Return error type
@@ -1038,6 +1973,26 @@ impl TypeChecker {
             Expression::UnaryOp { op, expr } => {
                 let expr_type = self.check_expression(expr)?;
                 self.check_unary_operation(op, &expr_type)
+            }
+            Expression::Assignment { target, value } => {
+                let target_type = self.check_expression(target)?;
+                let value_type = self.check_expression(value)?;
+                Ok(value_type)
+            }
+            Expression::StructLiteral { name, fields } => {
+                self.check_struct_literal(name, fields)
+            }
+            Expression::MapLiteral(fields) => {
+                for (_, expr) in fields {
+                    let _ = self.check_expression(expr)?;
+                }
+                Ok(Type::Map {
+                    key: Box::new(Type::String),
+                    value: Box::new(Type::Any)
+                })
+            }
+            Expression::ListLiteral(elements) => {
+                self.check_list_literal(elements)
             }
             Expression::GenericConstructor { name, type_params, args } => {
                 // Handle generic type constructors like Map<string, string>() or List<string>()
@@ -1112,7 +2067,121 @@ impl TypeChecker {
                 }
             }
             Expression::Call { callee, args } => {
-                // Handle constructor calls (e.g., HttpClient.new(), Validator.new())
+                // Handle constructor calls and module calls
+                // Try to flatten member access (e.g. agent.memory.store -> "agent.memory.store")
+                if let Some(full_name) = self.flatten_member_access(callee.as_ref()) {
+                    if let Some(sig) = self.environment.get_function(&full_name) {
+                        // Check argument count
+                        if args.len() != sig.params.len() {
+                            self.errors.push(TypeError::wrong_argument_count(
+                                sig.params.len(),
+                                args.len(),
+                            ));
+                        } else {
+                            // Check argument types
+                            for (i, (arg, param)) in args.iter().zip(sig.params.iter()).enumerate() {
+                                let arg_type = self.check_expression(arg)?;
+                                if !self.types_compatible(&arg_type, &param.param_type) {
+                                    self.errors.push(TypeError::new(
+                                        TypeErrorKind::InvalidArgumentType {
+                                            position: i,
+                                            expected: param.param_type.to_string(),
+                                            found: arg_type.to_string(),
+                                        },
+                                        format!(
+                                            "Argument {}: expected {}, found {}",
+                                            i + 1,
+                                            param.param_type.to_string(),
+                                            arg_type.to_string()
+                                        ),
+                                    ));
+                                }
+                            }
+                        }
+                        
+                        return Ok(sig.return_type.unwrap_or(Type::Void));
+                    }
+                }
+
+                // Check for method calls on types (Map, List, etc.)
+                if let Expression::Member { object, member } = callee.as_ref() {
+                    let object_type = self.check_expression(object)?;
+                    
+                    match &object_type {
+                        Type::Map { key, value } => {
+                            if member == "insert" {
+                                if args.len() != 2 {
+                                    self.errors.push(TypeError::wrong_argument_count(2, args.len()));
+                                } else {
+                                    let key_arg_type = self.check_expression(&args[0])?;
+                                    let value_arg_type = self.check_expression(&args[1])?;
+                                    
+                                    if !self.types_compatible(&key_arg_type, key) {
+                                        self.errors.push(TypeError::type_mismatch(&key.to_string(), &key_arg_type.to_string()));
+                                    }
+                                    if !self.types_compatible(&value_arg_type, value) {
+                                        self.errors.push(TypeError::type_mismatch(&value.to_string(), &value_arg_type.to_string()));
+                                    }
+                                }
+                                return Ok(Type::Void);
+                            } else if member == "get" {
+                                if args.len() != 1 {
+                                    self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                } else {
+                                    let key_arg_type = self.check_expression(&args[0])?;
+                                    if !self.types_compatible(&key_arg_type, key) {
+                                        self.errors.push(TypeError::type_mismatch(&key.to_string(), &key_arg_type.to_string()));
+                                    }
+                                }
+                                return Ok(Type::Optional(value.clone()));
+                            } else if member == "contains" {
+                                if args.len() != 1 {
+                                    self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                } else {
+                                    let key_arg_type = self.check_expression(&args[0])?;
+                                    if !self.types_compatible(&key_arg_type, key) {
+                                        self.errors.push(TypeError::type_mismatch(&key.to_string(), &key_arg_type.to_string()));
+                                    }
+                                }
+                                return Ok(Type::Boolean);
+                            }
+                        }
+                        Type::List(item_type) => {
+                            if member == "push" {
+                                if args.len() != 1 {
+                                    self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                } else {
+                                    let arg_type = self.check_expression(&args[0])?;
+                                    if !self.types_compatible(&arg_type, item_type) {
+                                        self.errors.push(TypeError::type_mismatch(&item_type.to_string(), &arg_type.to_string()));
+                                    }
+                                }
+                                return Ok(Type::Void);
+                            } else if member == "len" { // len() method
+                                return Ok(Type::Number);
+                            }
+                        }
+                        Type::String => {
+                             if member == "startsWith" || member == "endsWith" || member == "contains" {
+                                 if args.len() != 1 {
+                                     self.errors.push(TypeError::wrong_argument_count(1, args.len()));
+                                 } else {
+                                     let arg_type = self.check_expression(&args[0])?;
+                                     if arg_type != Type::String {
+                                         self.errors.push(TypeError::type_mismatch("string", &arg_type.to_string()));
+                                     }
+                                 }
+                                 return Ok(Type::Boolean);
+                             } else if member == "length" { // length property access handled in Member? No, it might be a method in some contexts or property
+                                 // If it's a property, it should be handled in Expression::Member, not Call. 
+                                 // But if the user calls it like string.length(), it's here.
+                                 return Ok(Type::Number);
+                             }
+                        }
+                        _ => {}
+                    }
+                }
+
                 if let Expression::Member { object, member } = callee.as_ref() {
                     if member == "new" {
                         if let Expression::Identifier(class_name) = object.as_ref() {
@@ -1830,6 +2899,22 @@ impl TypeChecker {
                         }
                     }
                     Type::Named(ref class_name) => {
+                        if class_name == "any" { return Ok(Type::Named("any".to_string())); }
+                        // Check for Module type
+                        if class_name.starts_with("Module:") {
+                            let module_name = &class_name[7..];
+                            if let Some(module_env) = self.environment.get_module(module_name) {
+                                if let Some(func) = module_env.get_function(member) {
+                                    return Ok(func.return_type.unwrap_or(Type::Void));
+                                } else if let Some(var) = module_env.get_variable(member) {
+                                    return Ok(var);
+                                } else {
+                                    self.errors.push(TypeError::undefined_variable(member));
+                                    return Ok(Type::Void);
+                                }
+                            }
+                        }
+
                         // First check if it's a struct with fields
                         if let Some(struct_def) = self.environment.get_struct(class_name) {
                             // Find the field and return its type
@@ -2018,6 +3103,18 @@ impl TypeChecker {
                             }
                         }
                     }
+                    Type::Optional(ref inner) => {
+                        if let Type::Named(ref name) = **inner {
+                             if name == "any" {
+                                 return Ok(Type::Named("any".to_string()));
+                             }
+                        }
+                        self.errors.push(TypeError::new(
+                            TypeErrorKind::InvalidMemberAccess,
+                            format!("Type '{}' does not support member access", obj_type.to_string()),
+                        ));
+                        Ok(Type::Void)
+                    }
                     _ => {
                         self.errors.push(TypeError::new(
                             TypeErrorKind::InvalidMemberAccess,
@@ -2118,27 +3215,6 @@ impl TypeChecker {
             Expression::Block(block) => {
                 Ok(self.check_block(block, None)?)
             }
-            Expression::StructLiteral { name, fields } => {
-                // Check that the struct type exists
-                // For now, return the struct type (could be generic)
-                // The actual type will be determined by the return type annotation
-                if let Some(_struct_def) = self.environment.get_type(name) {
-                    // Validate field expressions
-                    for (_field_name, field_expr) in fields {
-                        let _field_type = self.check_expression(field_expr)?;
-                        // Could validate field types here
-                    }
-                    // Return Named type - the actual generic instantiation will be checked
-                    // against the expected return type
-                    Ok(Type::Named(name.clone()))
-                } else {
-                    self.errors.push(TypeError::new(
-                        TypeErrorKind::UndefinedType(name.clone()),
-                        format!("Struct '{}' not found", name),
-                    ));
-                    Ok(Type::Void)
-                }
-            }
             Expression::FormatString { parts } => {
                 // Type-check all expressions in the format string
                 for part in parts {
@@ -2160,6 +3236,10 @@ impl TypeChecker {
         left_type: &Type,
         right_type: &Type,
     ) -> Result<Type, Vec<TypeError>> {
+        // Support 'any' type for dynamic operations
+        if let Type::Named(name) = left_type { if name == "any" { return Ok(Type::Named("any".to_string())); } }
+        if let Type::Named(name) = right_type { if name == "any" { return Ok(Type::Named("any".to_string())); } }
+
         match op {
             BinaryOperator::Add => {
                 // String concatenation
@@ -2257,7 +3337,7 @@ impl TypeChecker {
     
     fn check_type(&mut self, type_def: &Type) -> Result<(), Vec<TypeError>> {
         match type_def {
-            Type::String | Type::Number | Type::Boolean | Type::Void | Type::Null => Ok(()),
+            Type::String | Type::Number | Type::Boolean | Type::Void | Type::Null | Type::Any => Ok(()),
             Type::Named(name) => {
                 // Check if it's a generic type parameter (single uppercase letter or common pattern)
                 // For now, we'll be lenient and allow single-letter identifiers as type parameters
@@ -2335,6 +3415,14 @@ impl TypeChecker {
     }
     
     fn types_compatible(&self, t1: &Type, t2: &Type) -> bool {
+        // "any" type is compatible with everything
+        if let Type::Named(n) = t1 {
+            if n == "any" { return true; }
+        }
+        if let Type::Named(n) = t2 {
+            if n == "any" { return true; }
+        }
+
         if t1 == t2 {
             return true;
         }

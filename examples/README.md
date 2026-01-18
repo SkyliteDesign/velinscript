@@ -60,6 +60,23 @@
 
 ---
 
+### Ultimate Showcase? → `05-ultimate-showcase`
+
+**Alle Features von VelinScript 2.5 in einem Projekt** ✅
+
+> ⚠️ **Neu in Version 2.5**: Zeigt alle neuen Features.
+
+- **VelinAutoDoc**: Automatische Dokumentationsgenerierung
+- **VelinPipeline**: Automatische Parallelisierung
+- **@Flow**: Transaktionales Flow-Management
+- E-Commerce-Backend mit KI-Integration
+- Modulare Architektur
+- Production-Ready Patterns
+
+[→ Zu 05-ultimate-showcase](./05-ultimate-showcase/)
+
+---
+
 ## 📋 Übersicht
 
 | Beispiel | Schwierigkeit | Zeit | Fokus |
@@ -68,6 +85,7 @@
 | `02-llm-chat` | ⭐⭐ Mittel | 10 Min | KI-Integration, LLM |
 | `03-automation-pipeline` | ⭐⭐ Mittel | 15 Min | Automatisierung, Entscheidungslogik |
 | `04-custom-recommender` | ⭐⭐⭐ Fortgeschritten | 30+ Min | Production-System, Architektur |
+| `05-ultimate-showcase` | ⭐⭐⭐ Fortgeschritten | 45+ Min | Alle Features 2.5, VelinAutoDoc, VelinPipeline, @Flow |
 
 ---
 
@@ -84,6 +102,9 @@
 
 ### Du willst ein vollständiges Production-System sehen?
 → Studiere **`04-custom-recommender`**
+
+### Du willst alle neuen Features von Version 2.5 sehen?
+→ Erkunde **`05-ultimate-showcase`** (VelinAutoDoc, VelinPipeline, @Flow)
 
 ---
 

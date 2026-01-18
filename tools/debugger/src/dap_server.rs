@@ -1,5 +1,6 @@
 // DAP (Debug Adapter Protocol) Server Implementation
 
+use anyhow::Result;
 use crate::debugger::Debugger;
 use crate::breakpoints::BreakpointManager;
 use crate::variables::VariableInspector;
@@ -28,7 +29,7 @@ impl DAPServer {
         }
     }
 
-    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn run(&self) -> Result<()> {
         let listener = TcpListener::bind(format!("127.0.0.1:{}", self.port)).await?;
         println!("✓ DAP Server listening on port {}", self.port);
 
@@ -60,7 +61,7 @@ impl DAPServer {
         breakpoints: Arc<Mutex<BreakpointManager>>,
         variables: Arc<Mutex<VariableInspector>>,
         call_stack: Arc<Mutex<CallStack>>,
-    ) -> Result<(), Box<dyn std::error::Error + Send>> {
+    ) -> Result<()> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
         let (reader, mut writer) = stream.split();
         let mut buf_reader = tokio::io::BufReader::new(reader);
@@ -121,7 +122,7 @@ impl DAPServer {
         breakpoints: &Arc<Mutex<BreakpointManager>>,
         variables: &Arc<Mutex<VariableInspector>>,
         call_stack: &Arc<Mutex<CallStack>>,
-    ) -> Result<Value, Box<dyn std::error::Error + Send>> {
+    ) -> Result<Value> {
         let method = request.get("command")
             .and_then(|v| v.as_str())
             .unwrap_or("");

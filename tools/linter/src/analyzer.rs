@@ -1,7 +1,8 @@
 // Linter Analyzer
 // Analysiert VelinScript Code mit verschiedenen Linter-Regeln
 
-use crate::rules::{UnusedVariableRule, UnusedImportRule, ComplexityRule, NamingConventionRule};
+use crate::rules::{UnusedVariableRule, UnusedImportRule, ComplexityRule, NamingConventionRule, LintRule};
+use velin_compiler::parser::ast::{Program, Statement, Expression};
 use velin_compiler::parser::parser::Parser;
 use anyhow::Result;
 use std::collections::HashMap;
@@ -45,8 +46,8 @@ impl Linter {
     }
     
     pub fn enable_all_rules(&mut self) {
-        for (name, _) in &mut self.enabled_rules {
-            *self.enabled_rules.get_mut(name).unwrap() = true;
+        for (_, enabled) in &mut self.enabled_rules {
+            *enabled = true;
         }
     }
     

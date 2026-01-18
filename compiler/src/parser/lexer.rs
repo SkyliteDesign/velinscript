@@ -11,6 +11,8 @@ pub enum Token {
     For,
     While,
     Match,
+    Throw,
+    Break,
     Type,
     Struct,
     Enum,
@@ -88,15 +90,17 @@ pub enum Token {
     Newline,
     EOF,
     Unknown(char),
+    DocComment(String),
 }
 
 #[derive(Debug, Clone)]
 pub struct Lexer<'a> {
-    input: Chars<'a>,
-    current: Option<char>,
-    position: usize,
-    line: usize,
-    column: usize,
+    pub input: Chars<'a>,
+    pub current: Option<char>,
+    pub position: usize,
+    pub byte_position: usize,
+    pub line: usize,
+    pub column: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -118,6 +122,7 @@ impl<'a> Lexer<'a> {
             input: input.chars(),
             current: None,
             position: 0,
+            byte_position: 0,
             line: 1,
             column: 0,
         };
@@ -130,6 +135,9 @@ impl<'a> Lexer<'a> {
     }
     
     fn advance(&mut self) {
+        if let Some(ch) = self.current {
+            self.byte_position += ch.len_utf8();
+        }
         self.current = self.input.next();
         if let Some(ch) = self.current {
             if ch == '\n' {
@@ -150,7 +158,7 @@ impl<'a> Lexer<'a> {
         self.position += 1;
     }
     
-    fn skip_whitespace(&mut self) {
+    pub fn skip_whitespace(&mut self) {
         while let Some(ch) = self.current {
             // Skip BOM (Byte Order Mark) if present
             if ch == '\u{feff}' {
@@ -166,20 +174,39 @@ impl<'a> Lexer<'a> {
         }
     }
     
-    fn skip_comment(&mut self) {
+    fn skip_comment(&mut self) -> Option<Token> {
         // We already consumed the first '/' in next_token()
         // Now check for second '/' or '*'
         if let Some('/') = self.current {
             // Single-line comment: //
             self.advance(); // consume second '/'
+            
+            // Check for third '/' (Doc Comment)
+            let is_doc_comment = if let Some('/') = self.current {
+                self.advance();
+                true
+            } else {
+                false
+            };
+
+            let mut comment_content = String::new();
+
             // Skip until newline (but don't consume the newline)
             while let Some(ch) = self.current {
                 if ch == '\n' || ch == '\r' {
                     // Don't consume newline, let it be tokenized separately
                     break;
                 }
+                if is_doc_comment {
+                    comment_content.push(ch);
+                }
                 self.advance();
             }
+
+            if is_doc_comment {
+                return Some(Token::DocComment(comment_content.trim().to_string()));
+            }
+
         } else if let Some('*') = self.current {
             // Multi-line comment: /*
             self.advance(); // consume '*'
@@ -195,6 +222,7 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
+        None
     }
     
     fn read_string(&mut self) -> Result<String, LexerError> {
@@ -407,6 +435,8 @@ impl<'a> Lexer<'a> {
             "for" => Token::For,
             "while" => Token::While,
             "match" => Token::Match,
+            "throw" => Token::Throw,
+            "break" => Token::Break,
             "type" => Token::Type,
             "struct" => Token::Struct,
             "enum" => Token::Enum,
@@ -467,7 +497,9 @@ impl<'a> Lexer<'a> {
                 '/' => {
                     self.advance();
                     if let Some('/') | Some('*') = self.current {
-                        self.skip_comment();
+                        if let Some(token) = self.skip_comment() {
+                            return Ok(token);
+                        }
                         return self.next_token();
                     }
                     Token::Slash

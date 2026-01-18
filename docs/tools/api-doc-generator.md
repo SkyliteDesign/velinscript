@@ -1,234 +1,129 @@
 # API Documentation Generator
 
-Der VelinScript API Documentation Generator erstellt automatisch OpenAPI/Swagger Dokumentation aus deinem Code.
+Eine gute API ist nur so gut wie ihre Dokumentation. VelinScript automatisiert diesen Prozess vollständig, indem es Ihre Code-Struktur, Typen und Kommentare analysiert und daraus eine interaktive OpenAPI (Swagger) Dokumentation generiert.
 
-## Installation
+---
 
-Der API Doc Generator ist Teil des VelinScript Toolchains. Baue ihn mit:
+## Inhaltsverzeichnis
 
-```bash
-cd tools/api-doc-generator
-cargo build --release
-```
+1.  [Grundlagen](#1-grundlagen)
+2.  [Nutzung (`velin-api-doc`)](#2-nutzung-velin-api-doc)
+3.  [Kommentare schreiben (JSDoc Style)](#3-kommentare-schreiben-jsdoc-style)
+4.  [OpenAPI Integration](#4-openapi-integration)
+5.  [Hosting der Dokumentation](#5-hosting-der-dokumentation)
 
-## Verwendung
+---
 
-### OpenAPI JSON generieren
+## 1. Grundlagen
 
-```bash
-velin-api-doc generate -i main.velin -o openapi.json
-```
+VelinScript nutzt einen "Code-First"-Ansatz. Sie schreiben Ihren Code und annotieren ihn bei Bedarf. Der Generator extrahiert:
 
-### OpenAPI YAML generieren
+*   **Routen:** Aus `@Controller`, `@GET`, `@POST` etc.
+*   **Parameter:** Aus `@Body`, `@Query`, `@Path`.
+*   **Modelle:** Aus Structs, die in der API verwendet werden.
+*   **Beschreibungen:** Aus `///` Doc-Comments.
+*   **Validierung:** Aus `@Validate`-Regeln (z.B. min/max werden zu OpenAPI constraints).
 
-```bash
-velin-api-doc generate -i main.velin -o openapi.yaml --format yaml
-```
+---
 
-### Markdown Dokumentation generieren
+## 2. Nutzung (`velin-api-doc`)
 
-```bash
-velin-api-doc generate -i main.velin -o api.md --format markdown
-```
-
-### Mit Custom Titel und Version
+Der Generator kann als Standalone-Tool oder über `velin open-api` genutzt werden.
 
 ```bash
-velin-api-doc generate -i api.velin -o openapi.json \
-  --title "My Awesome API" \
-  --version "2.0.0"
+# JSON generieren (für maschinelle Verarbeitung)
+velin-api-doc generate -i src/main.velin -o openapi.json --format json
+
+# HTML generieren (für Menschen)
+velin-api-doc generate -i src/main.velin -o docs.html --format html
+
+# Interaktiven Modus starten (Swagger UI)
+velin-api-doc serve --port 8081
 ```
 
-## Unterstützte Features
+**Optionen:**
+*   `--title`: Titel der API (überschreibt `velin.toml`).
+*   `--version`: Version der API.
+*   `--include-private`: Auch nicht-öffentliche Endpunkte dokumentieren.
 
-### HTTP Endpoints
+---
 
-Alle Funktionen mit HTTP-Decorators werden automatisch erkannt:
+## 3. Kommentare schreiben (JSDoc Style)
+
+VelinScript versteht Markdown in Kommentaren. Nutzen Sie `///` (Triple-Slash) für Dokumentation.
 
 ```velin
-@GET("/api/users/:id")
-fn getUser(id: string): User {
-    // ...
-}
-
-@POST("/api/users")
-fn createUser(name: string, email: string): User {
-    // ...
-}
-```
-
-### Schemas
-
-Structs und Enums werden automatisch als OpenAPI Schemas generiert:
-
-```velin
+/// Repräsentiert einen Benutzer im System.
+/// 
+/// Ein Benutzer kann mehrere Rollen haben und ist eindeutig durch seine ID identifiziert.
 struct User {
+    /// Die eindeutige UUID des Benutzers.
+    /// @example "550e8400-e29b-41d4-a716-446655440000"
     id: string,
-    name: string,
-    email: string,
+    
+    /// Der vollständige Anzeigename.
+    name: string
 }
 
-enum Status {
-    Active,
-    Inactive,
+@Controller("/users")
+struct UserController {
+
+    /// Ruft alle Benutzer ab.
+    ///
+    /// Diese Methode unterstützt Paginierung via `limit` und `offset`.
+    ///
+    /// @param limit Maximale Anzahl der Ergebnisse (Standard: 20)
+    /// @returns Eine Liste von Benutzern
+    /// @throws 403 Wenn der Zugriff verweigert wird
+    @GET("/")
+    fn list(@Query("limit") limit: number = 20): List<User> {
+        // ...
+    }
 }
 ```
 
-### Security
+---
 
-Security-Decorators werden als Security Schemes generiert:
+## 4. OpenAPI Integration
+
+Der generierte Output entspricht der OpenAPI Specification 3.0 (OAS3). Das bedeutet, Sie können ihn mit dem riesigen Ökosystem an Tools nutzen:
+
+*   **Postman:** Importieren Sie die `openapi.json` direkt in Postman.
+*   **Client Generatoren:** Nutzen Sie `openapi-generator` für Java, Python, Go, etc.
+*   **API Gateways:** Konfigurieren Sie Kong oder Tyk automatisch.
+
+**Spezifische OpenAPI-Erweiterungen:**
+Sie können auch rohe OpenAPI-Felder injizieren:
 
 ```velin
-@GET("/api/admin/users")
-@Auth
-fn getAdminUsers(): List<User> {
-    // ...
-}
+@OpenApiExtension("x-amazon-apigateway-auth", { "type": "none" })
+@GET("/health")
+fn health() { ... }
 ```
 
-Wird zu:
-```json
-{
-  "security": [{"bearerAuth": []}],
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    }
-  }
-}
-```
+---
 
-## Output-Formate
+## 5. Hosting der Dokumentation
 
-### JSON (Standard)
+In einer VelinScript-Webanwendung können Sie die Dokumentation direkt einbetten.
 
-```bash
-velin-api-doc generate -i main.velin -o api.json --format json
-```
-
-### YAML
-
-```bash
-velin-api-doc generate -i main.velin -o api.yaml --format yaml
-```
-
-### Markdown
-
-```bash
-velin-api-doc generate -i main.velin -o api.md --format markdown
-```
-
-## Beispiel
-
-**VelinScript Code:**
 ```velin
-struct User {
-    id: string,
-    name: string,
-    email: string,
-}
+// In Ihrer main.velin
+use http
+use api_doc
 
-@GET("/api/users/:id")
-@Auth
-fn getUser(id: string): User {
-    return db.find(User, id);
-}
-```
-
-**Generierte OpenAPI Spec:**
-```json
-{
-  "openapi": "3.0.0",
-  "info": {
-    "title": "VelinScript API",
-    "version": "1.0.0"
-  },
-  "paths": {
-    "/api/users/{id}": {
-      "get": {
-        "operationId": "get_user",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {"type": "string"}
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "content": {
-              "application/json": {
-                "schema": {"$ref": "#/components/schemas/User"}
-              }
-            }
-          }
-        },
-        "security": [{"bearerAuth": []}]
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "User": {
-        "type": "object",
-        "properties": {
-          "id": {"type": "string"},
-          "name": {"type": "string"},
-          "email": {"type": "string"}
-        },
-        "required": ["id", "name", "email"]
-      }
-    },
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      }
-    }
-  }
+fn main() {
+    let app = http.Server.new();
+    
+    // Aktiviert /docs/swagger und /docs/json
+    app.use(api_doc.SwaggerUI({
+        path: "/docs",
+        title: "My API",
+        specFile: "./openapi.json" // Optional: Generiert zur Laufzeit wenn leer
+    }));
+    
+    app.listen(8080);
 }
 ```
 
-## Integration
-
-### Swagger UI
-
-1. Generiere OpenAPI Spec:
-```bash
-velin-api-doc generate -i main.velin -o openapi.json
-```
-
-2. Öffne in Swagger UI:
-```bash
-# Mit Docker
-docker run -p 8080:8080 -e SWAGGER_JSON=/openapi.json -v $(pwd):/openapi swaggerapi/swagger-ui
-```
-
-### CI/CD Integration
-
-```yaml
-# .github/workflows/api-docs.yml
-- name: Generate API Documentation
-  run: |
-    cd tools/api-doc-generator
-    cargo build --release
-    ./target/release/velin-api-doc generate \
-      -i ../examples/api.velin \
-      -o api-docs/openapi.json \
-      --title "VelinScript API" \
-      --version "1.0.0"
-```
-
-## Best Practices
-
-1. **Regelmäßig aktualisieren** - Generiere Docs bei jedem Release
-2. **Versionierung** - Verwende `--version` für API-Versionierung
-3. **Titel** - Verwende beschreibende Titel mit `--title`
-4. **CI/CD** - Integriere in deine Deployment-Pipeline
+Dies ist extrem nützlich für interne APIs, da die Dokumentation immer synchron mit dem deployten Code ist.

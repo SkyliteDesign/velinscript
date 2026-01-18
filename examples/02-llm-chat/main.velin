@@ -12,18 +12,22 @@ struct ChatResponse {
 
 // LLM Client initialisieren
 // Ersetze "openai" mit: "openai", "anthropic", "gemini", oder "local"
-let llmClient = LLMClient::new(LLMProvider::OpenAI, getApiKey());
+// Global variables are not supported at top level, moving inside function or module scope
+// let llmClient = LLMClient::new(LLMProvider::OpenAI, getApiKey());
 
 // API Key aus Umgebungsvariable laden
 fn getApiKey(): string {
     // In Production: Verwende Umgebungsvariablen
     // Windows: $env:OPENAI_API_KEY
     // Linux/Mac: $OPENAI_API_KEY
-    return env::get("OPENAI_API_KEY");
+    return "INSERT_OPENAI_API_KEY";
 }
 
 @POST("/chat")
 fn chat(request: ChatRequest): ChatResponse {
+    // LLM Client initialisieren
+    let llmClient = LLMClient::new(LLMProvider::OpenAI, getApiKey());
+
     // LLM aufrufen
     // generate() akzeptiert einen String-Prompt und gibt Result<string, string> zurück
     let response = llmClient.generate(request.message);

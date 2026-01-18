@@ -1048,6 +1048,362 @@ impl TrainingService {
     }
 }
 
+pub struct MLStdlib;
+
+impl MLStdlib {
+    pub fn generate_ml_runtime_code() -> String {
+        r#"
+// --- VelinScript ML Runtime ---
+
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use serde_json::json;
+use once_cell::sync::Lazy;
+
+// Global in-memory vector store for Local mode
+static LOCAL_VECTOR_STORE: Lazy<Arc<Mutex<HashMap<String, Vec<VectorRecord>>>>> = Lazy::new(|| {
+    Arc::new(Mutex::new(HashMap::new()))
+});
+
+#[derive(Debug, Clone)]
+struct VectorRecord {
+    id: String,
+    vector: Vec<f64>,
+}
+
+pub struct LLMClient {
+    pub provider: String,
+    pub api_key: String,
+}
+
+impl LLMClient {
+    pub fn new(provider: &str, api_key: &str) -> Self {
+        LLMClient { 
+            provider: provider.to_string(), 
+            api_key: api_key.to_string(),
+        }
+    }
+    
+    pub async fn generate(&self, prompt: &str) -> anyhow::Result<String> {
+        match self.provider.as_str() {
+            "openai" => self.generate_openai(prompt).await,
+            "anthropic" => self.generate_anthropic(prompt).await,
+            "gemini" => self.generate_gemini(prompt).await,
+            "local" => Ok(format!("Local model response to: {}", prompt)),
+            _ => Err(anyhow::anyhow!("Unknown provider: {}", self.provider)),
+        }
+    }
+
+    pub async fn embed(&self, text: &str) -> anyhow::Result<Vec<f64>> {
+        match self.provider.as_str() {
+            "openai" => self.embed_openai(text).await,
+            "gemini" => self.embed_gemini(text).await,
+            "local" => {
+                // Deterministic pseudo-embedding for local testing
+                use std::collections::hash_map::DefaultHasher;
+                use std::hash::{Hash, Hasher};
+                let mut hasher = DefaultHasher::new();
+                text.hash(&mut hasher);
+                let h = hasher.finish();
+                let mut vec = Vec::with_capacity(1536);
+                for i in 0..1536 {
+                    vec.push(((h.wrapping_add(i as u64)) % 100) as f64 / 100.0);
+                }
+                Ok(vec)
+            },
+            _ => Err(anyhow::anyhow!("Provider {} does not support embeddings", self.provider)),
+        }
+    }
+
+    async fn generate_openai(&self, prompt: &str) -> anyhow::Result<String> {
+        let client = reqwest::Client::new();
+        let url = "https://api.openai.com/v1/chat/completions";
+        
+        let payload = json!({
+            "model": "gpt-3.5-turbo",
+            "messages": [{ "role": "user", "content": prompt }],
+            "temperature": 0.7
+        });
+        
+        let response = client.post(url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .json(&payload)
+            .send()
+            .await?;
+            
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("OpenAI API error: {}", response.status()));
+        }
+        
+        let json: serde_json::Value = response.json().await?;
+        let content = json["choices"][0]["message"]["content"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid response format"))?;
+            
+        Ok(content.to_string())
+    }
+
+    async fn generate_anthropic(&self, prompt: &str) -> anyhow::Result<String> {
+        let client = reqwest::Client::new();
+        let url = "https://api.anthropic.com/v1/messages";
+        
+        let payload = json!({
+            "model": "claude-3-sonnet-20240229",
+            "max_tokens": 1000,
+            "messages": [{ "role": "user", "content": prompt }]
+        });
+        
+        let response = client.post(url)
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", "2023-06-01")
+            .json(&payload)
+            .send()
+            .await?;
+            
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Anthropic API error: {}", response.status()));
+        }
+        
+        let json: serde_json::Value = response.json().await?;
+        let content = json["content"][0]["text"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid response format"))?;
+            
+        Ok(content.to_string())
+    }
+
+    async fn generate_gemini(&self, prompt: &str) -> anyhow::Result<String> {
+        let client = reqwest::Client::new();
+        let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}", self.api_key);
+        
+        let payload = json!({
+            "contents": [{ "parts": [{ "text": prompt }] }]
+        });
+        
+        let response = client.post(&url)
+            .json(&payload)
+            .send()
+            .await?;
+            
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Gemini API error: {}", response.status()));
+        }
+        
+        let json: serde_json::Value = response.json().await?;
+        let content = json["candidates"][0]["content"]["parts"][0]["text"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid response format"))?;
+            
+        Ok(content.to_string())
+    }
+
+    async fn embed_openai(&self, text: &str) -> anyhow::Result<Vec<f64>> {
+        let client = reqwest::Client::new();
+        let url = "https://api.openai.com/v1/embeddings";
+        
+        let payload = json!({
+            "model": "text-embedding-ada-002",
+            "input": text
+        });
+        
+        let response = client.post(url)
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .json(&payload)
+            .send()
+            .await?;
+            
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("OpenAI Embeddings error: {}", response.status()));
+        }
+        
+        let json: serde_json::Value = response.json().await?;
+        let embedding = json["data"][0]["embedding"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("Invalid response format"))?;
+            
+        let result: Result<Vec<f64>, _> = embedding.iter()
+            .map(|v| v.as_f64().ok_or_else(|| anyhow::anyhow!("Invalid value")))
+            .collect();
+        result
+    }
+
+    async fn embed_gemini(&self, text: &str) -> anyhow::Result<Vec<f64>> {
+        let client = reqwest::Client::new();
+        let url = format!("https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key={}", self.api_key);
+        
+        let payload = json!({
+            "model": "models/embedding-001",
+            "content": { "parts": [{ "text": text }] }
+        });
+        
+        let response = client.post(&url)
+            .json(&payload)
+            .send()
+            .await?;
+            
+        if !response.status().is_success() {
+            return Err(anyhow::anyhow!("Gemini Embeddings error: {}", response.status()));
+        }
+        
+        let json: serde_json::Value = response.json().await?;
+        let embedding = json["embedding"]["values"]
+            .as_array()
+            .ok_or_else(|| anyhow::anyhow!("Invalid response format"))?;
+            
+        let result: Result<Vec<f64>, _> = embedding.iter()
+            .map(|v| v.as_f64().ok_or_else(|| anyhow::anyhow!("Invalid value")))
+            .collect();
+        result
+    }
+}
+
+pub struct VectorDB {
+    pub provider: String,
+    pub connection_string: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SearchResult {
+    pub id: String,
+    pub score: f64,
+}
+
+impl VectorDB {
+    pub fn new(provider: &str, connection_string: &str) -> Self {
+        VectorDB {
+            provider: provider.to_string(),
+            connection_string: connection_string.to_string(),
+        }
+    }
+    
+    pub async fn upsert(&self, collection: &str, id: &str, vector: Vec<f64>) -> anyhow::Result<()> {
+        match self.provider.as_str() {
+            "pinecone" => self.upsert_pinecone(collection, id, vector).await,
+            "qdrant" => self.upsert_qdrant(collection, id, vector).await,
+            "local" => {
+                let mut store = LOCAL_VECTOR_STORE.lock().unwrap();
+                let records = store.entry(collection.to_string()).or_insert_with(Vec::new);
+                // Update if exists, else push
+                if let Some(pos) = records.iter().position(|r| r.id == id) {
+                    records[pos].vector = vector;
+                } else {
+                    records.push(VectorRecord { id: id.to_string(), vector });
+                }
+                Ok(())
+            },
+            _ => Err(anyhow::anyhow!("Unknown provider: {}", self.provider)),
+        }
+    }
+    
+    pub async fn search(&self, collection: &str, query_vector: Vec<f64>, top_k: usize) -> anyhow::Result<Vec<SearchResult>> {
+        match self.provider.as_str() {
+            "pinecone" => self.search_pinecone(collection, query_vector, top_k).await,
+            "qdrant" => self.search_qdrant(collection, query_vector, top_k).await,
+            "local" => {
+                let store = LOCAL_VECTOR_STORE.lock().unwrap();
+                if let Some(records) = store.get(collection) {
+                    let mut results: Vec<SearchResult> = records.iter().map(|r| {
+                        let score = cosine_similarity(&query_vector, &r.vector);
+                        SearchResult { id: r.id.clone(), score }
+                    }).collect();
+                    
+                    // Sort by score descending
+                    results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+                    results.truncate(top_k);
+                    Ok(results)
+                } else {
+                    Ok(vec![])
+                }
+            },
+            _ => Err(anyhow::anyhow!("Unknown provider: {}", self.provider)),
+        }
+    }
+
+    async fn upsert_pinecone(&self, index_name: &str, id: &str, vector: Vec<f64>) -> anyhow::Result<()> {
+        let parts: Vec<&str> = self.connection_string.split('@').collect();
+        if parts.len() != 2 { return Err(anyhow::anyhow!("Invalid Pinecone string")); }
+        let (api_key, env) = (parts[0], parts[1]);
+        
+        let client = reqwest::Client::new();
+        let url = format!("https://{}.svc.{}.pinecone.io/vectors/upsert", index_name, env);
+        
+        let payload = json!({
+            "vectors": [{ "id": id, "values": vector }]
+        });
+        
+        let res = client.post(url).header("Api-Key", api_key).json(&payload).send().await?;
+        if !res.status().is_success() { return Err(anyhow::anyhow!("Pinecone error")); }
+        Ok(())
+    }
+
+    async fn search_pinecone(&self, index_name: &str, query_vector: Vec<f64>, top_k: usize) -> anyhow::Result<Vec<SearchResult>> {
+        let parts: Vec<&str> = self.connection_string.split('@').collect();
+        if parts.len() != 2 { return Err(anyhow::anyhow!("Invalid Pinecone string")); }
+        let (api_key, env) = (parts[0], parts[1]);
+        
+        let client = reqwest::Client::new();
+        let url = format!("https://{}.svc.{}.pinecone.io/query", index_name, env);
+        
+        let payload = json!({ "vector": query_vector, "topK": top_k, "includeMetadata": false });
+        
+        let res = client.post(url).header("Api-Key", api_key).json(&payload).send().await?;
+        if !res.status().is_success() { return Err(anyhow::anyhow!("Pinecone error")); }
+        
+        let json: serde_json::Value = res.json().await?;
+        let matches = json["matches"].as_array().ok_or_else(|| anyhow::anyhow!("Invalid format"))?;
+        
+        let results = matches.iter().map(|m| {
+            SearchResult {
+                id: m["id"].as_str().unwrap_or("").to_string(),
+                score: m["score"].as_f64().unwrap_or(0.0),
+            }
+        }).collect();
+        Ok(results)
+    }
+
+    async fn upsert_qdrant(&self, collection: &str, id: &str, vector: Vec<f64>) -> anyhow::Result<()> {
+        // Simple REST impl for Qdrant
+        let client = reqwest::Client::new();
+        let url = format!("{}/collections/{}/points", self.connection_string, collection);
+        let payload = json!({
+            "points": [{ "id": id, "vector": vector }]
+        });
+        let res = client.put(url).json(&payload).send().await?;
+        if !res.status().is_success() { return Err(anyhow::anyhow!("Qdrant error")); }
+        Ok(())
+    }
+
+    async fn search_qdrant(&self, collection: &str, query_vector: Vec<f64>, top_k: usize) -> anyhow::Result<Vec<SearchResult>> {
+        let client = reqwest::Client::new();
+        let url = format!("{}/collections/{}/points/search", self.connection_string, collection);
+        let payload = json!({ "vector": query_vector, "limit": top_k, "with_payload": false });
+        let res = client.post(url).json(&payload).send().await?;
+        if !res.status().is_success() { return Err(anyhow::anyhow!("Qdrant error")); }
+        
+        let json: serde_json::Value = res.json().await?;
+        let result = json["result"].as_array().ok_or_else(|| anyhow::anyhow!("Invalid format"))?;
+        
+        let results = result.iter().map(|r| {
+            SearchResult {
+                id: r["id"].as_str().unwrap_or("").to_string(),
+                score: r["score"].as_f64().unwrap_or(0.0),
+            }
+        }).collect();
+        Ok(results)
+    }
+}
+
+fn cosine_similarity(a: &[f64], b: &[f64]) -> f64 {
+    let dot_product: f64 = a.iter().zip(b).map(|(x, y)| x * y).sum();
+    let norm_a: f64 = a.iter().map(|x| x * x).sum::<f64>().sqrt();
+    let norm_b: f64 = b.iter().map(|x| x * x).sum::<f64>().sqrt();
+    if norm_a == 0.0 || norm_b == 0.0 { 0.0 } else { dot_product / (norm_a * norm_b) }
+}
+"#
+        .to_string()
+    }
+}
+
 /// ONNX Training Configuration
 #[derive(Debug, Clone)]
 pub struct ONNXTrainingConfig {

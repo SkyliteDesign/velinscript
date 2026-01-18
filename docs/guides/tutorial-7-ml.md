@@ -32,12 +32,18 @@ fn analyzeSentiment(text: string): SentimentResult {
 
 ## LLM Integration
 
-### OpenAI
+### OpenAI, Anthropic, Gemini, Local
+
+Die LLM-Integration ist nun vollständig implementiert und unterstützt echte API-Calls.
 
 ```velin
 @POST("/api/chat")
 fn chat(message: string): string {
+    // Unterstützte Provider: "openai", "anthropic", "gemini", "local"
+    // "local" Modus simuliert Antworten für Tests ohne API-Kosten
     let llm: LLMClient = LLMClient.new("openai", "api-key");
+    
+    // Asynchroner Aufruf via HTTP Client
     let result = await llm.generate(message);
     return result;
 }
@@ -49,6 +55,7 @@ fn chat(message: string): string {
 @POST("/api/embed")
 fn embed(text: string): List<number> {
     let llm: LLMClient = LLMClient.new("openai", "api-key");
+    // Generiert echte Vektor-Embeddings (z.B. 1536 Dimensionen für OpenAI)
     return llm.embed(text);
 }
 ```

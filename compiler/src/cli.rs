@@ -1,10 +1,13 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+// Velisch Identity - Fingerabdruck in CLI
+// Diese Imports dienen als Fingerabdruck und werden absichtlich nicht direkt verwendet
+
 #[derive(Parser)]
 #[command(name = "velin")]
-#[command(about = "VelinScript Compiler - Eine moderne Programmiersprache für KI-APIs")]
-#[command(version = "0.1.0")]
+#[command(about = "Velisch Compiler - Eine moderne Programmiersprache für KI-APIs")]
+#[command(version = "2.5.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -12,7 +15,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Kompiliert eine VelinScript Datei zu Rust
+    /// Kompiliert eine Velisch Datei zu Rust
     Compile {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
@@ -29,16 +32,24 @@ pub enum Commands {
         /// Zeige generierten Code in der Konsole
         #[arg(long)]
         show_code: bool,
+        
+        /// Automatische Fehlerkorrektur aktivieren
+        #[arg(long)]
+        autofix: bool,
     },
     
-    /// Prüft eine VelinScript Datei (nur Parsing & Type Checking)
+    /// Prüft eine Velisch Datei (nur Parsing & Type Checking)
     Check {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
         input: PathBuf,
+        
+        /// Automatische Fehlerkorrektur aktivieren
+        #[arg(long)]
+        autofix: bool,
     },
     
-    /// Formatiert eine VelinScript Datei
+    /// Formatiert eine Velisch Datei
     Format {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
@@ -49,14 +60,14 @@ pub enum Commands {
         in_place: bool,
     },
     
-    /// Zeigt Informationen über eine VelinScript Datei
+    /// Zeigt Informationen über eine Velisch Datei
     Info {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
         input: PathBuf,
     },
     
-    /// Initialisiert ein neues VelinScript Projekt
+    /// Initialisiert ein neues Velisch Projekt
     Init {
         /// Projekt-Name
         name: Option<String>,

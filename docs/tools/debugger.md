@@ -1,87 +1,118 @@
-# VelinScript Debugger
+# Debugging in VelinScript
 
-Der VelinScript Debugger ermöglicht es, VelinScript-Programme zu debuggen.
+Der VelinScript Debugger (`velin-debugger`) ist ein vollwertiger DAP (Debug Adapter Protocol) Server. Das bedeutet, er integriert sich nahtlos in moderne IDEs wie VS Code, NeoVim oder IntelliJ, ohne dass spezielle Plugins nötig sind (abgesehen von der Basis-Integration).
 
-## Installation
+---
 
-Der Debugger ist Teil des VelinScript Toolchains. Stelle sicher, dass `velin-debugger` installiert ist:
+## Inhaltsverzeichnis
 
-```bash
-cd tools/debugger
-cargo build --release
+1.  [Features](#1-features)
+2.  [Nutzung in VS Code](#2-nutzung-in-vs-code)
+3.  [CLI-Nutzung](#3-cli-nutzung)
+4.  [Erweiterte Debugging-Techniken](#4-erweiterte-debugging-techniken)
+    *   [Conditional Breakpoints](#conditional-breakpoints)
+    *   [Logpoints](#logpoints)
+    *   [Exception Breakpoints](#exception-breakpoints)
+5.  [Remote Debugging](#5-remote-debugging)
+
+---
+
+## 1. Features
+
+*   **Breakpoints:** Halten Sie die Ausführung an jeder Zeile an.
+*   **Stepping:** Step Over, Step Into, Step Out.
+*   **Variable Inspection:** Untersuchen Sie lokale Variablen, Globals und Closures.
+*   **Expression Evaluation:** Führen Sie VelinScript-Code im Kontext des gestoppten Programms aus.
+*   **Call Stack:** Navigieren Sie durch die Aufrufhierarchie.
+*   **Threads:** Debuggen Sie asynchrone Tasks und Worker.
+
+---
+
+## 2. Nutzung in VS Code
+
+Die offizielle Extension bringt bereits eine Konfiguration mit. Erstellen Sie eine `launch.json` im Ordner `.vscode`:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "velin",
+            "request": "launch",
+            "name": "Debug Main",
+            "program": "${workspaceFolder}/src/main.velin",
+            "args": [],
+            "env": { "DEBUG": "true" }
+        }
+    ]
+}
 ```
 
-## Verwendung
+Drücken Sie dann **F5**, um das Debugging zu starten.
 
-### DAP Server starten
+---
+
+## 3. CLI-Nutzung
+
+Sie können den Debug-Server auch manuell starten, z.B. für die Integration in andere Editoren.
 
 ```bash
 velin-debugger start --port 4711
 ```
 
-Der DAP Server lauscht standardmäßig auf Port 4711.
+Der Server lauscht nun auf DAP-Nachrichten.
 
-### VS Code Integration
-
-Der Debugger ist automatisch in der VS Code Extension integriert. Siehe [Debugger Tutorial](../guides/tutorial-debugger.md) für Details.
-
-## Features
-
-- **Breakpoints**: Setzen und Verwalten von Breakpoints
-- **Step Over/Into/Out**: Schrittweises Debugging
-- **Variable Inspection**: Variablen im aktuellen Scope anzeigen
-- **Call Stack**: Aufrufkette anzeigen
-- **Watch Expressions**: Ausdrücke während des Debuggings überwachen
-- **Evaluate Expressions**: Ausdrücke in der Debug Console evaluieren
-
-## DAP Protocol
-
-Der Debugger implementiert das Debug Adapter Protocol (DAP), was bedeutet, dass er mit jedem DAP-kompatiblen Editor funktioniert:
-
-- VS Code
-- Visual Studio
-- JetBrains IDEs (mit DAP Plugin)
-- Andere DAP-kompatible Editoren
-
-## Konfiguration
-
-### Port
-
-Standard-Port ist 4711. Kann mit `--port` geändert werden:
+Um ein Programm im Debug-Modus zu starten, ohne eine IDE zu verbinden (nur Wait-For-Attach):
 
 ```bash
-velin-debugger start --port 5000
+velin run main.velin --debug --wait-for-debugger
 ```
 
-### VS Code Settings
+---
 
-In VS Code können folgende Einstellungen konfiguriert werden:
+## 4. Erweiterte Debugging-Techniken
 
+### Conditional Breakpoints
+
+Manchmal wollen Sie nur anhalten, wenn eine bestimmte Bedingung wahr ist (z.B. in einer Schleife).
+
+*   Rechtsklick auf den Breakpoint in VS Code.
+*   "Edit Breakpoint..." wählen.
+*   Bedingung eingeben: `i == 100` oder `user.name == "Alice"`.
+
+### Logpoints
+
+Logpoints geben Nachrichten in die Konsole aus, ohne die Ausführung zu stoppen. Ideal für "Print-Debugging" ohne den Code zu verunreinigen.
+
+*   Rechtsklick -> "Add Logpoint..."
+*   Nachricht: `Schleifenindex ist: {i}`
+
+### Exception Breakpoints
+
+VelinScript kann automatisch anhalten, wenn eine Exception geworfen wird ("Uncaught Exceptions") oder sogar bei jeder Exception ("All Exceptions"). Dies aktivieren Sie im "Breakpoints"-Fenster Ihrer IDE.
+
+---
+
+## 5. Remote Debugging
+
+Sie können Anwendungen debuggen, die auf einem anderen Server oder in einem Docker-Container laufen.
+
+**Auf dem Server:**
+```bash
+velin run main.velin --debug --debug-port 4711 --debug-host 0.0.0.0
+```
+
+**Lokal (VS Code `launch.json`):**
 ```json
 {
-    "velin.debugger.path": "velin-debugger",
-    "velin.debugger.port": 4711
+    "type": "velin",
+    "request": "attach",
+    "name": "Attach to Remote",
+    "host": "192.168.1.50",
+    "port": 4711,
+    "remoteRoot": "/app/src",
+    "localRoot": "${workspaceFolder}/src"
 }
 ```
 
-## Troubleshooting
-
-### Port bereits belegt
-
-Wenn der Port bereits belegt ist, ändere den Port:
-
-```bash
-velin-debugger start --port 5000
-```
-
-### Debugger startet nicht
-
-- Prüfe, ob `velin-debugger` im PATH ist
-- Prüfe die Port-Konfiguration
-- Prüfe Firewall-Einstellungen
-
-### Breakpoints werden nicht getroffen
-
-- Stelle sicher, dass Debug-Informationen generiert wurden
-- Prüfe, ob der Code tatsächlich ausgeführt wird
-- Prüfe, ob die Zeilennummern korrekt sind
+VelinScript mappt die Dateipfade automatisch, sodass Sie lokal Breakpoints setzen können, die remote greifen.

@@ -3,6 +3,7 @@
 
 use crate::analyzer::LintIssue;
 use velin_compiler::parser::ast::*;
+use std::collections::{HashMap, HashSet};
 
 pub trait LintRule: Send + Sync {
     fn name(&self) -> &str;
@@ -108,6 +109,10 @@ impl UnusedVariableRule {
                         self.collect_in_block(&arm.body, defined, used);
                     }
                 }
+                Statement::Throw(throw_stmt) => {
+                    self.collect_in_expression(&throw_stmt.expression, used);
+                }
+                Statement::Break(_) => {}
             }
         }
     }
@@ -182,7 +187,7 @@ impl LintRule for UnusedImportRule {
         
         let mut issues = Vec::new();
         let mut imports = HashSet::new();
-        let mut used_items = HashSet::new();
+        let mut used_items: HashSet<String> = HashSet::new();
         
         // Sammle Imports
         for item in &program.items {

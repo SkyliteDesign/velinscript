@@ -1,23 +1,95 @@
 use velin_compiler::cli::{Cli, Commands};
 use velin_compiler::parser::parser::Parser;
-use velin_compiler::type_checker::TypeChecker;
-use velin_compiler::codegen::{RustCodeGenerator, OpenAPIGenerator, BoilerplateGenerator, ClientGenerator};
+use velin_compiler::codegen::{OpenAPIGenerator, BoilerplateGenerator, ClientGenerator};
 use velin_compiler::formatter::{Formatter, FormatConfig};
-use velin_compiler::optimizer::Optimizer;
 use std::fs;
 use std::path::PathBuf;
 use anyhow::{Context, Result as AnyhowResult};
 use clap::Parser as ClapParser;
 
+use velin_compiler::compiler::{VelinCompiler, config::CompilerConfig};
+use velin_compiler::compiler::language::get_velisch_identity;
+use velin_compiler::passes::{
+    autofix::AutoFixPass,
+    parser::ParserPass,
+    type_check::TypeCheckPass,
+    codegen::CodegenPass,
+};
+
 fn main() -> AnyhowResult<()> {
     let cli = Cli::parse();
     
     match cli.command {
-        Commands::Compile { input, output, no_type_check, show_code } => {
-            compile_command(input, output, no_type_check, show_code)
+        Commands::Compile { input, output, no_type_check, show_code, autofix } => {
+            let mut config = CompilerConfig::default();
+            config.enable_autofix = autofix;
+            config.enable_type_check = !no_type_check;
+            config.show_code = show_code;
+            
+            // Output path logic
+            let output_file = output.unwrap_or_else(|| {
+                input.with_extension("rs")
+            });
+            config.output_path = Some(output_file.clone());
+
+            let mut compiler = VelinCompiler::new(config.clone());
+            
+            // Register Passes
+            compiler.add_pass(Box::new(AutoFixPass::new(autofix)));
+            compiler.add_pass(Box::new(ParserPass::new()));
+            if !no_type_check {
+                compiler.add_pass(Box::new(TypeCheckPass::new(true)));
+            }
+            // Add Codegen Pass
+            compiler.add_pass(Box::new(CodegenPass::new(config.output_path, show_code)));
+
+            tracing::info!(file = ?input, language = %get_velisch_identity(), "Compiling Velisch file");
+            
+            let code = fs::read_to_string(&input)
+                .with_context(|| format!("Failed to read file: {}", input.display()))?;
+                
+            let context = compiler.compile(input.to_string_lossy().to_string(), code)?;
+            
+            if context.has_errors() {
+                eprintln!("✗ Kompilierung fehlgeschlagen mit {} Fehlern:", context.errors.len());
+                for error in context.errors {
+                     // Since CompilerError is an Enum now, we need to match it or use Display
+                     eprintln!("  - {}", error);
+                }
+                std::process::exit(1);
+            }
+            
+            println!("✓ Kompilierung erfolgreich");
+            Ok(())
         }
-        Commands::Check { input } => {
-            check_command(input)
+        Commands::Check { input, autofix } => {
+            let mut config = CompilerConfig::default();
+            config.enable_autofix = autofix;
+            config.enable_type_check = true;
+            
+            let mut compiler = VelinCompiler::new(config);
+            
+            compiler.add_pass(Box::new(AutoFixPass::new(autofix)));
+            compiler.add_pass(Box::new(ParserPass::new()));
+            compiler.add_pass(Box::new(TypeCheckPass::new(true)));
+            
+            println!("🔍 Prüfe: {}\n", input.display());
+            
+            let code = fs::read_to_string(&input)
+                .with_context(|| format!("Failed to read file: {}", input.display()))?;
+                
+            let context = compiler.compile(input.to_string_lossy().to_string(), code)?;
+            
+            if context.has_errors() {
+                 eprintln!("✗ Checks fehlgeschlagen mit {} Fehlern:", context.errors.len());
+                 for error in context.errors {
+                     eprintln!("  - {}", error);
+                }
+                std::process::exit(1);
+            }
+            
+            println!("✓ Alle Checks bestanden!");
+            Ok(())
         }
         Commands::Format { input, in_place } => {
             format_command(input, in_place)
@@ -131,105 +203,6 @@ fn main() -> AnyhowResult<()> {
                     serialize_validate_yaml_command(file)
                 }
             }
-        }
-    }
-}
-
-fn compile_command(input: PathBuf, output: Option<PathBuf>, no_type_check: bool, show_code: bool) -> AnyhowResult<()> {
-    tracing::info!(file = ?input, "Compiling VelinScript file");
-    
-    let code = fs::read_to_string(&input)
-        .with_context(|| format!("Failed to read file: {}", input.display()))?;
-    
-    let mut program = Parser::parse(&code)
-        .map_err(|e| anyhow::anyhow!("Parse error: {}", e.message))?;
-    
-    tracing::info!("Parsing successful");
-    
-    if !no_type_check {
-        let mut type_checker = TypeChecker::new();
-        match type_checker.check_program(&program) {
-            Ok(_) => {}
-            Err(errors) => {
-                tracing::error!(count = errors.len(), "Type checking failed");
-                for error in &errors {
-                    tracing::error!(
-                        message = %error.message,
-                        line = error.location.as_ref().map(|l| l.line),
-                        column = error.location.as_ref().map(|l| l.column),
-                        "Type error"
-                    );
-                }
-                return Err(anyhow::anyhow!("Type checking failed with {} errors", errors.len()));
-            }
-        }
-        tracing::info!("Type checking successful");
-        
-        // Run optimizer after type checking and before code generation
-        let optimizer = Optimizer::new();
-        optimizer.optimize(&mut program);
-        tracing::info!("Optimization complete");
-    }
-    
-    let mut codegen = RustCodeGenerator::new();
-    let rust_code = codegen.generate(&program, Some("axum"), None);
-    
-    if show_code {
-        println!("\n--- Generierter Rust Code ---\n");
-        println!("{}", rust_code);
-    }
-    
-    let output_file = output.unwrap_or_else(|| {
-        input.with_extension("rs")
-    });
-    
-    fs::write(&output_file, rust_code)
-        .with_context(|| format!("Failed to write output file: {}", output_file.display()))?;
-    
-    tracing::info!(output = ?output_file, "Compilation successful");
-    println!("✓ Kompilierung erfolgreich: {}", output_file.display());
-    println!("✓ Rust Code generiert: {}", output_file.display());
-    
-    Ok(())
-}
-
-fn check_command(input: PathBuf) -> AnyhowResult<()> {
-    println!("🔍 Prüfe: {}\n", input.display());
-    
-    let code = fs::read_to_string(&input)
-        .with_context(|| format!("Failed to read file: {}", input.display()))?;
-    
-    let program = Parser::parse(&code)
-        .map_err(|e| {
-            eprintln!("✗ Parsing-Fehler:");
-            eprintln!("  {}", e.message);
-            eprintln!("  Erwartet: {}", e.expected);
-            eprintln!("  Gefunden: {}", e.found);
-            eprintln!("  Position: Zeile {}, Spalte {}", e.line, e.column);
-            if let Some(ref context) = e.source_context {
-                eprintln!("\n  {}", context);
-            }
-            anyhow::anyhow!("Parse error: {}", e.message)
-        })?;
-    
-    println!("✓ Parsing erfolgreich");
-    
-    let mut type_checker = TypeChecker::new();
-    match type_checker.check_program(&program) {
-        Ok(()) => {
-            println!("✓ Type Checking erfolgreich");
-            println!("✓ Alle Checks bestanden!");
-            Ok(())
-        }
-        Err(errors) => {
-            eprintln!("✗ Type Checking Fehler ({}):", errors.len());
-            for error in &errors {
-                eprintln!("  - {}", error.message);
-                if let Some(loc) = &error.location {
-                    eprintln!("    Zeile {}, Spalte {}", loc.line, loc.column);
-                }
-            }
-            Err(anyhow::anyhow!("Type checking failed with {} errors", errors.len()))
         }
     }
 }
@@ -355,7 +328,7 @@ fn openapi_command(input: PathBuf, output: Option<PathBuf>) -> AnyhowResult<()> 
 fn init_command(name: Option<String>, current_dir: bool) -> AnyhowResult<()> {
     let project_name = name.unwrap_or_else(|| "velin-project".to_string());
     
-    println!("🚀 Initialisiere neues VelinScript Projekt: {}\n", project_name);
+    println!("🚀 Initialisiere neues Velisch Projekt: {}\n", project_name);
     
     let project_dir = if current_dir {
         std::env::current_dir()
@@ -370,11 +343,11 @@ fn init_command(name: Option<String>, current_dir: bool) -> AnyhowResult<()> {
     
     // Create main.velin
     let main_file = project_dir.join("main.velin");
-    let main_content = r#"// VelinScript Hauptdatei
+    let main_content = r#"// Velisch Hauptdatei
 
 @GET("/api/hello")
 fn hello(): string {
-    return "Hello, VelinScript! 🚀";
+    return "Hello, Velisch! 🚀";
 }
 "#;
     
@@ -383,12 +356,43 @@ fn hello(): string {
     
     // Create README
     let readme_file = project_dir.join("README.md");
-    let readme_content = format!("# {}\n\nVelinScript Projekt\n\n## Kompilieren\n\n```bash\nvelin compile -i main.velin\n```\n", project_name);
+    let readme_content = format!("# {}\n\nVelisch Projekt\n\n## Kompilieren\n\n```bash\nvelin compile -i main.velin\n```\n", project_name);
     
     fs::write(&readme_file, readme_content)
         .with_context(|| format!("Failed to create README: {}", readme_file.display()))?;
     
+    // Create Cargo.toml
+    let cargo_toml = project_dir.join("Cargo.toml");
+    let cargo_toml_content = format!(r#"[package]
+name = "{}"
+version = "2.5.0"
+edition = "2021"
+
+[dependencies]
+tokio = {{ version = "1.0", features = ["full"] }}
+axum = "0.7"
+serde = {{ version = "1.0", features = ["derive"] }}
+serde_json = "1.0"
+reqwest = {{ version = "0.11", features = ["json", "blocking"] }}
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+itertools = "0.12"
+derive_more = "0.99"
+regex = "1.10"
+chrono = {{ version = "0.4", features = ["serde"] }}
+once_cell = "1.18"
+rayon = "1.8"
+jsonwebtoken = "9.2"
+totp-rs = {{ version = "5.5", features = ["qr"] }}
+rand = "0.8"
+"#, project_name);
+
+    fs::write(&cargo_toml, cargo_toml_content)
+        .with_context(|| format!("Failed to create Cargo.toml: {}", cargo_toml.display()))?;
+
     println!("✓ Projekt erstellt in: {}", project_dir.display());
+    println!("✓ Cargo.toml erstellt");
     println!("✓ main.velin erstellt");
     println!("✓ README.md erstellt");
     println!("\n📝 Nächste Schritte:");

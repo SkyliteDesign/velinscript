@@ -292,6 +292,14 @@ impl Formatter {
             Statement::For(for_stmt) => self.format_for_statement(for_stmt),
             Statement::While(while_stmt) => self.format_while_statement(while_stmt),
             Statement::Match(match_stmt) => self.format_match_statement(match_stmt),
+            Statement::Throw(throw_stmt) => {
+                self.write("throw ");
+                self.format_expression(&throw_stmt.expression);
+                self.write(";");
+            }
+            Statement::Break(_) => {
+                self.write("break;");
+            }
         }
     }
     
@@ -498,6 +506,7 @@ impl Formatter {
                 self.format_expression(expr);
             }
             Expression::StructLiteral { name, fields } => {
+                // ... (existing implementation)
                 self.write(name);
                 self.write(" {");
                 self.writeln("");
@@ -517,6 +526,33 @@ impl Formatter {
                 self.indent_level -= 1;
                 self.indent();
                 self.write("}");
+            }
+            Expression::MapLiteral(fields) => {
+                self.write("{");
+                self.writeln("");
+                self.indent_level += 1;
+                for (i, (key, value)) in fields.iter().enumerate() {
+                    if i > 0 {
+                        self.writeln(",");
+                    }
+                    self.indent();
+                    self.write(&format!("\"{}\": ", key));
+                    self.format_expression(value);
+                }
+                self.writeln("");
+                self.indent_level -= 1;
+                self.indent();
+                self.write("}");
+            }
+            Expression::ListLiteral(elements) => {
+                self.write("[");
+                for (i, expr) in elements.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.format_expression(expr);
+                }
+                self.write("]");
             }
             Expression::Lambda { params, return_type, body } => {
                 self.write("(");
@@ -564,6 +600,11 @@ impl Formatter {
                     self.format_expression(arg);
                 }
                 self.write(")");
+            }
+            Expression::Assignment { target, value } => {
+                self.format_expression(target);
+                self.write(" = ");
+                self.format_expression(value);
             }
             Expression::FormatString { parts } => {
                 self.write("\"");

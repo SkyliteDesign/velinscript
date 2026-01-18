@@ -158,5 +158,63 @@
       "}"
     ],
     "description": "Const-Funktion (Compile-time)"
+  },
+  "Flow Function": {
+    "prefix": "velin-flow",
+    "body": [
+      "@Flow",
+      "fn ${1:flowName}(input: ${2:InputType}): ${3:ResultType} {",
+      "    flow.snapshot_input(input);",
+      "    $0",
+      "}"
+    ],
+    "description": "VelinFlow Funktion mit automatischem Rollback"
+  },
+  "AutoDoc Function": {
+    "prefix": "velin-autodoc",
+    "body": [
+      "/// ${1:Beschreibung der Funktion}",
+      "///",
+      "/// # Arguments",
+      "/// * `input` - ${2:Beschreibung des Inputs}",
+      "@VelinAutoDoc",
+      "fn ${3:functionName}(${4:input}): ${5:ReturnType} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Funktion mit automatischer Dokumentation"
+  },
+  "AutoTest Function": {
+    "prefix": "velin-autotest",
+    "body": [
+      "@VelinAutoTest",
+      "fn ${1:functionName}(${2:params}): ${3:ReturnType} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Funktion mit automatisch generierten Tests"
+  },
+  "Pipeline Module": {
+    "prefix": "velin-pipeline",
+    "body": [
+      "@VelinPipeline",
+      "async fn ${1:pipelineName}() {",
+      "    // Velin parallelisiert diese Aufrufe automatisch",
+      "    let a = await ${2:step1}();",
+      "    let b = await ${3:step2}();",
+      "    return combine(a, b);",
+      "}"
+    ],
+    "description": "Optimierte Daten-Pipeline"
+  },
+  "Insight Project": {
+    "prefix": "velin-insight",
+    "body": [
+      "@VelinInsight",
+      "project ${1:ProjectName} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Projekt mit KI-gestützter Analyse"
   }
 }

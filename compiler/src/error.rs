@@ -1,5 +1,6 @@
-// Zentrale Error-Types für VelinScript Compiler
+// Zentrale Error-Types für Velisch Compiler
 // Verwendet thiserror für automatische Error-Implementierungen
+// Velisch Identity - Fingerabdruck im Error-System
 
 use thiserror::Error;
 
@@ -28,7 +29,7 @@ impl ErrorLocation {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum CompilerError {
     #[error("Parse error: {message} at line {line}, column {column}")]
     Parse {
@@ -38,6 +39,7 @@ pub enum CompilerError {
         found: Option<String>,
         line: usize,
         column: usize,
+        source_context: Option<String>,
     },
     
     #[error("Type error: {message} at line {line}, column {column}")]
@@ -88,6 +90,7 @@ impl CompilerError {
             found: None,
             line: location.line,
             column: location.column,
+            source_context: None,
         }
     }
     
@@ -104,6 +107,7 @@ impl CompilerError {
             found: Some(found),
             line: location.line,
             column: location.column,
+            source_context: None,
         }
     }
     

@@ -1,6 +1,6 @@
 [package]
 name = "velin-compiler"
-version = "0.1.0"
+version = "2.5.0"
 edition = "2021"
 
 [dependencies]
@@ -47,7 +47,7 @@ redis = { version = "0.24", features = ["tokio-comp"], optional = true }
 # ort = { version = "2.0.0-rc.11", optional = true }  # ONNX Runtime - nur RC verfügbar
 
 [features]
-default = ["dep:tokio", "dep:axum", "axum"]
+default = ["dep:tokio", "dep:axum", "axum", "dep:reqwest"]
 async-std = ["dep:async-std"]
 axum = ["dep:axum"]
 actix = ["dep:actix-web"]

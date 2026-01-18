@@ -1,436 +1,378 @@
-# API Documentation - Standard Library
+# Standard Library API Reference
 
-Die VelinScript Standard Library bietet vordefinierte Funktionen für häufige Aufgaben.
+VelinScript provides a rich standard library for common tasks. Version 2.5 includes 50+ modules with over 150+ functions.
 
-## Database Funktionen
+**Neu in Version 2.5**: 13 neue Module mit 117+ Funktionen hinzugefügt ✅
 
-### db.find
+## Table of Contents
 
-Findet ein Entity anhand der ID.
+- [String](#string)
+- [Math](#math)
+- [Date](#date)
+- [FileSystem](#filesystem)
+- [LLM](#llm)
+- [Embedding](#embedding)
+- [Agent](#agent)
+- [Process](#process)
+- [Sandbox](#sandbox)
+- [Rollback](#rollback)
+- [HTTP](#http)
+- [WebSocket](#websocket)
+- [Utils](#utils)
+- [Logging](#logging)
+- [Config](#config)
+- [Flow](#flow)
+- [AutoDoc](#autodoc)
+- [Pipeline](#pipeline)
 
+## String
+
+Global object: `string`
+
+**Neu in Version 2.5** ✅
+
+Erweiterte String-Manipulation für Textverarbeitung.
+
+- `split(text: string, delimiter: string) -> List<string>` - Teilt einen String an einem Delimiter
+- `join(list: List<string>, delimiter: string) -> string` - Verbindet eine Liste von Strings
+- `replace(text: string, old: string, new: string) -> string` - Ersetzt Teilstrings
+- `trim(text: string) -> string` - Entfernt Whitespace am Anfang und Ende
+- `slugify(text: string) -> string` - Konvertiert Text zu URL-freundlichem Slug
+- `to_int(text: string) -> Result<number, string>` - Konvertiert String zu Integer
+- `to_float(text: string) -> Result<number, string>` - Konvertiert String zu Float
+- `capitalize(text: string) -> string` - Macht ersten Buchstaben groß
+- `lowercase(text: string) -> string` - Konvertiert zu Kleinbuchstaben
+- `uppercase(text: string) -> string` - Konvertiert zu Großbuchstaben
+- `starts_with(text: string, prefix: string) -> boolean` - Prüft ob String mit Prefix beginnt
+- `ends_with(text: string, suffix: string) -> boolean` - Prüft ob String mit Suffix endet
+
+**Beispiel:**
 ```velin
-let user = db.find(User, "123");
+let parts = string.split("hello,world,test", ",");
+let joined = string.join(parts, "-");
+let slug = string.slugify("Hello World!"); // "hello-world"
 ```
 
-**Signatur:**
+## Math
+
+Global object: `math`
+
+**Neu in Version 2.5** ✅
+
+Mathematische Utilities für Berechnungen.
+
+- `clamp(value: number, min: number, max: number) -> number` - Begrenzt Wert auf Bereich
+- `lerp(a: number, b: number, t: number) -> number` - Lineare Interpolation
+- `round_to(value: number, decimals: number) -> number` - Rundet auf Dezimalstellen
+- `random_range(min: number, max: number) -> number` - Zufällige Zahl im Bereich
+- `min(a: number, b: number) -> number` - Minimum von zwei Werten
+- `max(a: number, b: number) -> number` - Maximum von zwei Werten
+- `abs(value: number) -> number` - Absoluter Wert
+- `floor(value: number) -> number` - Abrunden
+- `ceil(value: number) -> number` - Aufrunden
+
+**Beispiel:**
 ```velin
-fn<T>(T, string) -> Optional<T>
+let clamped = math.clamp(150, 0, 100); // 100
+let random = math.random_range(1, 10);
+let rounded = math.round_to(3.14159, 2); // 3.14
 ```
 
-**Parameter:**
-- `Entity` (Type) - Der Entity-Typ
-- `id` (string) - Die ID
+## Date
 
-**Rückgabewert:**
-- `Optional<T>` - Das gefundene Entity oder null
+Global object: `date`
 
-**Transformiert zu:**
-```rust
-db.find::<User>("123").await
-```
+**Neu in Version 2.5** ✅
 
-### db.findAll
+Erweiterte Datum- und Zeit-Operationen.
 
-Findet alle Entities eines Typs.
+- `add_days(timestamp: number, days: number) -> number` - Fügt Tage hinzu
+- `add_hours(timestamp: number, hours: number) -> number` - Fügt Stunden hinzu
+- `add_minutes(timestamp: number, minutes: number) -> number` - Fügt Minuten hinzu
+- `format_relative(timestamp: number) -> string` - Formatierung als relativer Zeit (z.B. "vor 2 Stunden")
+- `is_weekend(timestamp: number) -> boolean` - Prüft ob Wochenende
+- `is_weekday(timestamp: number) -> boolean` - Prüft ob Wochentag
 
+**Beispiel:**
 ```velin
-let users = db.findAll(User);
+let now = datetime.now();
+let tomorrow = date.add_days(now, 1);
+let relative = date.format_relative(now); // "vor 2 Stunden"
+let weekend = date.is_weekend(now);
 ```
 
-**Signatur:**
+## FileSystem
+
+Global object: `fs`
+
+**Neu in Version 2.5** ✅
+
+Dateisystem-Operationen für Datei-Management.
+
+- `read_json(path: string) -> Result<any, string>` - Liest JSON-Datei
+- `write_json(path: string, value: any) -> Result<(), string>` - Schreibt JSON-Datei
+- `copy(source: string, dest: string) -> Result<(), string>` - Kopiert Datei/Verzeichnis
+- `move_file(source: string, dest: string) -> Result<(), string>` - Verschiebt Datei
+- `get_size(path: string) -> Result<number, string>` - Gibt Dateigröße zurück
+- `is_empty(path: string) -> boolean` - Prüft ob Verzeichnis leer ist
+- `exists(path: string) -> boolean` - Prüft ob Pfad existiert
+- `mkdir(path: string) -> Result<(), string>` - Erstellt Verzeichnis
+- `list_files(path: string) -> Result<List<string>, string>` - Listet Dateien auf
+
+**Beispiel:**
 ```velin
-fn<T>(T) -> List<T>
+let data = fs.read_json("config.json");
+fs.write_json("output.json", { key: "value" });
+fs.copy("source.txt", "dest.txt");
+let size = fs.get_size("file.txt");
 ```
 
-**Parameter:**
-- `Entity` (Type) - Der Entity-Typ
+## LLM
 
-**Rückgabewert:**
-- `List<T>` - Liste aller Entities
+Global object: `llm`
 
-**Transformiert zu:**
-```rust
-db.find_all::<User>().await
-```
+**Neu in Version 2.5** ✅
 
-### db.save
+KI/LLM-Integration für Textverarbeitung und -generierung.
 
-Speichert ein Entity.
+**Hinweis**: Diese Funktionen benötigen einen konfigurierten LLMClient. Siehe [ML Tutorial](tutorial-7-ml.md) für Details.
 
+- `summarize(text: string) -> Result<string, string>` - Erstellt Zusammenfassung
+- `classify(text: string, categories: List<string>) -> Result<string, string>` - Klassifiziert Text
+- `extract_entities(text: string) -> Result<List<Map<string, string>>, string>` - Extrahiert Entitäten
+- `generate(title: string, style?: string) -> Result<string, string>` - Generiert Text
+- `translate(text: string, target_lang: string) -> Result<string, string>` - Übersetzt Text
+- `sentiment(text: string) -> Result<string, string>` - Analysiert Sentiment
+- `complete(prompt: string, max_tokens?: number) -> Result<string, string>` - Vervollständigt Prompt
+- `embed(text: string) -> Result<List<number>, string>` - Erstellt Embedding
+- `chat(messages: List<any>) -> Result<string, string>` - Chat-Kompletion
+
+**Beispiel:**
 ```velin
-let savedUser = db.save(user);
+let client = LLMClient.new("openai");
+let summary = await llm.summarize("Long text here...");
+let sentiment = await llm.sentiment("I love this product!");
 ```
 
-**Signatur:**
-```velin
-fn<T>(T) -> T
-```
+## Embedding
+
+Global object: `embedding`
+
+- `compare(a: List<number>, b: List<number>) -> number`
+- `similarity(a: List<number>, b: List<number>) -> number`
+- `cluster(list: List<List<number>>, k: number) -> Result<List<List<List<number>>>, string>`
+- `normalize(embedding: List<number>) -> List<number>`
+- `distance(a: List<number>, b: List<number>) -> number`
+- `find_nearest(query: List<number>, candidates: List<List<number>>, k: number) -> List<List<number>>`
+- `average(embeddings: List<List<number>>) -> List<number>`
+- `dimension(embedding: List<number>) -> number`
+
+## Agent
+
+Global object: `agent`
+
+- `create(name: string) -> Agent`
+- `think(context: string) -> Result<string, string>`
+- `memory.store(key: string, value: any) -> Result<(), string>`
+- `memory.search(query: string) -> Result<List<any>, string>`
+- `memory.get(key: string) -> Result<any, string>`
+- `memory.delete(key: string) -> Result<(), string>`
+- `task.run(description: string) -> Result<any, string>`
+- `task.plan(goal: string) -> Result<List<string>, string>`
+- `task.execute(plan: List<string>) -> Result<any, string>`
+
+## Process
 
-**Parameter:**
-- `entity` (T) - Das Entity zum Speichern
+Global object: `process`
 
-**Rückgabewert:**
-- `T` - Das gespeicherte Entity
+- `spawn(command: string, args: List<string>) -> Result<number, string>`
+- `kill(pid: number) -> Result<(), string>`
+- `restart(pid: number) -> Result<(), string>`
+- `status(pid: number) -> Result<any, string>`
+- `list() -> List<any>`
+- `wait(pid: number) -> Result<number, string>`
+- `get_output(pid: number) -> Result<string, string>`
+- `is_running(pid: number) -> boolean`
+- `get_memory(pid: number) -> Result<number, string>`
 
-**Transformiert zu:**
-```rust
-db.save(user).await
-```
+## Sandbox
 
-### db.delete
+Global object: `sandbox`
 
-Löscht ein Entity.
+- `build(project_path: string) -> Result<(), string>`
+- `test(project_path: string) -> Result<(), string>`
+- `validate(code: string) -> Result<(), string>`
+- `run(code: string) -> Result<any, string>`
+- `lint(code: string) -> Result<List<string>, string>`
+- `format(code: string) -> Result<string, string>`
+- `check_types(code: string) -> Result<(), string>`
+- `optimize(code: string) -> Result<string, string>`
 
-```velin
-let deleted = db.delete(User, "123");
-```
+## Rollback
 
-**Signatur:**
-```velin
-fn<T>(T, string) -> boolean
-```
+Global object: `rollback`
 
-**Parameter:**
-- `Entity` (Type) - Der Entity-Typ
-- `id` (string) - Die ID
+- `list_snapshots() -> List<any>`
+- `delete_snapshot(snapshot_id: string) -> Result<(), string>`
+- `compare(snapshot1: string, snapshot2: string) -> Result<any, string>`
+- `get_info(snapshot_id: string) -> Result<any, string>`
+- `auto_snapshot(interval_seconds: number) -> Result<(), string>`
 
-**Rückgabewert:**
-- `boolean` - true wenn gelöscht, false wenn nicht gefunden
+## HTTP
 
-**Transformiert zu:**
-```rust
-db.delete::<User>("123").await
-```
+Global object: `http`
 
-## Assert Funktionen
+- `patch(url: string, body: any) -> Result<HttpResponse, string>`
+- `head(url: string) -> Result<HttpResponse, string>`
+- `options(url: string) -> Result<HttpResponse, string>`
+- `set_timeout(client: HttpClient, ms: number) -> HttpClient`
+- `set_headers(client: HttpClient, headers: any) -> HttpClient`
 
-### assert
+## WebSocket
 
-Prüft eine Bedingung.
+Global object: `websocket`
 
-```velin
-assert(condition);
-assert(value == expected);
-```
+- `connect(url: string) -> Result<WebSocket, string>`
+- `send(ws: WebSocket, message: string) -> Result<(), string>`
+- `receive(ws: WebSocket) -> Result<string, string>`
+- `close(ws: WebSocket) -> Result<(), string>`
+- `is_connected(ws: WebSocket) -> boolean`
+- `ping(ws: WebSocket) -> Result<(), string>`
+- `subscribe(ws: WebSocket, topic: string) -> Result<(), string>`
+- `on_message(ws: WebSocket, callback: fn) -> Result<(), string>`
 
-**Signatur:**
-```velin
-fn(boolean) -> void
-```
+## Utils
 
-**Parameter:**
-- `condition` (boolean) - Die zu prüfende Bedingung
+Global object: `utils`
 
-**Transformiert zu:**
-- `assert!(condition)` - Einfache Bedingung
-- `assert_eq!(left, right)` - Wenn `==` verwendet wird
-- `assert_ne!(left, right)` - Wenn `!=` verwendet wird
+- `uuid() -> string`
+- `sleep(ms: number) -> void`
+- `retry(fn: fn, times: number) -> Result<any, string>`
+- `debounce(fn: fn, ms: number) -> fn`
+- `throttle(fn: fn, ms: number) -> fn`
+- `memoize(fn: fn) -> fn`
+- `timeout(fn: fn, ms: number) -> Result<any, string>`
+- `parallel(tasks: List<fn>) -> List<Result<any, string>>`
+- `cache(key: string, fn: fn) -> any`
 
-**Beispiele:**
+## Logging
 
-```velin
-@test
-fn testAddition() {
-    let result = add(2, 3);
-    assert(result == 5);  // Wird zu assert_eq!(result, 5)
-    assert(result != 0); // Wird zu assert_ne!(result, 0)
-    assert(result > 0);  // Wird zu assert!(result > 0)
-}
-```
+Global object: `log`
 
-## String Funktionen
+- `info(message: string) -> void`
+- `warn(message: string) -> void`
+- `error(message: string) -> void`
+- `debug(message: string) -> void`
+- `trace(message: string) -> void`
+- `set_level(level: string) -> void`
+- `with_context(key: string, value: string) -> Logger`
+- `to_file(path: string) -> Result<(), string>`
+- `json(message: string, data: any) -> void`
 
-### String Concatenation
+## Config
 
-```velin
-let greeting = "Hello, " + name + "!";
-```
+Global object: `config`
 
-### String Interpolation
+- `get_env(key: string) -> Result<string, string>`
+- `get_or_default(key: string, default: string) -> string`
+- `load_dotenv() -> Result<(), string>`
 
-Format-Strings ermöglichen die Interpolation von Ausdrücken:
+## Flow
 
-```velin
-let name = "John";
-let message = "Hello, {name}!";
-// Ergebnis: "Hello, John!"
+Global object: `flow`
 
-let x = 10;
-let y = 20;
-let result = "Sum: {x + y}";
-// Ergebnis: "Sum: 30"
-```
+**Decorator**: `@Flow`
 
-**Syntax:**
-- Format-Strings verwenden geschweifte Klammern `{}` für Interpolation
-- Beliebige Ausdrücke können innerhalb der Klammern verwendet werden
-- Escaping: `\{` für literal `{`, `\}` für literal `}`
+**Neu in Version 2.5** ✅
 
-**Kompilierung:**
-Format-Strings werden zu Rust `format!` Macros kompiliert.
-
-## Collection Funktionen
-
-### List Operations
-
-```velin
-let users = db.findAll(User);
-let firstUser = users[0];        // Index Access
-let count = users.length;        // Length (geplant)
-```
-
-### Map Operations
-
-```velin
-let map = Map<string, number>();
-map["key"] = 42;                 // Set
-let value = map["key"];          // Get
-```
-
-## Type Conversion
-
-### Explizite Konvertierung (geplant)
-
-```velin
-let number = stringToNumber("42");
-let string = numberToString(42);
-```
-
-## Utility Funktionen
-
-### generateId
-
-Generiert eine eindeutige ID.
-
-```velin
-let id = generateId();
-```
-
-**Signatur:**
-```velin
-fn() -> string
-```
-
-### currentUser
-
-Gibt den aktuell authentifizierten Benutzer zurück.
-
-```velin
-@Auth
-@GET("/api/profile")
-fn getProfile(): User {
-    return currentUser();
-}
-```
-
-**Signatur:**
-```velin
-fn() -> User
-```
-
-**Voraussetzung:**
-- Funktion muss mit `@Auth` Decorator markiert sein
-
-## Error Handling
-
-### Error Types (geplant)
-
-```velin
-enum Error {
-    NotFound(message: string),
-    ValidationError(field: string, message: string),
-    ServerError(message: string),
-}
-```
-
-### Result Type (geplant)
-
-```velin
-type Result<T, E> = Ok(value: T) | Error(err: E);
-```
-
-## Async/Await
-
-### Async Functions
-
-```velin
-async fn fetchData(url: string): Data {
-    // Async operation
-    return await http.get(url);
-}
-```
-
-### Await
-
-```velin
-let data = await fetchData("https://api.example.com/data");
-```
-
-## HTTP Funktionen
-
-### HttpRequest
-
-HTTP Request Handling.
-
-```velin
-let request = HttpRequest::new("GET", "/api/users");
-request.header("Authorization", "Bearer token");
-let auth = request.get_header("Authorization");
-```
-
-### HttpResponse
-
-HTTP Response Handling.
-
-```velin
-let response = HttpResponse::ok("Success");
-let error = HttpResponse::bad_request("Invalid input");
-let notFound = HttpResponse::not_found("Resource not found");
-```
-
-## Validation Funktionen
-
-### Validator
-
-Input Validation Framework.
-
-```velin
-let mut validator = Validator::new();
-validator
-    .required("name", &name)
-    .min_length("name", &name, 3)
-    .max_length("name", &name, 50)
-    .email("email", &email);
-
-if (!validator.is_valid()) {
-    for error in validator.errors() {
-        println!("{}: {}", error.field, error.message);
-    }
-}
-```
-
-**Methoden:**
-- `required(field, value)` - Prüft ob Feld vorhanden ist
-- `min_length(field, value, min)` - Minimale Länge
-- `max_length(field, value, max)` - Maximale Länge
-- `email(field, value)` - E-Mail-Validierung
-- `pattern(field, value, pattern, message)` - Pattern-Matching
-
-## Authentication Funktionen
-
-### AuthService
-
-JWT Token Management.
-
-```velin
-let auth = AuthService::new("secret-key");
-let claims = UserClaims {
-    user_id: "123",
-    email: "user@example.com",
-    roles: ["user", "admin"],
-};
-let token = auth.generate_token(claims);
-let verified = auth.verify_token(&token.token);
-```
-
-### OAuth2Provider
-
-OAuth2 Integration.
-
-```velin
-let oauth = OAuth2Provider::new(
-    "client-id",
-    "client-secret",
-    "https://redirect.uri"
-);
-let auth_url = oauth.get_authorization_url("state");
-let token = oauth.exchange_code("code");
-```
-
-## ML/LLM Funktionen
-
-### ModelLoader
-
-ML Model Loading & Prediction.
-
-```velin
-let mut loader = ModelLoader::new();
-loader.load_model("sentiment", ModelType::Sentiment, "model.onnx");
-let prediction = loader.predict("sentiment", "This is great!");
-```
-
-### LLMClient
-
-Large Language Model Integration.
-
-```velin
-let llm = LLMClient::new(LLMProvider::OpenAI, "api-key");
-let response = llm.generate("What is AI?");
-let embeddings = llm.embed("Hello, world!");
-```
-
-### VectorDB
-
-Vector Database Support.
-
-```velin
-let db = VectorDB::new(VectorDBProvider::Pinecone, "connection-string");
-db.upsert("collection", "id", [0.1, 0.2, 0.3]);
-let results = db.search("collection", [0.1, 0.2, 0.3], 10);
-```
-
-### TrainingService
-
-Model Training mit ONNX Runtime und TensorFlow.
-
-```velin
-let mut training = TrainingService::new();
-training.add_example("input", "output");
-
-// Basis-Training
-training.train("model-name");
-
-// ONNX Training
-let onnxConfig = ONNXTrainingConfig {
-    epochs: 100,
-    batch_size: 32,
-    learning_rate: 0.001,
-    optimizer: "Adam",
-    loss_function: "CrossEntropy"
-};
-let result = training.train_with_onnx("model", onnxConfig);
-
-// TensorFlow Training
-let tfConfig = TensorFlowTrainingConfig {
-    epochs: 100,
-    batch_size: 32,
-    learning_rate: 0.001,
-    optimizer: "Adam",
-    loss_function: "SparseCategoricalCrossentropy",
-    validation_split: 0.2
-};
-let result = training.train_with_tensorflow("model", tfConfig);
-
-// Model Evaluation
-let testData = [TrainingExample { input: "test", output: "expected" }];
-let evalResult = training.evaluate_model("model", testData);
-```
+VelinFlow Runtime für transaktionales Flow-Management mit automatischem State-Tracking, Snapshots und Rollback.
 
 **Features:**
-- ONNX Runtime Integration
-- TensorFlow Integration
-- Hyperparameter Tuning
-- Model Evaluation & Metrics
-- Automatic Logging (VelinLogger)
-- Metrics Collection
+- Automatisches State-Tracking (Pending, Running, Completed, Failed, Compensating, Compensated)
+- Input-Snapshot-Management für Rollback
+- Automatisches Commit bei Erfolg
+- Automatisches Rollback mit Compensation-Logic bei Fehler
+- Logging der Ausführungsdauer und Status
+- Self-Healing durch Compensation-Hooks
 
-## Best Practices
+**Verfügbare Funktionen:**
+- `flow.snapshot_input(input: any) -> void`: Manuelles Aufzeichnen eines Input-Snapshots
 
-1. **Immer Typen angeben** für öffentliche APIs
-2. **Type Inference nutzen** für lokale Variablen
-3. **Decorators verwenden** für API-Endpoints
-4. **Error Handling** implementieren
-5. **Tests schreiben** mit `@test`
-6. **Input Validation** für alle User-Inputs
-7. **Authentication** für geschützte Endpoints
-8. **Performance** mit Optimizer verbessern
+**Beispiel:**
+```velin
+@Flow
+@POST("/orders")
+fn createOrder(input: OrderInput): OrderResult {
+    flow.snapshot_input(input);
+    // Automatisches State-Tracking
+    // Automatisches Rollback bei Fehler
+    return processOrder(input);
+}
+```
+
+## AutoDoc
+
+**Decorator**: `@VelinAutoDoc`
+
+**Neu in Version 2.5** ✅
+
+Automatische Dokumentationsgenerierung aus `///` Doc-Comments.
+
+**Features:**
+- Erfasst `///` Doc-Comments als First-Class-Citizens im AST
+- Generiert strukturierte JSON-Dokumentation
+- Extrahiert Typ-Signaturen, Parameter und Return-Types
+- Erstellt `llm_prompt_context` für KI-gestützte Dokumentationsgenerierung
+- Unterstützt Funktionen, Structs und Module
+
+**Usage**: Place above any function or struct.
+
+**Beispiel:**
+```velin
+/// Erstellt einen neuen Benutzer
+/// 
+/// @param name - Der Name des Benutzers
+/// @returns Ein User-Objekt mit generierter ID
+@VelinAutoDoc
+fn createUser(name: string): User {
+    // ...
+}
+```
+
+**Output**: Generates a JSON structure containing:
+  - Signatures, parameters, return types.
+  - Extracted doc comments (`///`).
+  - `llm_prompt_context` field optimized for AI explanation generation.
+
+## Pipeline
+
+**Decorator**: `@VelinPipeline`
+
+**Neu in Version 2.5** ✅
+
+Pipeline-Optimizer für automatische Parallelisierung von unabhängigen async Operationen.
+
+**Features:**
+- Analysiert Datenabhängigkeiten zwischen Statements
+- Erkennt automatisch unabhängige async Operationen
+- Optimiert sequentielle Aufrufe zu parallelen Ausführungsgruppen
+- Generiert automatisch `tokio::join!` für unabhängige Operationen
+- Verbessert Performance durch Parallelisierung
+
+**Usage**: Place above a `mod` or `fn`.
+
+**Beispiel:**
+```velin
+@VelinPipeline
+async fn loadDashboard() {
+    // Werden automatisch parallel ausgeführt
+    let user = await getUser();
+    let stats = await getStats();
+    return { user, stats };
+}
+```
+
+**Effect**:
+  - Analyzes data dependencies between statements.
+  - Automatically identifies independent async operations.
+  - Optimizes sequential calls into parallel execution groups (`tokio::join!`).

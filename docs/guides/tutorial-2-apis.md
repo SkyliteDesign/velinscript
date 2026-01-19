@@ -134,6 +134,66 @@ fn deleteUser(id: string): void {
 }
 ```
 
+## Beispiel: Krypto-Portfolio-API
+
+Eine kleine realistische API, die ein Krypto-Portfolio berechnet:
+
+```velin
+struct PortfolioRequest {
+    btcAmount: number,
+    ethAmount: number,
+    solAmount: number,
+}
+
+struct PortfolioOverview {
+    btcAmount: number,
+    btcValueUsd: number,
+    ethAmount: number,
+    ethValueUsd: number,
+    solAmount: number,
+    solValueUsd: number,
+    totalValueUsd: number,
+}
+
+@POST("/api/crypto/portfolio/custom")
+fn calculateCustomPortfolio(request: PortfolioRequest): PortfolioOverview {
+    let btc = getStaticBitcoinPrice();
+    let eth = getStaticEthereumPrice();
+    let sol = getStaticSolanaPrice();
+
+    let btcValue = btc.priceUsd * request.btcAmount;
+    let ethValue = eth.priceUsd * request.ethAmount;
+    let solValue = sol.priceUsd * request.solAmount;
+
+    let total = btcValue + ethValue + solValue;
+
+    return PortfolioOverview {
+        btcAmount: request.btcAmount,
+        btcValueUsd: btcValue,
+        ethAmount: request.ethAmount,
+        ethValueUsd: ethValue,
+        solAmount: request.solAmount,
+        solValueUsd: solValue,
+        totalValueUsd: total,
+    };
+}
+```
+
+Beispiel-Request:
+
+```http
+POST /api/crypto/portfolio/custom
+Content-Type: application/json
+
+{
+  "btcAmount": 0.25,
+  "ethAmount": 2.0,
+  "solAmount": 15.0
+}
+```
+
+Die Antwort enthält die berechneten USD-Werte je Coin und die Gesamtsumme.
+
 ## Nächste Schritte
 
 - [Tutorial 3: Security](tutorial-3-security.md) - Security Features

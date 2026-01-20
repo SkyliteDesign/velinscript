@@ -7,7 +7,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "velin")]
 #[command(about = "Velisch Compiler - Eine moderne Programmiersprache für KI-APIs")]
-#[command(version = "2.5.0")]
+#[command(version = "2.7.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,

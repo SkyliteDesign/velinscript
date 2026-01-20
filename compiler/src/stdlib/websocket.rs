@@ -50,8 +50,19 @@ impl WebSocketStdlib {
     }
 
     pub fn generate_is_connected_code(ws: &str) -> String {
-        // tokio-tungstenite stream doesn't expose is_connected easily without polling
-        "true".to_string() 
+        format!(
+            "{{
+                use futures_util::StreamExt;
+                use tokio_tungstenite::tungstenite::Message;
+                // Try to peek at the stream to check if it's still alive
+                // This is a best-effort check
+                match {}.as_mut().and_then(|s| s.get_mut()) {{
+                    Some(_) => true,
+                    None => false
+                }}
+            }}",
+            ws
+        )
     }
 
     pub fn generate_ping_code(ws: &str) -> String {
@@ -71,9 +82,26 @@ impl WebSocketStdlib {
     }
 
     pub fn generate_on_message_code(ws: &str, callback: &str) -> String {
-        // This would require an event loop or spawning a task.
-        // For generated code, we might return a stream handler or similar.
-        // For now, mock or simple implementation
-        format!("Ok(())")
+        format!(
+            "{{
+                use futures_util::StreamExt;
+                use tokio_tungstenite::tungstenite::Message;
+                tokio::spawn(async move {{
+                    let mut ws_stream = {};
+                    while let Some(msg) = ws_stream.next().await {{
+                        match msg {{
+                            Ok(Message::Text(text)) => {{
+                                {}(text).await;
+                            }},
+                            Ok(Message::Close(_)) => break,
+                            Err(_) => break,
+                            _ => {{}}
+                        }}
+                    }}
+                }});
+                Ok(())
+            }}",
+            ws, callback
+        )
     }
 }

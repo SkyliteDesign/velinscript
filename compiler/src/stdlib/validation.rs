@@ -130,6 +130,43 @@ impl Validator {
         &self.errors
     }
     
+}
+
+pub struct ValidationStdlib;
+
+impl ValidationStdlib {
+    pub fn generate_new_code() -> String {
+        "Validator::new()".to_string()
+    }
+
+    pub fn generate_required_code(validator: &str, field: &str, value: &str) -> String {
+        format!("{}.required({}, {})", validator, field, value)
+    }
+
+    pub fn generate_min_length_code(validator: &str, field: &str, value: &str, min: &str) -> String {
+        format!("{}.min_length({}, {}, {})", validator, field, value, min)
+    }
+
+    pub fn generate_max_length_code(validator: &str, field: &str, value: &str, max: &str) -> String {
+        format!("{}.max_length({}, {}, {})", validator, field, value, max)
+    }
+
+    pub fn generate_email_code(validator: &str, field: &str, value: &str) -> String {
+        format!("{}.email({}, {})", validator, field, value)
+    }
+
+    pub fn generate_pattern_code(validator: &str, field: &str, value: &str, pattern: &str, message: &str) -> String {
+        format!("{}.pattern({}, {}, {}, {})", validator, field, value, pattern, message)
+    }
+
+    pub fn generate_min_code(validator: &str, field: &str, value: &str, min: &str) -> String {
+        format!("{}.min({}, {}, {})", validator, field, value, min)
+    }
+
+    pub fn generate_max_code(validator: &str, field: &str, value: &str, max: &str) -> String {
+        format!("{}.max({}, {}, {})", validator, field, value, max)
+    }
+
     /// Generiert Rust-Code für Validator-Import
     pub fn generate_import() -> String {
         "use regex::Regex;\n".to_string()

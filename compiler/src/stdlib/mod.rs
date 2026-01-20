@@ -1,6 +1,8 @@
 pub mod api;
 pub mod database;
 pub mod security;
+
+pub mod test_module;
 pub mod testing;
 pub mod http;
 pub mod validation;
@@ -52,3 +54,28 @@ pub mod utils;
 pub mod log;
 pub mod config;
 pub mod flow;
+pub mod path;
+pub mod url;
+pub mod stream;
+pub mod redis;
+pub mod tracing;
+pub mod encoding;
+pub mod queue;
+#[cfg(feature = "mongodb")]
+pub mod mongodb;
+#[cfg(feature = "smtp")]
+pub mod smtp;
+pub mod csv;
+pub mod yaml;
+pub mod audit;
+#[cfg(feature = "security")]
+pub mod encryption;
+pub mod alerting;
+pub mod nlp;
+pub mod workflow;
+pub mod scheduler;
+pub mod event_bus;
+pub mod fixtures;
+pub mod mocks;
+pub mod template;
+pub mod env;

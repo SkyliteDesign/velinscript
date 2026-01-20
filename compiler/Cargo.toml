@@ -1,6 +1,6 @@
 [package]
 name = "velin-compiler"
-version = "2.5.0"
+version = "2.7.0"
 edition = "2021"
 
 [dependencies]
@@ -44,10 +44,26 @@ qdrant-client = { version = "1.7", optional = true }
 bcrypt = { version = "0.15", optional = true }
 aes-gcm = { version = "0.10", optional = true }
 redis = { version = "0.24", features = ["tokio-comp"], optional = true }
+url = "2.5"
+pathdiff = "0.2"
+futures = "0.3"
+urlencoding = "2.1"
+once_cell = "1.19"
+tempfile = "3.10"
+hex = "0.4"
+csv = "1.3"
+mongodb = { version = "2.8", optional = true }
+lettre = { version = "0.11", optional = true }
+fernet = "0.1"
+rsa = { version = "0.9", optional = true }
 # ort = { version = "2.0.0-rc.11", optional = true }  # ONNX Runtime - nur RC verfügbar
 
 [features]
 default = ["dep:tokio", "dep:axum", "axum", "dep:reqwest"]
+# Note: mongodb, smtp, and encryption require additional system dependencies
+# mongodb requires MongoDB client libraries
+# smtp (lettre) requires OpenSSL
+# encryption (rsa, aes-gcm) are part of security feature
 async-std = ["dep:async-std"]
 axum = ["dep:axum"]
 actix = ["dep:actix-web"]
@@ -57,7 +73,9 @@ vault = ["dep:vaultrs"]
 privacy = ["dep:zeroize", "dep:secrecy"]
 tls = ["dep:rustls", "dep:rustls-pemfile"]
 ml = ["dep:reqwest", "dep:qdrant-client"]
-security = ["dep:bcrypt", "dep:aes-gcm", "dep:redis"]
+security = ["dep:bcrypt", "dep:aes-gcm", "dep:redis", "dep:rsa"]
+mongodb = ["dep:mongodb"]
+smtp = ["dep:lettre"]
 qdrant-client = ["dep:qdrant-client"]
 
 [[test]]

@@ -198,23 +198,48 @@ impl PerformanceMonitor {
             if let Some(start) = times.remove(name) {
                 start.elapsed().as_secs_f64()
             } else {
-                return;
+                0.0
             }
         };
         
-        let mut metric_labels = labels.unwrap_or_default();
-        metric_labels.insert("operation".to_string(), name.to_string());
-        
-        self.collector.observe_histogram(
-            &format!("{}_duration_seconds", name),
-            duration,
-            Some(metric_labels),
-        );
+        self.collector.observe_histogram(name, duration, labels);
     }
-    
+
     /// Gibt den Metrics Collector zurück
     pub fn collector(&self) -> &MetricsCollector {
         &self.collector
+    }
+}
+
+/// Metrics Standard Library für Code-Generierung
+pub struct MetricsStdlib;
+
+impl MetricsStdlib {
+    /// Generiert Rust-Code für metrics.increment()
+    pub fn generate_increment_code(name: &str, labels: Option<&str>) -> String {
+        if let Some(l) = labels {
+            format!("metrics::increment_counter(\"{}\", Some({}))", name, l)
+        } else {
+            format!("metrics::increment_counter(\"{}\", None)", name)
+        }
+    }
+
+    /// Generiert Rust-Code für metrics.gauge()
+    pub fn generate_gauge_code(name: &str, value: &str, labels: Option<&str>) -> String {
+        if let Some(l) = labels {
+            format!("metrics::set_gauge(\"{}\", {}, Some({}))", name, value, l)
+        } else {
+            format!("metrics::set_gauge(\"{}\", {}, None)", name, value)
+        }
+    }
+
+    /// Generiert Rust-Code für metrics.histogram()
+    pub fn generate_histogram_code(name: &str, value: &str, labels: Option<&str>) -> String {
+        if let Some(l) = labels {
+            format!("metrics::observe_histogram(\"{}\", {}, Some({}))", name, value, l)
+        } else {
+            format!("metrics::observe_histogram(\"{}\", {}, None)", name, value)
+        }
     }
 }
 

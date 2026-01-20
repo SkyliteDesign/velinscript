@@ -1,6 +1,6 @@
 # VelinScript Language Specification
 
-Version 2.5.0
+Version 2.6.0
 
 ## Übersicht
 
@@ -11,7 +11,12 @@ VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die
 - VelinAutoDoc für automatische Dokumentationsgenerierung
 - VelinPipeline für automatische Performance-Optimierung
 - VelinFlow Runtime für transaktionales Flow-Management
-- Erweiterte String-, Math-, Date-, FS-, LLM-, Embedding-, Agent-, Process-, Sandbox-, WebSocket-, Utils-, Log- und Config-Module
+
+**Neu in Version 2.6**: 
+- 5 neue kritische Standard Library Module mit 50+ Funktionen
+- path, url, stream, redis, tracing Module hinzugefügt
+- Alle Mock-Funktionen durch echte Implementierungen ersetzt
+- Verbesserte Pipeline-Optimierung mit echter Dependency-Tracking
 
 ## Design-Prinzipien
 

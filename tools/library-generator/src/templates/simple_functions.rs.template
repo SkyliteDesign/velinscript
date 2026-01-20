@@ -1,0 +1,7 @@
+// {{description}}
+
+pub struct {{ModuleName}}Stdlib;
+
+impl {{ModuleName}}Stdlib {
+{{functions}}
+}

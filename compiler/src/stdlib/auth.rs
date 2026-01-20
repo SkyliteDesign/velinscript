@@ -109,6 +109,26 @@ impl AuthService {
     }
 }
 
+pub struct AuthStdlib;
+
+impl AuthStdlib {
+    pub fn generate_generate_token_code(service: &str, claims: &str) -> String {
+        format!("{}.generate_token({})", service, claims)
+    }
+
+    pub fn generate_verify_token_code(service: &str, token: &str) -> String {
+        format!("{}.verify_token({})", service, token)
+    }
+
+    pub fn generate_extract_user_id_code(service: &str, token: &str) -> String {
+        format!("{}.extract_user_id({})", service, token)
+    }
+
+    pub fn generate_has_role_code(service: &str, token: &str, role: &str) -> String {
+        format!("{}.has_role({}, {})", service, token, role)
+    }
+}
+
 #[cfg(feature = "oauth2")]
 pub mod oauth2_integration {
     use super::*;

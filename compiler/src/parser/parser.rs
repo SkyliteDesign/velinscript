@@ -2338,7 +2338,7 @@ impl Parser {
         })
     }
     
-    fn parse_module(&mut self, visibility: Visibility, documentation: Option<String>) -> Result<Module, ParseError> {
+    fn parse_module(&mut self, visibility: Visibility, _documentation: Option<String>) -> Result<Module, ParseError> {
         // Skip newlines after 'mod'
         while matches!(self.peek(), Some(Token::Newline)) {
             self.advance();

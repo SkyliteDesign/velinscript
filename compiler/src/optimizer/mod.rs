@@ -692,7 +692,7 @@ impl Optimizer {
     /// Unrolled eine Schleife
     fn unroll_loop(&self, for_stmt: &ForStatement) -> Option<Statement> {
         // Versuche Range zu extrahieren: 0..N
-        if let Expression::BinaryOp { left, op: BinaryOperator::Lt, right: _ } = &for_stmt.iterable {
+        if let Expression::BinaryOp { left: _, op: BinaryOperator::Lt, right: _ } = &for_stmt.iterable {
             // Dies ist ein Platzhalter, da VelinScript Ranges anders repräsentiert
             // Normalerweise for i in 0..3 -> Range { start: 0, end: 3 }
             // Aber hier vereinfachen wir die Annahme für das Beispiel

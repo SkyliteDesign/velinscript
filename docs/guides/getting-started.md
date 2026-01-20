@@ -27,10 +27,14 @@ cargo build --release
 export PATH=$PATH:$(pwd)/target/release
 ```
 
-#### Option 2: Installation Script (später verfügbar)
+#### Option 2: Installation Script
 
 ```bash
-curl https://velinscript.dev/install.sh | sh
+# Auf Linux/macOS:
+curl -sSL https://velisch.dev/install | sh
+
+# Auf Windows (PowerShell):
+curl -sSL https://velisch.dev/install | bash
 ```
 
 ## Dein erstes Programm
@@ -152,6 +156,7 @@ fn createUser(name: string, email: string): User {
 - **VelinPipeline** - Automatische Performance-Optimierung
 - **Dead Code Detector** - [../tools/dead-code-detector.md](../tools/dead-code-detector.md)
 - **API Documentation Generator** - [../tools/api-doc-generator.md](../tools/api-doc-generator.md)
+- **Bibliotheks-Generator** - [../tools/library-generator.md](../tools/library-generator.md) ✅ (Neu in 2.7)
 - **VS Code Extension** - [../tools/vscode-extension.md](../tools/vscode-extension.md) ✅
 - **Package Manager** - Siehe `tools/package-manager/README.md`
 

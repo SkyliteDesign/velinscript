@@ -27,6 +27,7 @@ Diese Übersicht zeigt, welche Tools tatsächlich implementiert sind und welche 
 | **Bundle Analyzer** | ✅ Stabil | [bundle-analyzer.md](bundle-analyzer.md) | Analysiert Bundle-Größe, Tree-Shaking-Potenzial und Code-Splitting-Möglichkeiten |
 | **Runtime Inspector** | ✅ Stabil | [runtime-inspector.md](runtime-inspector.md) | Live-Inspection von Variablen, State und Memory während der Ausführung |
 | **Benchmark Runner** | ✅ Stabil | [benchmark-runner.md](benchmark-runner.md) | Performance-Benchmarks mit statistischer Auswertung |
+| **Bibliotheks-Generator** | ✅ Stabil | [library-generator.md](library-generator.md) | Automatische Generierung von Standardbibliotheks-Modulen (Neu in 2.7) ✅ |
 
 ### Compiler-Integrierte Tools
 
@@ -57,8 +58,8 @@ Alle geplanten Tools wurden implementiert! 🎉
 
 ## 📊 Zusammenfassung
 
-### Implementiert: 21 Tools
-- ✅ 17 Standalone Tools im `tools/` Verzeichnis
+### Implementiert: 22 Tools
+- ✅ 18 Standalone Tools im `tools/` Verzeichnis
 - ✅ 4 Compiler-integrierte Tools
 - ✅ 5 Compiler-Features (VelinFlow, VelinPipeline, etc.)
 
@@ -76,4 +77,4 @@ Alle geplanten Tools wurden implementiert! 🎉
 ---
 
 **Letzte Aktualisierung:** 2026-01-30  
-**Version:** 2.5.0
+**Version:** 2.7.0

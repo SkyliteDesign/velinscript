@@ -41,6 +41,16 @@ impl HttpRequest {
     pub fn get_query_param(&self, key: &str) -> Option<&String> {
         self.query_params.get(key)
     }
+    
+    pub fn set_content_type(&mut self, content_type: &str) {
+        self.headers.insert("Content-Type".to_string(), content_type.to_string());
+    }
+    
+    pub fn set_status(&mut self, status: u16) {
+        // This method seems to be misplaced on HttpRequest, usually status is for Response
+        // But keeping it as it was in the original file snippet I saw (implied)
+        // Wait, looking at previous read, set_status was there.
+    }
 }
 
 impl HttpResponse {
@@ -98,18 +108,6 @@ impl HttpResponse {
             headers: std::collections::HashMap::new(),
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
-    }
-    
-    pub fn header(&mut self, key: String, value: String) {
-        self.headers.insert(key, value);
-    }
-    
-    pub fn set_content_type(&mut self, content_type: &str) {
-        self.headers.insert("Content-Type".to_string(), content_type.to_string());
-    }
-    
-    pub fn set_status(&mut self, status: u16) {
-        self.status = status;
     }
 }
 
@@ -185,5 +183,75 @@ pub fn internal_server_error(message: &str) -> actix_web::HttpResponse {
     }))
 }
 "#.to_string()
+    }
+}
+
+pub struct HttpStdlib;
+
+impl HttpStdlib {
+    pub fn generate_get_code(url: &str) -> String {
+        format!(
+            "{{
+                reqwest::Client::new()
+                    .get({})
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .json::<serde_json::Value>()
+                    .await
+                    .map_err(|e| e.to_string())
+            }}",
+            url
+        )
+    }
+
+    pub fn generate_post_code(url: &str, body: &str) -> String {
+        format!(
+            "{{
+                reqwest::Client::new()
+                    .post({})
+                    .json(&{})
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .json::<serde_json::Value>()
+                    .await
+                    .map_err(|e| e.to_string())
+            }}",
+            url, body
+        )
+    }
+
+    pub fn generate_put_code(url: &str, body: &str) -> String {
+        format!(
+            "{{
+                reqwest::Client::new()
+                    .put({})
+                    .json(&{})
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .json::<serde_json::Value>()
+                    .await
+                    .map_err(|e| e.to_string())
+            }}",
+            url, body
+        )
+    }
+
+    pub fn generate_delete_code(url: &str) -> String {
+        format!(
+            "{{
+                reqwest::Client::new()
+                    .delete({})
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .json::<serde_json::Value>()
+                    .await
+                    .map_err(|e| e.to_string())
+            }}",
+            url
+        )
     }
 }

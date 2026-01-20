@@ -29,14 +29,37 @@ impl LogStdlib {
     }
 
     pub fn generate_with_context_code(key: &str, value: &str) -> String {
-        // Return a span or similar?
-        // Just return a Logger struct mock
-        format!("crate::stdlib::logging::Logger::new()")
+        format!(
+            "{{
+                let span = tracing::span!(tracing::Level::INFO, \"context\", {} = {}, {} = {});
+                span.enter();
+                crate::stdlib::logging::Logger::new()
+            }}",
+            key, value, key, value
+        )
     }
 
     pub fn generate_to_file_code(path: &str) -> String {
-        // Setup file appender
-        format!("Ok(())")
+        format!(
+            "{{
+                use tracing_subscriber::fmt;
+                use tracing_subscriber::prelude::*;
+                use std::fs::OpenOptions;
+                let file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open({})
+                    .map_err(|e| e.to_string())?;
+                let file_layer = fmt::layer()
+                    .with_writer(file)
+                    .with_ansi(false);
+                tracing_subscriber::registry()
+                    .with(file_layer)
+                    .init();
+                Ok(())
+            }}",
+            path
+        )
     }
 
     pub fn generate_json_code(message: &str, data: &str) -> String {

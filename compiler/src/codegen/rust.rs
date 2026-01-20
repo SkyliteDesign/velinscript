@@ -1496,10 +1496,195 @@ where
                             self.generate_utils_call(member, args);
                             return;
                         } else if obj_name == "log" {
+                        self.generate_log_call(member, args);
+                        return;
+                    } else if obj_name == "queue" {
+                        self.generate_queue_call(member, args);
+                        return;
+                    } else if obj_name == "mongodb" {
+                        self.generate_mongodb_call(member, args);
+                        return;
+                    } else if obj_name == "event_bus" {
+                        self.generate_event_bus_call(member, args);
+                        return;
+                    } else if obj_name == "encryption" {
+                        self.generate_encryption_call(member, args);
+                        return;
+                    } else if obj_name == "csv" {
+                        self.generate_csv_call(member, args);
+                        return;
+                    } else if obj_name == "redis" {
+                        self.generate_redis_call(member, args);
+                        return;
+                    } else if obj_name == "alerting" {
+                        self.generate_alerting_call(member, args);
+                        return;
+                    } else if obj_name == "analytics" {
+                        self.generate_analytics_call(member, args);
+                        return;
+                    } else if obj_name == "auth" {
+                        self.generate_auth_call(member, args);
+                        return;
+                    } else if obj_name == "compression" {
+                        self.generate_compression_call(member, args);
+                        return;
+                    } else if obj_name == "crypto" {
+                        self.generate_crypto_call(member, args);
+                        return;
+                    } else if obj_name == "email" {
+                        self.generate_email_call(member, args);
+                        return;
+                    } else if obj_name == "encoding" {
+                        self.generate_encoding_call(member, args);
+                        return;
+                    } else if obj_name == "file_storage" {
+                        self.generate_file_storage_call(member, args);
+                        return;
+                    } else if obj_name == "geolocation" {
+                        self.generate_geolocation_call(member, args);
+                        return;
+                    } else if obj_name == "http" {
+                        self.generate_http_call(member, args);
+                        return;
+                    } else if obj_name == "i18n" {
+                        self.generate_i18n_call(member, args);
+                        return;
+                    } else if obj_name == "jwt" {
+                        self.generate_jwt_call(member, args);
+                        return;
+                    } else if obj_name == "logger" {
+                        self.generate_logger_call(member, args);
+                        return;
+                    } else if obj_name == "pdf" {
+                        self.generate_pdf_call(member, args);
+                        return;
+                    } else if obj_name == "regex" || obj_name == "regex_lib" {
+                        self.generate_regex_lib_call(member, args);
+                        return;
+                    } else if obj_name == "search" {
+                        self.generate_search_call(member, args);
+                        return;
+                    } else if obj_name == "string_utils" {
+                        self.generate_string_utils_call(member, args);
+                        return;
+                    } else if obj_name == "system" {
+                        self.generate_system_call(member, args);
+                        return;
+                    } else if obj_name == "time" || obj_name == "time_lib" {
+                        self.generate_time_lib_call(member, args);
+                        return;
+                    } else if obj_name == "validation" {
+                        self.generate_validation_call(member, args);
+                        return;
+                    } else if obj_name == "xml" {
+                        self.generate_xml_call(member, args);
+                        return;
+                    }
+
                             self.generate_log_call(member, args);
                             return;
                         } else if obj_name == "config" {
                             self.generate_config_call(member, args);
+                            return;
+                        } else if obj_name == "path" {
+                            self.generate_path_call(member, args);
+                            return;
+                        } else if obj_name == "url" {
+                            self.generate_url_call(member, args);
+                            return;
+                        } else if obj_name == "stream" {
+                            self.generate_stream_call(member, args);
+                            return;
+                        } else if obj_name == "redis" {
+                            self.generate_redis_call(member, args);
+                            return;
+                        } else if obj_name == "tracing" {
+                            self.generate_tracing_call(member, args);
+                            return;
+                        } else if obj_name == "encoding" {
+                            self.generate_encoding_call(member, args);
+                            return;
+                        } else if obj_name == "queue" {
+                            self.generate_queue_call(member, args);
+                            return;
+                        } else if obj_name == "mongodb" {
+                            #[cfg(feature = "mongodb")]
+                            {
+                                self.generate_mongodb_call(member, args);
+                                return;
+                            }
+                            #[cfg(not(feature = "mongodb"))]
+                            {
+                                self.write("// mongodb feature not enabled");
+                                return;
+                            }
+                        } else if obj_name == "smtp" {
+                            #[cfg(feature = "smtp")]
+                            {
+                                self.generate_smtp_call(member, args);
+                                return;
+                            }
+                            #[cfg(not(feature = "smtp"))]
+                            {
+                                self.write("// smtp feature not enabled");
+                                return;
+                            }
+                        } else if obj_name == "csv" {
+                            self.generate_csv_call(member, args);
+                            return;
+                        } else if obj_name == "yaml" {
+                            self.generate_yaml_call(member, args);
+                            return;
+                        } else if obj_name == "audit" {
+                            self.generate_audit_call(member, args);
+                            return;
+                        } else if obj_name == "encryption" {
+                            #[cfg(feature = "security")]
+                            {
+                                self.generate_encryption_call(member, args);
+                                return;
+                            }
+                            #[cfg(not(feature = "security"))]
+                            {
+                                self.write("// encryption feature not enabled");
+                                return;
+                            }
+                        } else if obj_name == "alerting" {
+                            self.generate_alerting_call(member, args);
+                            return;
+                        } else if obj_name == "nlp" {
+                            self.generate_nlp_call(member, args);
+                            return;
+                        } else if obj_name == "workflow" {
+                            self.generate_workflow_call(member, args);
+                            return;
+                        } else if obj_name == "scheduler" {
+                            self.generate_scheduler_call(member, args);
+                            return;
+                        } else if obj_name == "event_bus" {
+                            self.generate_event_bus_call(member, args);
+                            return;
+                        } else if obj_name == "fixtures" {
+                            self.generate_fixtures_call(member, args);
+                            return;
+                        } else if obj_name == "mocks" {
+                            self.generate_mocks_call(member, args);
+                            return;
+                        } else if obj_name == "template" {
+                            self.generate_template_call(member, args);
+                            return;
+
+                        } else if obj_name == "test_module" {
+                            self.generate_test_module_call(member, args);
+                            return;
+                        } else if obj_name == "env" {
+                            self.generate_env_call(member, args);
+                            return;
+                        } else if obj_name == "metrics" {
+                            self.generate_metrics_call(member, args);
+                            return;
+                        } else if obj_name == "cache" {
+                            self.generate_cache_call(member, args);
                             return;
                         }
                     } else if let Expression::Member { object: inner_obj, member: inner_member } = object.as_ref() {
@@ -3837,6 +4022,1929 @@ where
                 self.write(&ConfigStdlib::generate_load_dotenv_code());
             }
             _ => self.write(&format!("// Unknown config method: {}", method)),
+        }
+    }
+
+    fn generate_path_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::path::PathStdlib;
+        
+        match method {
+            "join" => {
+                if let Some(arg) = args.first() {
+                    let parts = self.capture_expression(arg);
+                    self.write(&PathStdlib::generate_join_code(&parts));
+                }
+            }
+            "dirname" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&PathStdlib::generate_dirname_code(&path));
+                }
+            }
+            "basename" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&PathStdlib::generate_basename_code(&path));
+                }
+            }
+            "extname" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&PathStdlib::generate_extname_code(&path));
+                }
+            }
+            "normalize" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&PathStdlib::generate_normalize_code(&path));
+                }
+            }
+            "resolve" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&PathStdlib::generate_resolve_code(&path));
+                }
+            }
+            "relative" => {
+                if args.len() >= 2 {
+                    let from = self.capture_expression(&args[0]);
+                    let to = self.capture_expression(&args[1]);
+                    self.write(&PathStdlib::generate_relative_code(&from, &to));
+                }
+            }
+            "is_absolute" | "isAbsolute" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&PathStdlib::generate_is_absolute_code(&path));
+                }
+            }
+            "separator" => {
+                self.write(&PathStdlib::generate_separator_code());
+            }
+            _ => self.write(&format!("// Unknown path method: {}", method)),
+        }
+    }
+
+    fn generate_url_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::url::UrlStdlib;
+        
+        match method {
+            "parse" => {
+                if let Some(arg) = args.first() {
+                    let url_str = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_parse_code(&url_str));
+                }
+            }
+            "protocol" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_protocol_code(&url));
+                }
+            }
+            "hostname" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_hostname_code(&url));
+                }
+            }
+            "port" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_port_code(&url));
+                }
+            }
+            "pathname" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_pathname_code(&url));
+                }
+            }
+            "search" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_search_code(&url));
+                }
+            }
+            "hash" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_hash_code(&url));
+                }
+            }
+            "format" => {
+                if let Some(arg) = args.first() {
+                    let components = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_format_code(&components));
+                }
+            }
+            "parse_query" | "parseQuery" => {
+                if let Some(arg) = args.first() {
+                    let query_str = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_parse_query_code(&query_str));
+                }
+            }
+            "stringify_query" | "stringifyQuery" => {
+                if let Some(arg) = args.first() {
+                    let params = self.capture_expression(arg);
+                    self.write(&UrlStdlib::generate_stringify_query_code(&params));
+                }
+            }
+            _ => self.write(&format!("// Unknown url method: {}", method)),
+        }
+    }
+
+    fn generate_stream_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::stream::StreamStdlib;
+        
+        match method {
+            "create" => {
+                self.write(&StreamStdlib::generate_create_code());
+            }
+            "map" => {
+                if args.len() >= 2 {
+                    let stream = self.capture_expression(&args[0]);
+                    let mapper = self.capture_expression(&args[1]);
+                    self.write(&StreamStdlib::generate_map_code(&stream, &mapper));
+                }
+            }
+            "filter" => {
+                if args.len() >= 2 {
+                    let stream = self.capture_expression(&args[0]);
+                    let predicate = self.capture_expression(&args[1]);
+                    self.write(&StreamStdlib::generate_filter_code(&stream, &predicate));
+                }
+            }
+            "reduce" => {
+                if args.len() >= 3 {
+                    let stream = self.capture_expression(&args[0]);
+                    let reducer = self.capture_expression(&args[1]);
+                    let initial = self.capture_expression(&args[2]);
+                    self.write(&StreamStdlib::generate_reduce_code(&stream, &reducer, &initial));
+                }
+            }
+            "batch" => {
+                if args.len() >= 2 {
+                    let stream = self.capture_expression(&args[0]);
+                    let size = self.capture_expression(&args[1]);
+                    self.write(&StreamStdlib::generate_batch_code(&stream, &size));
+                }
+            }
+            "buffer" => {
+                if args.len() >= 2 {
+                    let stream = self.capture_expression(&args[0]);
+                    let size = self.capture_expression(&args[1]);
+                    self.write(&StreamStdlib::generate_buffer_code(&stream, &size));
+                }
+            }
+            "merge" => {
+                if args.len() >= 2 {
+                    let stream1 = self.capture_expression(&args[0]);
+                    let stream2 = self.capture_expression(&args[1]);
+                    self.write(&StreamStdlib::generate_merge_code(&stream1, &stream2));
+                }
+            }
+            "zip" => {
+                if args.len() >= 2 {
+                    let stream1 = self.capture_expression(&args[0]);
+                    let stream2 = self.capture_expression(&args[1]);
+                    self.write(&StreamStdlib::generate_zip_code(&stream1, &stream2));
+                }
+            }
+            _ => self.write(&format!("// Unknown stream method: {}", method)),
+        }
+    }
+
+    fn generate_redis_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::redis::RedisStdlib;
+        
+        match method {
+            "connect" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&RedisStdlib::generate_connect_code(&url));
+                }
+            }
+            "set" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    if args.len() >= 4 {
+                        let ttl = self.capture_expression(&args[3]);
+                        self.write(&RedisStdlib::generate_set_code(&client, &key, &value, Some(&ttl)));
+                    } else {
+                        self.write(&RedisStdlib::generate_set_code(&client, &key, &value, None));
+                    }
+                }
+            }
+            "get" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_get_code(&client, &key));
+                }
+            }
+            "delete" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_delete_code(&client, &key));
+                }
+            }
+            "hset" => {
+                if args.len() >= 4 {
+                    let client = self.capture_expression(&args[0]);
+                    let hash = self.capture_expression(&args[1]);
+                    let field = self.capture_expression(&args[2]);
+                    let value = self.capture_expression(&args[3]);
+                    self.write(&RedisStdlib::generate_hset_code(&client, &hash, &field, &value));
+                }
+            }
+            "hget" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let hash = self.capture_expression(&args[1]);
+                    let field = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_hget_code(&client, &hash, &field));
+                }
+            }
+            "hgetall" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let hash = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_hgetall_code(&client, &hash));
+                }
+            }
+            "lpush" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let list = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_lpush_code(&client, &list, &value));
+                }
+            }
+            "rpush" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let list = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_rpush_code(&client, &list, &value));
+                }
+            }
+            "lpop" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let list = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_lpop_code(&client, &list));
+                }
+            }
+            "llen" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let list = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_llen_code(&client, &list));
+                }
+            }
+            "sadd" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let set = self.capture_expression(&args[1]);
+                    let member = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_sadd_code(&client, &set, &member));
+                }
+            }
+            "sismember" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let set = self.capture_expression(&args[1]);
+                    let member = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_sismember_code(&client, &set, &member));
+                }
+            }
+            "smembers" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let set = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_smembers_code(&client, &set));
+                }
+            }
+            "publish" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let channel = self.capture_expression(&args[1]);
+                    let message = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_publish_code(&client, &channel, &message));
+                }
+            }
+            _ => self.write(&format!("// Unknown redis method: {}", method)),
+        }
+    }
+
+    fn generate_tracing_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::tracing::TracingStdlib;
+        
+        match method {
+            "start_span" | "startSpan" => {
+                if let Some(arg) = args.first() {
+                    let name = self.capture_expression(arg);
+                    self.write(&TracingStdlib::generate_start_span_code(&name));
+                }
+            }
+            "set_attribute" | "setAttribute" => {
+                if args.len() >= 3 {
+                    let span = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    self.write(&TracingStdlib::generate_set_attribute_code(&span, &key, &value));
+                }
+            }
+            "child_span" | "childSpan" => {
+                if args.len() >= 2 {
+                    let parent = self.capture_expression(&args[0]);
+                    let name = self.capture_expression(&args[1]);
+                    self.write(&TracingStdlib::generate_child_span_code(&parent, &name));
+                }
+            }
+            "end_span" | "endSpan" => {
+                if let Some(arg) = args.first() {
+                    let span = self.capture_expression(arg);
+                    self.write(&TracingStdlib::generate_end_span_code(&span));
+                }
+            }
+            "export" => {
+                if let Some(arg) = args.first() {
+                    let format = self.capture_expression(arg);
+                    self.write(&TracingStdlib::generate_export_code(&format));
+                }
+            }
+            _ => self.write(&format!("// Unknown tracing method: {}", method)),
+        }
+    }
+
+    fn generate_encoding_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::encoding::EncodingStdlib;
+        match method {
+            "base64_encode" | "base64Encode" => {
+                if let Some(arg) = args.first() {
+                    let input = self.capture_expression(arg);
+                    self.write(&EncodingStdlib::generate_base64_encode_code(&input));
+                }
+            }
+            "base64_decode" | "base64Decode" => {
+                if let Some(arg) = args.first() {
+                    let input = self.capture_expression(arg);
+                    self.write(&EncodingStdlib::generate_base64_decode_code(&input));
+                }
+            }
+            "url_encode" | "urlEncode" => {
+                if let Some(arg) = args.first() {
+                    let input = self.capture_expression(arg);
+                    self.write(&EncodingStdlib::generate_url_encode_code(&input));
+                }
+            }
+            "url_decode" | "urlDecode" => {
+                if let Some(arg) = args.first() {
+                    let input = self.capture_expression(arg);
+                    self.write(&EncodingStdlib::generate_url_decode_code(&input));
+                }
+            }
+            "hex_encode" | "hexEncode" => {
+                if let Some(arg) = args.first() {
+                    let input = self.capture_expression(arg);
+                    self.write(&EncodingStdlib::generate_hex_encode_code(&input));
+                }
+            }
+            "hex_decode" | "hexDecode" => {
+                if let Some(arg) = args.first() {
+                    let input = self.capture_expression(arg);
+                    self.write(&EncodingStdlib::generate_hex_decode_code(&input));
+                }
+            }
+            "is_valid_utf8" | "isValidUtf8" => {
+                if let Some(arg) = args.first() {
+                    let bytes = self.capture_expression(arg);
+                    self.write(&EncodingStdlib::generate_is_valid_utf8_code(&bytes));
+                }
+            }
+            "fix_utf8" | "fixUtf8" => {
+                if let Some(arg) = args.first() {
+                    let bytes = self.capture_expression(arg);
+                    self.write(&EncodingStdlib::generate_fix_utf8_code(&bytes));
+                }
+            }
+            _ => self.write(&format!("// Unknown encoding method: {}", method)),
+        }
+    }
+
+    fn generate_queue_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::queue::QueueStdlib;
+        match method {
+            "create" => {
+                let capacity = args.first().map(|a| self.capture_expression(a));
+                self.write(&QueueStdlib::generate_create_code(capacity.as_deref()));
+            }
+            "enqueue" => {
+                if args.len() >= 2 {
+                    let queue = self.capture_expression(&args[0]);
+                    let item = self.capture_expression(&args[1]);
+                    self.write(&QueueStdlib::generate_enqueue_code(&queue, &item));
+                }
+            }
+            "dequeue" => {
+                if let Some(arg) = args.first() {
+                    let queue = self.capture_expression(arg);
+                    self.write(&QueueStdlib::generate_dequeue_code(&queue));
+                }
+            }
+            "peek" => {
+                if let Some(arg) = args.first() {
+                    let queue = self.capture_expression(arg);
+                    self.write(&QueueStdlib::generate_peek_code(&queue));
+                }
+            }
+            "size" => {
+                if let Some(arg) = args.first() {
+                    let queue = self.capture_expression(arg);
+                    self.write(&QueueStdlib::generate_size_code(&queue));
+                }
+            }
+            "is_empty" | "isEmpty" => {
+                if let Some(arg) = args.first() {
+                    let queue = self.capture_expression(arg);
+                    self.write(&QueueStdlib::generate_is_empty_code(&queue));
+                }
+            }
+            "is_full" | "isFull" => {
+                if let Some(arg) = args.first() {
+                    let queue = self.capture_expression(arg);
+                    self.write(&QueueStdlib::generate_is_full_code(&queue));
+                }
+            }
+            "priority" => {
+                if let Some(arg) = args.first() {
+                    let compare = self.capture_expression(arg);
+                    self.write(&QueueStdlib::generate_priority_create_code(&compare));
+                }
+            }
+            "bounded" => {
+                if let Some(arg) = args.first() {
+                    let capacity = self.capture_expression(arg);
+                    self.write(&QueueStdlib::generate_bounded_create_code(&capacity));
+                }
+            }
+            _ => self.write(&format!("// Unknown queue method: {}", method)),
+        }
+    }
+
+    #[cfg(feature = "mongodb")]
+    fn generate_mongodb_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::mongodb::MongoDbStdlib;
+        match method {
+            "connect" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&MongoDbStdlib::generate_connect_code(&url));
+                }
+            }
+            "database" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let name = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_database_code(&client, &name));
+                }
+            }
+            "collection" => {
+                if args.len() >= 2 {
+                    let db = self.capture_expression(&args[0]);
+                    let name = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_collection_code(&db, &name));
+                }
+            }
+            "insert_one" | "insertOne" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let doc = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_insert_one_code(&collection, &doc));
+                }
+            }
+            "find" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let filter = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_find_code(&collection, &filter));
+                }
+            }
+            "find_one" | "findOne" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let filter = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_find_one_code(&collection, &filter));
+                }
+            }
+            "update_one" | "updateOne" => {
+                if args.len() >= 3 {
+                    let collection = self.capture_expression(&args[0]);
+                    let filter = self.capture_expression(&args[1]);
+                    let update = self.capture_expression(&args[2]);
+                    self.write(&MongoDbStdlib::generate_update_one_code(&collection, &filter, &update));
+                }
+            }
+            "delete_one" | "deleteOne" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let filter = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_delete_one_code(&collection, &filter));
+                }
+            }
+            "aggregate" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let pipeline = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_aggregate_code(&collection, &pipeline));
+                }
+            }
+            "create_index" | "createIndex" => {
+                if args.len() >= 3 {
+                    let collection = self.capture_expression(&args[0]);
+                    let keys = self.capture_expression(&args[1]);
+                    let unique = if let Expression::Boolean(b) = &args[2] { *b } else { false };
+                    self.write(&MongoDbStdlib::generate_create_index_code(&collection, &keys, unique));
+                }
+            }
+            _ => self.write(&format!("// Unknown mongodb method: {}", method)),
+        }
+    }
+
+    #[cfg(feature = "smtp")]
+    fn generate_smtp_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::smtp::SmtpStdlib;
+        match method {
+            "connect" => {
+                if let Some(arg) = args.first() {
+                    let config = self.capture_expression(arg);
+                    self.write(&SmtpStdlib::generate_connect_code(&config));
+                }
+            }
+            "send" => {
+                if args.len() >= 2 {
+                    let mailer = self.capture_expression(&args[0]);
+                    let email = self.capture_expression(&args[1]);
+                    self.write(&SmtpStdlib::generate_send_code(&mailer, &email));
+                }
+            }
+            "template" => {
+                if args.len() >= 2 {
+                    let template_path = self.capture_expression(&args[0]);
+                    let data = self.capture_expression(&args[1]);
+                    self.write(&SmtpStdlib::generate_template_code(&template_path, &data));
+                }
+            }
+            _ => self.write(&format!("// Unknown smtp method: {}", method)),
+        }
+    }
+
+    fn generate_csv_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::csv::CsvStdlib;
+        match method {
+            "read" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let has_header = if let Expression::Boolean(b) = &args[1] { *b } else { false };
+                    self.write(&CsvStdlib::generate_read_code(&path, has_header));
+                }
+            }
+            "write" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let rows = self.capture_expression(&args[1]);
+                    let headers = args.get(2).map(|a| self.capture_expression(a));
+                    self.write(&CsvStdlib::generate_write_code(&path, &rows, headers.as_deref()));
+                }
+            }
+            "parse" => {
+                if let Some(arg) = args.first() {
+                    let csv_string = self.capture_expression(arg);
+                    self.write(&CsvStdlib::generate_parse_code(&csv_string));
+                }
+            }
+            "stringify" => {
+                if args.len() >= 2 {
+                    let rows = self.capture_expression(&args[0]);
+                    let headers = self.capture_expression(&args[1]);
+                    self.write(&CsvStdlib::generate_stringify_code(&rows, &headers));
+                }
+            }
+            "validate" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let schema = self.capture_expression(&args[1]);
+                    self.write(&CsvStdlib::generate_validate_code(&path, &schema));
+                }
+            }
+            _ => self.write(&format!("// Unknown csv method: {}", method)),
+        }
+    }
+
+    fn generate_yaml_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::yaml::YamlStdlib;
+        match method {
+            "parse" => {
+                if let Some(arg) = args.first() {
+                    let yaml_string = self.capture_expression(arg);
+                    self.write(&YamlStdlib::generate_parse_code(&yaml_string));
+                }
+            }
+            "parse_file" | "parseFile" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&YamlStdlib::generate_parse_file_code(&path));
+                }
+            }
+            "stringify" => {
+                if let Some(arg) = args.first() {
+                    let value = self.capture_expression(arg);
+                    self.write(&YamlStdlib::generate_stringify_code(&value));
+                }
+            }
+            "write_file" | "writeFile" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let value = self.capture_expression(&args[1]);
+                    self.write(&YamlStdlib::generate_write_file_code(&path, &value));
+                }
+            }
+            "validate" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let schema = self.capture_expression(&args[1]);
+                    self.write(&YamlStdlib::generate_validate_code(&path, &schema));
+                }
+            }
+            _ => self.write(&format!("// Unknown yaml method: {}", method)),
+        }
+    }
+
+    fn generate_audit_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::audit::AuditStdlib;
+        match method {
+            "log" => {
+                if let Some(arg) = args.first() {
+                    let log_data = self.capture_expression(arg);
+                    self.write(&AuditStdlib::generate_log_code(&log_data));
+                }
+            }
+            "query" => {
+                if let Some(arg) = args.first() {
+                    let filters = self.capture_expression(arg);
+                    self.write(&AuditStdlib::generate_query_code(&filters));
+                }
+            }
+            "export" => {
+                if args.len() >= 2 {
+                    let format = self.capture_expression(&args[0]);
+                    let filters = self.capture_expression(&args[1]);
+                    self.write(&AuditStdlib::generate_export_code(&format, &filters));
+                }
+            }
+            _ => self.write(&format!("// Unknown audit method: {}", method)),
+        }
+    }
+
+    #[cfg(feature = "security")]
+    fn generate_encryption_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::encryption::EncryptionStdlib;
+        match method {
+            "aes_encrypt" | "aesEncrypt" => {
+                if args.len() >= 2 {
+                    let data = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_aes_encrypt_code(&data, &key));
+                }
+            }
+            "aes_decrypt" | "aesDecrypt" => {
+                if args.len() >= 2 {
+                    let encrypted = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_aes_decrypt_code(&encrypted, &key));
+                }
+            }
+            "rsa_generate_keypair" | "rsaGenerateKeypair" => {
+                if let Some(arg) = args.first() {
+                    let bits = self.capture_expression(arg);
+                    self.write(&EncryptionStdlib::generate_rsa_generate_keypair_code(&bits));
+                }
+            }
+            "rsa_encrypt" | "rsaEncrypt" => {
+                if args.len() >= 2 {
+                    let data = self.capture_expression(&args[0]);
+                    let public_key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_rsa_encrypt_code(&data, &public_key));
+                }
+            }
+            "rsa_decrypt" | "rsaDecrypt" => {
+                if args.len() >= 2 {
+                    let encrypted = self.capture_expression(&args[0]);
+                    let private_key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_rsa_decrypt_code(&encrypted, &private_key));
+                }
+            }
+            "fernet_generate_key" | "fernetGenerateKey" => {
+                self.write(&EncryptionStdlib::generate_fernet_generate_key_code());
+            }
+            "fernet_encrypt" | "fernetEncrypt" => {
+                if args.len() >= 2 {
+                    let data = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_fernet_encrypt_code(&data, &key));
+                }
+            }
+            "fernet_decrypt" | "fernetDecrypt" => {
+                if args.len() >= 2 {
+                    let encrypted = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_fernet_decrypt_code(&encrypted, &key));
+                }
+            }
+            "generate_key" | "generateKey" => {
+                if let Some(arg) = args.first() {
+                    let algorithm = self.capture_expression(arg);
+                    self.write(&EncryptionStdlib::generate_generate_key_code(&algorithm));
+                }
+            }
+            "store_key" | "storeKey" => {
+                if args.len() >= 3 {
+                    let key_id = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    let vault = self.capture_expression(&args[2]);
+                    self.write(&EncryptionStdlib::generate_store_key_code(&key_id, &key, &vault));
+                }
+            }
+            "retrieve_key" | "retrieveKey" => {
+                if let Some(arg) = args.first() {
+                    let key_id = self.capture_expression(arg);
+                    self.write(&EncryptionStdlib::generate_retrieve_key_code(&key_id));
+                }
+            }
+            _ => self.write(&format!("// Unknown encryption method: {}", method)),
+        }
+    }
+
+    fn generate_alerting_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::alerting::AlertingStdlib;
+        match method {
+            "create_rule" | "createRule" => {
+                if let Some(arg) = args.first() {
+                    let rule = self.capture_expression(arg);
+                    self.write(&AlertingStdlib::generate_create_rule_code(&rule));
+                }
+            }
+            "check" => {
+                if args.len() >= 3 {
+                    let metric = self.capture_expression(&args[0]);
+                    let value = self.capture_expression(&args[1]);
+                    let rules = self.capture_expression(&args[2]);
+                    self.write(&AlertingStdlib::generate_check_code(&metric, &value, &rules));
+                }
+            }
+            "trigger" => {
+                if let Some(arg) = args.first() {
+                    let alert = self.capture_expression(arg);
+                    self.write(&AlertingStdlib::generate_trigger_code(&alert));
+                }
+            }
+            "history" => {
+                if let Some(arg) = args.first() {
+                    let filters = self.capture_expression(arg);
+                    self.write(&AlertingStdlib::generate_history_code(&filters));
+                }
+            }
+            _ => self.write(&format!("// Unknown alerting method: {}", method)),
+        }
+    }
+
+    fn generate_nlp_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::nlp::NlpStdlib;
+        match method {
+            "tokenize" => {
+                if let Some(arg) = args.first() {
+                    let text = self.capture_expression(arg);
+                    self.write(&NlpStdlib::generate_tokenize_code(&text));
+                }
+            }
+            "sentiment" => {
+                if let Some(arg) = args.first() {
+                    let text = self.capture_expression(arg);
+                    self.write(&NlpStdlib::generate_sentiment_code(&text));
+                }
+            }
+            "ner" => {
+                if let Some(arg) = args.first() {
+                    let text = self.capture_expression(arg);
+                    self.write(&NlpStdlib::generate_ner_code(&text));
+                }
+            }
+            "keywords" => {
+                if args.len() >= 2 {
+                    let text = self.capture_expression(&args[0]);
+                    let count = self.capture_expression(&args[1]);
+                    self.write(&NlpStdlib::generate_keywords_code(&text, &count));
+                }
+            }
+            "similarity" => {
+                if args.len() >= 2 {
+                    let text1 = self.capture_expression(&args[0]);
+                    let text2 = self.capture_expression(&args[1]);
+                    self.write(&NlpStdlib::generate_similarity_code(&text1, &text2));
+                }
+            }
+            "summarize" => {
+                if args.len() >= 2 {
+                    let text = self.capture_expression(&args[0]);
+                    let sentences = self.capture_expression(&args[1]);
+                    self.write(&NlpStdlib::generate_summarize_code(&text, &sentences));
+                }
+            }
+            _ => self.write(&format!("// Unknown nlp method: {}", method)),
+        }
+    }
+
+    fn generate_workflow_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::workflow::WorkflowStdlib;
+        match method {
+            "create" => {
+                if let Some(arg) = args.first() {
+                    let definition = self.capture_expression(arg);
+                    self.write(&WorkflowStdlib::generate_create_code(&definition));
+                }
+            }
+            "start" => {
+                if let Some(arg) = args.first() {
+                    let workflow = self.capture_expression(arg);
+                    self.write(&WorkflowStdlib::generate_start_code(&workflow));
+                }
+            }
+            "execute_step" | "executeStep" => {
+                if args.len() >= 2 {
+                    let workflow = self.capture_expression(&args[0]);
+                    let step_id = self.capture_expression(&args[1]);
+                    self.write(&WorkflowStdlib::generate_execute_step_code(&workflow, &step_id));
+                }
+            }
+            "get_status" | "getStatus" => {
+                if let Some(arg) = args.first() {
+                    let workflow = self.capture_expression(arg);
+                    self.write(&WorkflowStdlib::generate_get_status_code(&workflow));
+                }
+            }
+            "get_history" | "getHistory" => {
+                if let Some(arg) = args.first() {
+                    let workflow = self.capture_expression(arg);
+                    self.write(&WorkflowStdlib::generate_get_history_code(&workflow));
+                }
+            }
+            "complete" => {
+                if let Some(arg) = args.first() {
+                    let workflow = self.capture_expression(arg);
+                    self.write(&WorkflowStdlib::generate_complete_code(&workflow));
+                }
+            }
+            "fail" => {
+                if args.len() >= 2 {
+                    let workflow = self.capture_expression(&args[0]);
+                    let error = self.capture_expression(&args[1]);
+                    self.write(&WorkflowStdlib::generate_fail_code(&workflow, &error));
+                }
+            }
+            _ => self.write(&format!("// Unknown workflow method: {}", method)),
+        }
+    }
+
+    fn generate_scheduler_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::scheduler::SchedulerStdlib;
+        match method {
+            "schedule" => {
+                if args.len() >= 2 {
+                    let task = self.capture_expression(&args[0]);
+                    let cron = self.capture_expression(&args[1]);
+                    self.write(&SchedulerStdlib::generate_schedule_code(&task, &cron));
+                }
+            }
+            "schedule_interval" | "scheduleInterval" => {
+                if args.len() >= 2 {
+                    let task = self.capture_expression(&args[0]);
+                    let interval = self.capture_expression(&args[1]);
+                    self.write(&SchedulerStdlib::generate_schedule_interval_code(&task, &interval));
+                }
+            }
+            "cancel" => {
+                if let Some(arg) = args.first() {
+                    let task_id = self.capture_expression(arg);
+                    self.write(&SchedulerStdlib::generate_cancel_code(&task_id));
+                }
+            }
+            "list" => {
+                self.write(&SchedulerStdlib::generate_list_code());
+            }
+            "get" => {
+                if let Some(arg) = args.first() {
+                    let task_id = self.capture_expression(arg);
+                    self.write(&SchedulerStdlib::generate_get_code(&task_id));
+                }
+            }
+            "enable" => {
+                if let Some(arg) = args.first() {
+                    let task_id = self.capture_expression(arg);
+                    self.write(&SchedulerStdlib::generate_enable_code(&task_id));
+                }
+            }
+            "disable" => {
+                if let Some(arg) = args.first() {
+                    let task_id = self.capture_expression(arg);
+                    self.write(&SchedulerStdlib::generate_disable_code(&task_id));
+                }
+            }
+            _ => self.write(&format!("// Unknown scheduler method: {}", method)),
+        }
+    }
+
+    fn generate_event_bus_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::event_bus::EventBusStdlib;
+        match method {
+            "create" => {
+                self.write(&EventBusStdlib::generate_create_code());
+            }
+            "publish" => {
+                if args.len() >= 3 {
+                    let bus = self.capture_expression(&args[0]);
+                    let topic = self.capture_expression(&args[1]);
+                    let event = self.capture_expression(&args[2]);
+                    self.write(&EventBusStdlib::generate_publish_code(&bus, &topic, &event));
+                }
+            }
+            "subscribe" => {
+                if args.len() >= 2 {
+                    let bus = self.capture_expression(&args[0]);
+                    let topic = self.capture_expression(&args[1]);
+                    self.write(&EventBusStdlib::generate_subscribe_code(&bus, &topic));
+                }
+            }
+            "unsubscribe" => {
+                if let Some(arg) = args.first() {
+                    let subscription = self.capture_expression(arg);
+                    self.write(&EventBusStdlib::generate_unsubscribe_code(&subscription));
+                }
+            }
+            "get_history" | "getHistory" => {
+                if args.len() >= 3 {
+                    let bus = self.capture_expression(&args[0]);
+                    let topic = self.capture_expression(&args[1]);
+                    let limit = self.capture_expression(&args[2]);
+                    self.write(&EventBusStdlib::generate_get_history_code(&bus, &topic, &limit));
+                }
+            }
+            _ => self.write(&format!("// Unknown event_bus method: {}", method)),
+        }
+    }
+
+    fn generate_fixtures_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::fixtures::FixturesStdlib;
+        match method {
+            "create" => {
+                if let Some(arg) = args.first() {
+                    let template = self.capture_expression(arg);
+                    self.write(&FixturesStdlib::generate_create_code(&template));
+                }
+            }
+            "create_many" | "createMany" => {
+                if args.len() >= 2 {
+                    let template = self.capture_expression(&args[0]);
+                    let count = self.capture_expression(&args[1]);
+                    self.write(&FixturesStdlib::generate_create_many_code(&template, &count));
+                }
+            }
+            "factory" => {
+                if args.len() >= 2 {
+                    let name = self.capture_expression(&args[0]);
+                    let builder = self.capture_expression(&args[1]);
+                    self.write(&FixturesStdlib::generate_factory_code(&name, &builder));
+                }
+            }
+            "build" => {
+                if args.len() >= 2 {
+                    let factory = self.capture_expression(&args[0]);
+                    let overrides = self.capture_expression(&args[1]);
+                    self.write(&FixturesStdlib::generate_build_code(&factory, &overrides));
+                }
+            }
+            _ => self.write(&format!("// Unknown fixtures method: {}", method)),
+        }
+    }
+
+    fn generate_mocks_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::mocks::MocksStdlib;
+        match method {
+            "mock" => {
+                if args.len() >= 2 {
+                    let original = self.capture_expression(&args[0]);
+                    let mock = self.capture_expression(&args[1]);
+                    self.write(&MocksStdlib::generate_mock_code(&original, &mock));
+                }
+            }
+            "spy" => {
+                if let Some(arg) = args.first() {
+                    let target = self.capture_expression(arg);
+                    self.write(&MocksStdlib::generate_spy_code(&target));
+                }
+            }
+            "verify" => {
+                if args.len() >= 2 {
+                    let spy = self.capture_expression(&args[0]);
+                    let expected_calls = self.capture_expression(&args[1]);
+                    self.write(&MocksStdlib::generate_verify_code(&spy, &expected_calls));
+                }
+            }
+            "reset" => {
+                if let Some(arg) = args.first() {
+                    let spy = self.capture_expression(arg);
+                    self.write(&MocksStdlib::generate_reset_code(&spy));
+                }
+            }
+            "stub" => {
+                if let Some(arg) = args.first() {
+                    let return_value = self.capture_expression(arg);
+                    self.write(&MocksStdlib::generate_stub_code(&return_value));
+                }
+            }
+            _ => self.write(&format!("// Unknown mocks method: {}", method)),
+        }
+    }
+
+    fn generate_template_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::template::TemplateStdlib;
+        match method {
+            "render" => {
+                if args.len() >= 2 {
+                    let template = self.capture_expression(&args[0]);
+                    let data = self.capture_expression(&args[1]);
+                    self.write(&TemplateStdlib::generate_render_code(&template, &data));
+                }
+            }
+            "render_file" | "renderFile" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let data = self.capture_expression(&args[1]);
+                    self.write(&TemplateStdlib::generate_render_file_code(&path, &data));
+                }
+            }
+            "partial" => {
+                if args.len() >= 2 {
+                    let partial_path = self.capture_expression(&args[0]);
+                    let data = self.capture_expression(&args[1]);
+                    self.write(&TemplateStdlib::generate_partial_code(&partial_path, &data));
+                }
+            }
+            "cache" => {
+                if args.len() >= 2 {
+                    let template = self.capture_expression(&args[0]);
+                    let cache_key = self.capture_expression(&args[1]);
+                    self.write(&TemplateStdlib::generate_cache_code(&template, &cache_key));
+                }
+            }
+            _ => self.write(&format!("// Unknown template method: {}", method)),
+        }
+    }
+
+    fn generate_env_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::env::EnvStdlib;
+        match method {
+            "load" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&EnvStdlib::generate_load_code(&path));
+                }
+            }
+            "get" => {
+                if args.len() >= 1 {
+                    let key = self.capture_expression(&args[0]);
+                    let default = args.get(1).map(|a| self.capture_expression(a));
+                    self.write(&EnvStdlib::generate_get_code(&key, default.as_deref()));
+                }
+            }
+            "get_number" | "getNumber" => {
+                if args.len() >= 2 {
+                    let key = self.capture_expression(&args[0]);
+                    let default = self.capture_expression(&args[1]);
+                    self.write(&EnvStdlib::generate_get_number_code(&key, &default));
+                }
+            }
+            "get_bool" | "getBool" => {
+                if args.len() >= 2 {
+                    let key = self.capture_expression(&args[0]);
+                    let default = if let Expression::Boolean(b) = &args[1] { if *b { "true" } else { "false" } } else { "false" };
+                    self.write(&EnvStdlib::generate_get_bool_code(&key, default));
+                }
+            }
+            "set" => {
+                if args.len() >= 2 {
+                    let key = self.capture_expression(&args[0]);
+                    let value = self.capture_expression(&args[1]);
+                    self.write(&EnvStdlib::generate_set_code(&key, &value));
+                }
+            }
+            "validate" => {
+                if let Some(arg) = args.first() {
+                    let schema = self.capture_expression(arg);
+                    self.write(&EnvStdlib::generate_validate_code(&schema));
+                }
+            }
+            "get_secret" | "getSecret" => {
+                if args.len() >= 2 {
+                    let key = self.capture_expression(&args[0]);
+                    let vault = self.capture_expression(&args[1]);
+                    self.write(&EnvStdlib::generate_get_secret_code(&key, &vault));
+                }
+            }
+            _ => self.write(&format!("// Unknown env method: {}", method)),
+        }
+    }
+
+
+    fn generate_test_module_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::test_module::TestModuleStdlib;
+        
+        match method {
+            "process_data" => {
+                if args.len() >= 1 {
+                    let input = self.capture_expression(&args[0]);
+                    let options = if args.len() > 1 {
+                        self.capture_expression(&args[1])
+                    } else {
+                        String::new()
+                    };
+                    self.write(&TestModuleStdlib::generate_process_data_code(&input, &options));
+                } else {
+                    self.write(&format!("// Error: process_data requires at least 1 arguments", args.len()));
+                }
+            }
+            "validate_input" => {
+                if args.len() >= 1 {
+                    let data = self.capture_expression(&args[0]);
+                    self.write(&TestModuleStdlib::generate_validate_input_code(&data));
+                } else {
+                    self.write(&format!("// Error: validate_input requires at least 1 arguments", args.len()));
+                }
+            }
+            "transform_format" => {
+                if args.len() >= 2 {
+                    let data = self.capture_expression(&args[0]);
+                    let target_format = self.capture_expression(&args[1]);
+                    self.write(&TestModuleStdlib::generate_transform_format_code(&data, &target_format));
+                } else {
+                    self.write(&format!("// Error: transform_format requires at least 2 arguments", args.len()));
+                }
+            }
+            _ => self.write(&format!("// Unknown test_module method: {}", method)),
+        }
+    }
+
+    fn generate_metrics_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::metrics::MetricsStdlib;
+        match method {
+            "increment" => {
+                if args.len() >= 1 {
+                    let name = self.capture_expression(&args[0]);
+                    let labels = args.get(1).map(|a| self.capture_expression(a));
+                    self.write(&MetricsStdlib::generate_increment_code(&name, labels.as_deref()));
+                }
+            }
+            "gauge" => {
+                if args.len() >= 2 {
+                    let name = self.capture_expression(&args[0]);
+                    let value = self.capture_expression(&args[1]);
+                    let labels = args.get(2).map(|a| self.capture_expression(a));
+                    self.write(&MetricsStdlib::generate_gauge_code(&name, &value, labels.as_deref()));
+                }
+            }
+            "histogram" => {
+                if args.len() >= 2 {
+                    let name = self.capture_expression(&args[0]);
+                    let value = self.capture_expression(&args[1]);
+                    let labels = args.get(2).map(|a| self.capture_expression(a));
+                    self.write(&MetricsStdlib::generate_histogram_code(&name, &value, labels.as_deref()));
+                }
+            }
+            _ => self.write(&format!("// Unknown metrics method: {}", method)),
+        }
+    }
+
+    fn generate_cache_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::cache::CacheStdlib;
+        match method {
+            "set" => {
+                if args.len() >= 2 {
+                    let key = self.capture_expression(&args[0]);
+                    let value = self.capture_expression(&args[1]);
+                    let ttl = args.get(2).map(|a| self.capture_expression(a));
+                    self.write(&CacheStdlib::generate_set_code(&key, &value, ttl.as_deref()));
+                }
+            }
+            "get" => {
+                if let Some(arg) = args.first() {
+                    let key = self.capture_expression(arg);
+                    self.write(&CacheStdlib::generate_get_code(&key));
+                }
+            }
+            "remove" => {
+                if let Some(arg) = args.first() {
+                    let key = self.capture_expression(arg);
+                    self.write(&CacheStdlib::generate_remove_code(&key));
+                }
+            }
+            "clear" => {
+                self.write(&CacheStdlib::generate_clear_code());
+            }
+            "exists" => {
+                if let Some(arg) = args.first() {
+                    let key = self.capture_expression(arg);
+                    self.write(&CacheStdlib::generate_exists_code(&key));
+                }
+            }
+            "size" => {
+                self.write(&CacheStdlib::generate_size_code());
+            }
+            _ => self.write(&format!("// Unknown cache method: {}", method)),
+        }
+    }
+
+    fn generate_auth_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::auth::AuthStdlib;
+        match method {
+            "generate_token" | "generateToken" => {
+                if args.len() >= 2 {
+                    let service = self.capture_expression(&args[0]);
+                    let claims = self.capture_expression(&args[1]);
+                    self.write(&AuthStdlib::generate_generate_token_code(&service, &claims));
+                }
+            }
+            "verify_token" | "verifyToken" => {
+                if args.len() >= 2 {
+                    let service = self.capture_expression(&args[0]);
+                    let token = self.capture_expression(&args[1]);
+                    self.write(&AuthStdlib::generate_verify_token_code(&service, &token));
+                }
+            }
+            "extract_user_id" | "extractUserId" => {
+                if args.len() >= 2 {
+                    let service = self.capture_expression(&args[0]);
+                    let token = self.capture_expression(&args[1]);
+                    self.write(&AuthStdlib::generate_extract_user_id_code(&service, &token));
+                }
+            }
+            "has_role" | "hasRole" => {
+                if args.len() >= 3 {
+                    let service = self.capture_expression(&args[0]);
+                    let token = self.capture_expression(&args[1]);
+                    let role = self.capture_expression(&args[2]);
+                    self.write(&AuthStdlib::generate_has_role_code(&service, &token, &role));
+                }
+            }
+            _ => self.write(&format!("// Unknown auth method: {}", method)),
+        }
+    }
+
+    fn generate_validation_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::validation::ValidationStdlib;
+        match method {
+            "new" => {
+                self.write(&ValidationStdlib::generate_new_code());
+            }
+            "required" => {
+                if args.len() >= 3 {
+                    let validator = self.capture_expression(&args[0]);
+                    let field = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    self.write(&ValidationStdlib::generate_required_code(&validator, &field, &value));
+                }
+            }
+            "min_length" | "minLength" => {
+                if args.len() >= 4 {
+                    let validator = self.capture_expression(&args[0]);
+                    let field = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    let min = self.capture_expression(&args[3]);
+                    self.write(&ValidationStdlib::generate_min_length_code(&validator, &field, &value, &min));
+                }
+            }
+            "max_length" | "maxLength" => {
+                if args.len() >= 4 {
+                    let validator = self.capture_expression(&args[0]);
+                    let field = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    let max = self.capture_expression(&args[3]);
+                    self.write(&ValidationStdlib::generate_max_length_code(&validator, &field, &value, &max));
+                }
+            }
+            "email" => {
+                if args.len() >= 3 {
+                    let validator = self.capture_expression(&args[0]);
+                    let field = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    self.write(&ValidationStdlib::generate_email_code(&validator, &field, &value));
+                }
+            }
+            "pattern" => {
+                if args.len() >= 5 {
+                    let validator = self.capture_expression(&args[0]);
+                    let field = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    let pattern = self.capture_expression(&args[3]);
+                    let message = self.capture_expression(&args[4]);
+                    self.write(&ValidationStdlib::generate_pattern_code(&validator, &field, &value, &pattern, &message));
+                }
+            }
+            "min" => {
+                if args.len() >= 4 {
+                    let validator = self.capture_expression(&args[0]);
+                    let field = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    let min = self.capture_expression(&args[3]);
+                    self.write(&ValidationStdlib::generate_min_code(&validator, &field, &value, &min));
+                }
+            }
+            "max" => {
+                if args.len() >= 4 {
+                    let validator = self.capture_expression(&args[0]);
+                    let field = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    let max = self.capture_expression(&args[3]);
+                    self.write(&ValidationStdlib::generate_max_code(&validator, &field, &value, &max));
+                }
+            }
+            _ => self.write(&format!("// Unknown validation method: {}", method)),
+        }
+    }
+
+    fn generate_alerting_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::alerting::AlertingStdlib;
+        match method {
+            "create_rule" | "createRule" => {
+                if let Some(arg) = args.first() {
+                    let rule = self.capture_expression(arg);
+                    self.write(&AlertingStdlib::generate_create_rule_code(&rule));
+                }
+            }
+            "check" => {
+                if args.len() >= 3 {
+                    let metric = self.capture_expression(&args[0]);
+                    let value = self.capture_expression(&args[1]);
+                    let rules = self.capture_expression(&args[2]);
+                    self.write(&AlertingStdlib::generate_check_code(&metric, &value, &rules));
+                }
+            }
+            _ => self.write(&format!("// Unknown alerting method: {}", method)),
+        }
+    }
+
+    fn generate_crypto_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::crypto::CryptoStdlib;
+        match method {
+            "sha256" => {
+                if let Some(arg) = args.first() {
+                    let input = self.capture_expression(arg);
+                    self.write(&CryptoStdlib::generate_sha256_code(&input));
+                }
+            }
+            "md5" => {
+                if let Some(arg) = args.first() {
+                    let input = self.capture_expression(arg);
+                    self.write(&CryptoStdlib::generate_md5_code(&input));
+                }
+            }
+            "uuid" => {
+                self.write(&CryptoStdlib::generate_uuid_code());
+            }
+            "hash_password" | "hashPassword" => {
+                if args.len() >= 2 {
+                    let password = self.capture_expression(&args[0]);
+                    let salt = self.capture_expression(&args[1]);
+                    self.write(&CryptoStdlib::generate_hash_password_code(&password, &salt));
+                }
+            }
+            _ => self.write(&format!("// Unknown crypto method: {}", method)),
+        }
+    }
+
+    fn generate_csv_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::csv::CsvStdlib;
+        match method {
+            "read" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let has_header = if let Expression::Boolean(b) = &args[1] { if *b { "true" } else { "false" } } else { "false" };
+                    self.write(&CsvStdlib::generate_read_code(&path, has_header.parse().unwrap_or(false)));
+                }
+            }
+            "write" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let rows = self.capture_expression(&args[1]);
+                    let headers = args.get(2).map(|a| self.capture_expression(a));
+                    self.write(&CsvStdlib::generate_write_code(&path, &rows, headers.as_deref()));
+                }
+            }
+            "parse" => {
+                if let Some(arg) = args.first() {
+                    let csv_string = self.capture_expression(arg);
+                    self.write(&CsvStdlib::generate_parse_code(&csv_string));
+                }
+            }
+            "stringify" => {
+                if args.len() >= 2 {
+                    let rows = self.capture_expression(&args[0]);
+                    let headers = self.capture_expression(&args[1]);
+                    self.write(&CsvStdlib::generate_stringify_code(&rows, &headers));
+                }
+            }
+            "validate" => {
+                if args.len() >= 2 {
+                    let path = self.capture_expression(&args[0]);
+                    let schema = self.capture_expression(&args[1]);
+                    self.write(&CsvStdlib::generate_validate_code(&path, &schema));
+                }
+            }
+            _ => self.write(&format!("// Unknown csv method: {}", method)),
+        }
+    }
+
+    fn generate_redis_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::redis::RedisStdlib;
+        match method {
+            "connect" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&RedisStdlib::generate_connect_code(&url));
+                }
+            }
+            "set" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    let ttl = args.get(3).map(|a| self.capture_expression(a));
+                    self.write(&RedisStdlib::generate_set_code(&client, &key, &value, ttl.as_deref()));
+                }
+            }
+            "get" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_get_code(&client, &key));
+                }
+            }
+            "delete" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_delete_code(&client, &key));
+                }
+            }
+            "hset" => {
+                if args.len() >= 4 {
+                    let client = self.capture_expression(&args[0]);
+                    let hash = self.capture_expression(&args[1]);
+                    let field = self.capture_expression(&args[2]);
+                    let value = self.capture_expression(&args[3]);
+                    self.write(&RedisStdlib::generate_hset_code(&client, &hash, &field, &value));
+                }
+            }
+            "hget" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let hash = self.capture_expression(&args[1]);
+                    let field = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_hget_code(&client, &hash, &field));
+                }
+            }
+            "hgetall" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let hash = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_hgetall_code(&client, &hash));
+                }
+            }
+            "lpush" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let list = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_lpush_code(&client, &list, &value));
+                }
+            }
+            "rpush" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let list = self.capture_expression(&args[1]);
+                    let value = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_rpush_code(&client, &list, &value));
+                }
+            }
+            "lpop" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let list = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_lpop_code(&client, &list));
+                }
+            }
+            "llen" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let list = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_llen_code(&client, &list));
+                }
+            }
+            "sadd" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let set = self.capture_expression(&args[1]);
+                    let member = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_sadd_code(&client, &set, &member));
+                }
+            }
+            "sismember" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let set = self.capture_expression(&args[1]);
+                    let member = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_sismember_code(&client, &set, &member));
+                }
+            }
+            "smembers" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let set = self.capture_expression(&args[1]);
+                    self.write(&RedisStdlib::generate_smembers_code(&client, &set));
+                }
+            }
+            "publish" => {
+                if args.len() >= 3 {
+                    let client = self.capture_expression(&args[0]);
+                    let channel = self.capture_expression(&args[1]);
+                    let message = self.capture_expression(&args[2]);
+                    self.write(&RedisStdlib::generate_publish_code(&client, &channel, &message));
+                }
+            }
+            _ => self.write(&format!("// Unknown redis method: {}", method)),
+        }
+    }
+
+    fn generate_mongodb_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::mongodb::MongoDbStdlib;
+        match method {
+            "connect" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&MongoDbStdlib::generate_connect_code(&url));
+                }
+            }
+            "database" => {
+                if args.len() >= 2 {
+                    let client = self.capture_expression(&args[0]);
+                    let name = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_database_code(&client, &name));
+                }
+            }
+            "collection" => {
+                if args.len() >= 2 {
+                    let db = self.capture_expression(&args[0]);
+                    let name = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_collection_code(&db, &name));
+                }
+            }
+            "insert_one" | "insertOne" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let doc = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_insert_one_code(&collection, &doc));
+                }
+            }
+            "find" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let filter = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_find_code(&collection, &filter));
+                }
+            }
+            "find_one" | "findOne" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let filter = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_find_one_code(&collection, &filter));
+                }
+            }
+            "update_one" | "updateOne" => {
+                if args.len() >= 3 {
+                    let collection = self.capture_expression(&args[0]);
+                    let filter = self.capture_expression(&args[1]);
+                    let update = self.capture_expression(&args[2]);
+                    self.write(&MongoDbStdlib::generate_update_one_code(&collection, &filter, &update));
+                }
+            }
+            "delete_one" | "deleteOne" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let filter = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_delete_one_code(&collection, &filter));
+                }
+            }
+            "aggregate" => {
+                if args.len() >= 2 {
+                    let collection = self.capture_expression(&args[0]);
+                    let pipeline = self.capture_expression(&args[1]);
+                    self.write(&MongoDbStdlib::generate_aggregate_code(&collection, &pipeline));
+                }
+            }
+            "create_index" | "createIndex" => {
+                if args.len() >= 3 {
+                    let collection = self.capture_expression(&args[0]);
+                    let keys = self.capture_expression(&args[1]);
+                    let unique = if let Expression::Boolean(b) = &args[2] { *b } else { false };
+                    self.write(&MongoDbStdlib::generate_create_index_code(&collection, &keys, unique));
+                }
+            }
+            _ => self.write(&format!("// Unknown mongodb method: {}", method)),
+        }
+    }
+
+    fn generate_event_bus_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::event_bus::EventBusStdlib;
+        match method {
+            "create" => {
+                self.write(&EventBusStdlib::generate_create_code());
+            }
+            "publish" => {
+                if args.len() >= 3 {
+                    let bus = self.capture_expression(&args[0]);
+                    let topic = self.capture_expression(&args[1]);
+                    let event = self.capture_expression(&args[2]);
+                    self.write(&EventBusStdlib::generate_publish_code(&bus, &topic, &event));
+                }
+            }
+            "subscribe" => {
+                if args.len() >= 2 {
+                    let bus = self.capture_expression(&args[0]);
+                    let topic = self.capture_expression(&args[1]);
+                    self.write(&EventBusStdlib::generate_subscribe_code(&bus, &topic));
+                }
+            }
+            "unsubscribe" => {
+                if let Some(arg) = args.first() {
+                    let subscription = self.capture_expression(arg);
+                    self.write(&EventBusStdlib::generate_unsubscribe_code(&subscription));
+                }
+            }
+            "get_history" => {
+                if args.len() >= 3 {
+                    let bus = self.capture_expression(&args[0]);
+                    let topic = self.capture_expression(&args[1]);
+                    let limit = self.capture_expression(&args[2]);
+                    self.write(&EventBusStdlib::generate_get_history_code(&bus, &topic, &limit));
+                }
+            }
+            _ => self.write(&format!("// Unknown event_bus method: {}", method)),
+        }
+    }
+
+    fn generate_encryption_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::encryption::EncryptionStdlib;
+        match method {
+            "aes_encrypt" => {
+                if args.len() >= 2 {
+                    let data = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_aes_encrypt_code(&data, &key));
+                }
+            }
+            "aes_decrypt" => {
+                if args.len() >= 2 {
+                    let encrypted = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_aes_decrypt_code(&encrypted, &key));
+                }
+            }
+            "rsa_generate_keypair" => {
+                if let Some(arg) = args.first() {
+                    let bits = self.capture_expression(arg);
+                    self.write(&EncryptionStdlib::generate_rsa_generate_keypair_code(&bits));
+                }
+            }
+            "rsa_encrypt" => {
+                if args.len() >= 2 {
+                    let data = self.capture_expression(&args[0]);
+                    let public_key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_rsa_encrypt_code(&data, &public_key));
+                }
+            }
+            "rsa_decrypt" => {
+                if args.len() >= 2 {
+                    let encrypted = self.capture_expression(&args[0]);
+                    let private_key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_rsa_decrypt_code(&encrypted, &private_key));
+                }
+            }
+            "fernet_generate_key" => {
+                self.write(&EncryptionStdlib::generate_fernet_generate_key_code());
+            }
+            "fernet_encrypt" => {
+                if args.len() >= 2 {
+                    let data = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_fernet_encrypt_code(&data, &key));
+                }
+            }
+            "fernet_decrypt" => {
+                if args.len() >= 2 {
+                    let encrypted = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&EncryptionStdlib::generate_fernet_decrypt_code(&encrypted, &key));
+                }
+            }
+            _ => self.write(&format!("// Unknown encryption method: {}", method)),
+        }
+    }
+
+    fn generate_smtp_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::smtp::SmtpStdlib;
+        match method {
+            "connect" => {
+                if let Some(arg) = args.first() {
+                    let config = self.capture_expression(arg);
+                    self.write(&SmtpStdlib::generate_connect_code(&config));
+                }
+            }
+            "send" => {
+                if args.len() >= 2 {
+                    let mailer = self.capture_expression(&args[0]);
+                    let email = self.capture_expression(&args[1]);
+                    self.write(&SmtpStdlib::generate_send_code(&mailer, &email));
+                }
+            }
+            "template" => {
+                if args.len() >= 2 {
+                    let template_path = self.capture_expression(&args[0]);
+                    let data = self.capture_expression(&args[1]);
+                    self.write(&SmtpStdlib::generate_template_code(&template_path, &data));
+                }
+            }
+            _ => self.write(&format!("// Unknown smtp method: {}", method)),
+        }
+    }
+
+    fn generate_http_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::http::HttpStdlib;
+        match method {
+            "get" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&HttpStdlib::generate_get_code(&url));
+                }
+            }
+            "post" => {
+                if args.len() >= 2 {
+                    let url = self.capture_expression(&args[0]);
+                    let body = self.capture_expression(&args[1]);
+                    self.write(&HttpStdlib::generate_post_code(&url, &body));
+                }
+            }
+            "put" => {
+                if args.len() >= 2 {
+                    let url = self.capture_expression(&args[0]);
+                    let body = self.capture_expression(&args[1]);
+                    self.write(&HttpStdlib::generate_put_code(&url, &body));
+                }
+            }
+            "delete" => {
+                if let Some(arg) = args.first() {
+                    let url = self.capture_expression(arg);
+                    self.write(&HttpStdlib::generate_delete_code(&url));
+                }
+            }
+            _ => self.write(&format!("// Unknown http method: {}", method)),
+        }
+    }
+
+    fn generate_json_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::json::JsonStdlib;
+        match method {
+            "parse" => {
+                if let Some(arg) = args.first() {
+                    let json_string = self.capture_expression(arg);
+                    self.write(&JsonStdlib::generate_parse_code(&json_string));
+                }
+            }
+            "stringify" => {
+                if let Some(arg) = args.first() {
+                    let value = self.capture_expression(arg);
+                    self.write(&JsonStdlib::generate_stringify_code(&value));
+                }
+            }
+            "get" => {
+                if args.len() >= 2 {
+                    let value = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&JsonStdlib::generate_get_code(&value, &key));
+                }
+            }
+            "set" => {
+                if args.len() >= 3 {
+                    let value = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    let new_value = self.capture_expression(&args[2]);
+                    self.write(&JsonStdlib::generate_set_code(&value, &key, &new_value));
+                }
+            }
+            "has_key" => {
+                if args.len() >= 2 {
+                    let value = self.capture_expression(&args[0]);
+                    let key = self.capture_expression(&args[1]);
+                    self.write(&JsonStdlib::generate_has_key_code(&value, &key));
+                }
+            }
+            "keys" => {
+                if let Some(arg) = args.first() {
+                    let value = self.capture_expression(arg);
+                    self.write(&JsonStdlib::generate_keys_code(&value));
+                }
+            }
+            "length" => {
+                if let Some(arg) = args.first() {
+                    let value = self.capture_expression(arg);
+                    self.write(&JsonStdlib::generate_length_code(&value));
+                }
+            }
+            _ => self.write(&format!("// Unknown json method: {}", method)),
+        }
+    }
+
+    fn generate_log_call(&mut self, method: &str, args: &[Expression]) {
+        use crate::stdlib::log::LogStdlib;
+        match method {
+            "info" => {
+                if let Some(arg) = args.first() {
+                    let message = self.capture_expression(arg);
+                    self.write(&LogStdlib::generate_info_code(&message));
+                }
+            }
+            "warn" => {
+                if let Some(arg) = args.first() {
+                    let message = self.capture_expression(arg);
+                    self.write(&LogStdlib::generate_warn_code(&message));
+                }
+            }
+            "error" => {
+                if let Some(arg) = args.first() {
+                    let message = self.capture_expression(arg);
+                    self.write(&LogStdlib::generate_error_code(&message));
+                }
+            }
+            "debug" => {
+                if let Some(arg) = args.first() {
+                    let message = self.capture_expression(arg);
+                    self.write(&LogStdlib::generate_debug_code(&message));
+                }
+            }
+            "trace" => {
+                if let Some(arg) = args.first() {
+                    let message = self.capture_expression(arg);
+                    self.write(&LogStdlib::generate_trace_code(&message));
+                }
+            }
+            "set_level" => {
+                if let Some(arg) = args.first() {
+                    let level = self.capture_expression(arg);
+                    self.write(&LogStdlib::generate_set_level_code(&level));
+                }
+            }
+            "with_context" => {
+                if args.len() >= 2 {
+                    let key = self.capture_expression(&args[0]);
+                    let value = self.capture_expression(&args[1]);
+                    self.write(&LogStdlib::generate_with_context_code(&key, &value));
+                }
+            }
+            "to_file" => {
+                if let Some(arg) = args.first() {
+                    let path = self.capture_expression(arg);
+                    self.write(&LogStdlib::generate_to_file_code(&path));
+                }
+            }
+            "json" => {
+                if args.len() >= 2 {
+                    let message = self.capture_expression(&args[0]);
+                    let data = self.capture_expression(&args[1]);
+                    self.write(&LogStdlib::generate_json_code(&message, &data));
+                }
+            }
+            _ => self.write(&format!("// Unknown log method: {}", method)),
         }
     }
 

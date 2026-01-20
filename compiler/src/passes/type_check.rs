@@ -1,7 +1,6 @@
 use crate::compiler::pass::Pass;
 use crate::compiler::context::CompilationContext;
 use crate::type_checker::TypeChecker;
-use crate::error::CompilerError;
 use anyhow::Result;
 
 pub struct TypeCheckPass {

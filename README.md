@@ -1,4 +1,4 @@
-# 🚀 VelinScript 2.5
+# 🚀 VelinScript 2.7
 
 <div align="center">
 
@@ -10,13 +10,13 @@
  ╚████╔╝ ███████╗███████╗██║██║ ╚████║    ███████║╚██████╗██║  ██║██║██║  ██║   ██║   
   ╚═══╝  ╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝    ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝   ╚═╝   
                                                                                         
-                    V E L I N S C R I P T  2.5.0
+                    V E L I N S C R I P T  2.7.0
                     Velisch Eine moderne Programmiersprache für KI-APIs
 ```
 
 **Eine moderne Programmiersprache für KI-APIs mit den Namen (Velisch), die zu Rust kompiliert.**
 
-[![Version](https://img.shields.io/badge/version-2.5.0-blue?style=for-the-badge&logo=rust)](https://github.com/SkyliteDesign/velinscript)
+[![Version](https://img.shields.io/badge/version-2.7.0-blue?style=for-the-badge&logo=rust)](https://github.com/SkyliteDesign/velinscript)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 [![Build](https://github.com/SkyliteDesign/velinscript/workflows/CI/badge.svg?style=for-the-badge)](https://github.com/SkyliteDesign/velinscript/actions)
@@ -53,9 +53,12 @@
 
 ---
 
-## 🎯 VelinScript(Velisch) 2.5
+## 🎯 VelinScript(Velisch) 2.7
 
-VelinScript 2.5 ist die nächste Generation einer speziell für KI-API-Entwicklung optimierten Programmiersprache namens Velisch. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
+VelinScript 2.7 ist die nächste Generation einer speziell für KI-API-Entwicklung optimierten Programmiersprache namens Velisch. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
+
+**Neu in Version 2.6**: 5 neue Standard Library Module (path, url, stream, redis, tracing) mit 50+ Funktionen hinzugefügt ✅  
+**Neu in Version 2.7**: Bibliotheks-Generator für automatische Standardbibliotheks-Generierung ✅
 
 ### ✨  Kernpunkte
 
@@ -75,7 +78,7 @@ VelinScript 2.5 ist die nächste Generation einer speziell für KI-API-Entwicklu
 
 ## 🤖 KI & Machine Learning Features
 
-VelinScript 2.5 bietet native Unterstützung für moderne KI- und ML-Workflows:
+VelinScript 2.7 bietet native Unterstützung für moderne KI- und ML-Workflows:
 
 ### LLM Integration
 
@@ -298,6 +301,17 @@ let result = "Sum: {x + y}";
     - `velin generate client --openapi api.json --language typescript`
   - **Framework Selector**: Automatische Erkennung und Codegen für Axum/Actix-Web
 
+- **Bibliotheks-Generator** (Neu in 2.7): ✅
+  - **Automatische Standardbibliotheks-Generierung**: Erstellt neue Bibliotheks-Module mit vollständiger Integration
+    - `velin-library-generator generate --interactive` - Interaktiver Modus
+    - `velin-library-generator generate --config library.yaml` - Mit YAML-Konfiguration
+    - `velin-library-generator validate --config library.yaml` - Konfiguration validieren
+  - **Vollständige Integration**: Automatische Integration in mod.rs, Type Checker, Code Generator
+  - **Template-System**: 3 Modul-Typen (Simple Functions, Struct Based, Service Based)
+  - **Test-Generierung**: Automatische Unit Tests für alle Funktionen
+  - **Dokumentation**: Vollständige API-Dokumentation wird automatisch generiert
+  - **Siehe**: [Bibliotheks-Generator Dokumentation](tools/library-generator/README.md)
+
 - **VelinAutoDoc** (Neu in 2.5): ✅
   - Automatische Dokumentationsgenerierung aus `///` Doc-Comments
   - Strukturierte JSON-Exporte mit API-Dokumentation
@@ -417,7 +431,7 @@ let result = "Sum: {x + y}";
 
 ### Modulare Architektur
 
-VelinScript 2.5 folgt einer klaren, modularen Architektur für maximale Wartbarkeit und Skalierbarkeit:
+VelinScript 2.7 folgt einer klaren, modularen Architektur für maximale Wartbarkeit und Skalierbarkeit:
 
 ```
 velinscript/
@@ -480,7 +494,7 @@ velinscript/
 
 **Aktueller Status: Beta (Production-Ready Features verfügbar)**
 
-VelinScript 2.5 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Checker, Code Generator) ist funktionsfähig. Die Standard Library ist größtenteils nutzbar und getestet (50+ Module mit 150+ Funktionen registriert und validiert).
+VelinScript 2.7 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Checker, Code Generator) ist funktionsfähig. Die Standard Library ist größtenteils nutzbar und getestet (50+ Module mit 150+ Funktionen registriert und validiert).
 
 ### ✅ Was funktioniert zuverlässig
 - Parser für grundlegende Syntax (Funktionen, Structs, Enums, Decorators)
@@ -506,7 +520,7 @@ VelinScript 2.5 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Chec
   - Logging (`Logger.new()`, `VelinLogger.new()`, `logger.info()`, etc.) ✅
   - Metrics (`MetricsCollector.new()`, `collector.incrementCounter()`, etc.) ✅
   - ML/LLM (`LLMClient.new()`, `ModelLoader.new()`, `TrainingService.new()`, etc.) ✅
-- **Status**: ~50+ Module mit über 150+ Funktionen sind im Type Checker registriert und vollständig getestet ✅
+- **Status**: ~55+ Module mit über 200+ Funktionen sind im Type Checker registriert und vollständig getestet ✅
 - **Neu in Version 2.5 registriert**: 
   - Rate Limiting Decorator (`@RateLimit`) mit vollständiger Validierung ✅
   - DateTime Module (`datetime.now()`, `datetime.format()`, `datetime.parse()`, etc.) ✅
@@ -526,6 +540,12 @@ VelinScript 2.5 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Chec
   - Log Module (`log.trace()`, `log.to_file()`, `log.with_context()`, etc.) ✅
   - Config Module (`config.get_env()`, `config.load_dotenv()`) ✅
   - Flow Module (`@Flow` Decorator, `flow.snapshot_input()`, automatisches Rollback/Commit) ✅
+- **Neu in Version 2.6 registriert**:
+  - Path Module (`path.join()`, `path.dirname()`, `path.basename()`, `path.extname()`, etc.) ✅
+  - URL Module (`url.parse()`, `url.protocol()`, `url.hostname()`, `url.parse_query()`, etc.) ✅
+  - Stream Module (`stream.create()`, `stream.map()`, `stream.filter()`, `stream.reduce()`, etc.) ✅
+  - Redis Module (`redis.connect()`, `redis.set()`, `redis.get()`, `redis.publish()`, etc.) ✅
+  - Tracing Module (`tracing.start_span()`, `tracing.set_attribute()`, `tracing.child_span()`, etc.) ✅
 
 #### ML/LLM Features
 - **Funktioniert und getestet**: `LLMClient.new()`, `ModelLoader.new()`, `TrainingService.new()` sind registriert und getestet ✅
@@ -570,7 +590,13 @@ VelinScript 2.5 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Chec
 - **Security-Framework**: ✅ Vollständig implementiert - JWT/OAuth2, RBAC, Rate Limiting
 - **Hot Reloading**: ✅ Vollständig implementiert - File Watching, Watch Mode, Server Mode
 - **Vollständige Tool-Integration**: ✅ Alle Tools vollständig funktionsfähig
-- **Standard Library Expansion**: ✅ 13 neue Module mit 117+ Funktionen in Version 2.5 hinzugefügt
+- **Standard Library Expansion**: ✅ 18 neue Module mit 167+ Funktionen in Version 2.5-2.6 hinzugefügt
+  - Version 2.5: 13 Module (string, math, date, fs, llm, embedding, agent, process, sandbox, websocket, utils, log, config)
+  - Version 2.6: 5 Module (path, url, stream, redis, tracing)
+- **Bibliotheks-Generator** (Neu in 2.7): ✅ Vollständig implementiert
+  - Automatische Generierung neuer Standardbibliotheks-Module
+  - Interaktiver Modus und YAML-Konfiguration
+  - Vollständige Integration in alle System-Komponenten
 
 #### Langfristig
 - **Production-Ready Status**: Beta-Release mit vollständiger Standard Library und getesteten Tools
@@ -616,7 +642,7 @@ $ cd velinscript
 ```bash
 $ cd compiler
 $ cargo build --release
-   Compiling velin-compiler v2.5.0
+   Compiling velin-compiler v2.7.0
    Compiling dependencies...
    [========================================] 100%
    Finished release [optimized] target(s) in 45.2s
@@ -735,7 +761,7 @@ $ velin-compiler.exe generate crud --name Product --fields "id:string,name:strin
 // Einfache API-Funktion
 @GET("/api/hello")
 fn hello(): string {
-    return "Hello, VelinScript 2.5! 🚀";
+    return "Hello, VelinScript 2.7! 🚀";
 }
 
 // Mit Parametern und Validation
@@ -1251,6 +1277,7 @@ $ velin-compiler.exe insight -i main.velin
   - [Code-Generierung](docs/architecture/code-generation.md) - Codegen-System
 - **[Tools Dokumentation](docs/tools/)** - Entwickler-Tools:
   - [VS Code Extension](docs/tools/vscode-extension.md) - IDE-Integration
+  - [Bibliotheks-Generator](docs/tools/library-generator.md) - Automatische Bibliotheks-Generierung (Neu in 2.7) ✅
 - **[Plugin Development](docs/guides/plugin-development.md)** - 🔌 Plugin-Entwicklung für VelinScript
 - **[Tutorials](docs/guides/)** - Umfassende Tutorials:
   - [Pattern Matching](docs/guides/tutorial-pattern-matching.md) - Erweiterte Pattern Matching
@@ -1267,11 +1294,11 @@ $ velin-compiler.exe insight -i main.velin
 
 ## 🌟 Showcase-Beispiele
 
-### 🎯 [Ultimate Showcase](examples/05-ultimate-showcase/) - Alle Features von VelinScript 2.5
+### 🎯 [Ultimate Showcase](examples/05-ultimate-showcase/) - Alle Features von VelinScript 2.7
 
-**Neu in Version 2.5** ✅ - Das ultimative Beispiel, das alle neuen Features demonstriert:
+**Neu in Version 2.5-2.7** ✅ - Das ultimative Beispiel, das alle neuen Features demonstriert:
 
-Ein vollständiges E-Commerce-Backend, das die volle Leistungsfähigkeit von VelinScript 2.5 zeigt:
+Ein vollständiges E-Commerce-Backend, das die volle Leistungsfähigkeit von VelinScript 2.7 zeigt:
 
 #### ✨ Features
 
@@ -1301,7 +1328,7 @@ velin-compiler check -i main.velin
 
 ### 🎯 [Custom Recommender](examples/custom-recommender/) - Hybrid Recommendation System
 
-Ein **production-ready Beispiel** für ein hybrides Recommendation System, das die volle Power von VelinScript 2.5 demonstriert:
+Ein **production-ready Beispiel** für ein hybrides Recommendation System, das die volle Power von VelinScript 2.7 demonstriert:
 
 Ein vollständiges, production-ready Beispiel für ein intelligentes Recommendation System mit **echten VectorDB-Integrationen** (Pinecone, Weaviate, Qdrant) und **echten LLM-API-Calls** (OpenAI, Anthropic, Google Gemini):
 
@@ -1350,7 +1377,7 @@ velin-compiler test
 
 #### 💡 Weitere Beispiele
 
-- **[Ultimate Showcase](examples/05-ultimate-showcase/)** - Alle Features 2.5 (VelinAutoDoc, VelinPipeline, @Flow) ✅
+- **[Ultimate Showcase](examples/05-ultimate-showcase/)** - Alle Features 2.5-2.7 (VelinAutoDoc, VelinPipeline, @Flow, Bibliotheks-Generator) ✅
 - **[Hello API](examples/01-hello-api/)** - Einfaches Einstiegsbeispiel
 - **[LLM Chat](examples/02-llm-chat/)** - Chat-API mit LLM-Integration
 - **[Automation Pipeline](examples/03-automation-pipeline/)** - Automatisierungsbeispiel
@@ -1422,7 +1449,7 @@ Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe [LICENSE](LICENSE) f�
 
 <div align="center">
 
-**VelinScript 2.5 wird von der Community entwickelt und verbessert. Vielen Dank an alle Contributors!**
+**VelinScript 2.7 wird von der Community entwickelt und verbessert. Vielen Dank an alle Contributors!**
 
 [![Contributors](https://img.shields.io/github/contributors/SkyliteDesign/velinscript?style=for-the-badge&logo=github)](https://github.com/SkyliteDesign/velinscript/graphs/contributors)
 

@@ -46,8 +46,8 @@ Diese Dokumentation hilft Ihnen dabei, das richtige Tool oder Feature für Ihre 
    │ LSP     │          │ Linter   │          │ generate │
    │ Hot Reload│        │ Formatter│          │ api/crud │
    │ REPL    │          │ AutoFix  │          │ client   │
-   │ Debugger│          │ Deps Graph│         │          │
-   │ Inspector│         │ Bundle   │          │          │
+   │ Debugger│          │ Deps Graph│         │ library  │
+   │ Inspector│         │ Bundle   │          │ generator│
    └─────────┘          └──────────┘          └──────────┘
         │                     │                     │
         └─────────────────────┼─────────────────────┘
@@ -496,6 +496,47 @@ velin-api-doc generate -i main.velin -o openapi.json --format json --interactive
 
 ---
 
+### Wann nutze ich den **Bibliotheks-Generator** (`velin-library-generator`)?
+
+**Nutzen Sie den Bibliotheks-Generator, wenn:**
+- ✅ Sie neue Standardbibliotheks-Module für VelinScript erstellen möchten
+- ✅ Sie konsistente Module-Struktur für die Standardbibliothek benötigen
+- ✅ Sie Zeit bei der Erstellung von Standardbibliotheks-Modulen sparen wollen
+- ✅ Sie automatische Integration in Type Checker, Code Generator und Tests brauchen
+- ✅ Sie automatische Dokumentations- und Test-Generierung benötigen
+- ✅ Sie verschiedene Modul-Typen (Utility, Service, Data Structure) erstellen möchten
+
+**Beispiel:**
+```bash
+# Interaktiver Modus
+cd tools/library-generator
+cargo run -- generate --interactive
+
+# Mit YAML-Konfiguration
+cargo run -- generate --config my-library.yaml
+
+# Validierung
+cargo run -- validate --config my-library.yaml
+```
+
+**Generierte Komponenten:**
+- Modul-Datei (`compiler/src/stdlib/{name}.rs`)
+- Automatische `mod.rs` Integration
+- Type Checker Integration
+- Code Generator Integration
+- Unit Tests (`compiler/tests/{name}_test.rs`)
+- Dokumentation (`docs/api/{name}.md`)
+
+**Wann NICHT:**
+- ❌ Bei Anwendungs-Code (nutzen Sie normale VelinScript-Dateien)
+- ❌ Bei externen Bibliotheken (nutzen Sie den Package Manager)
+- ❌ Bei sehr speziellen, einmaligen Modulen (manuelle Implementierung besser)
+- ❌ Bei sehr einfachen Utility-Funktionen (Overhead zu groß)
+
+**Best Practice:** Nutzen Sie den Bibliotheks-Generator für alle neuen Standardbibliotheks-Module, um Konsistenz und Vollständigkeit sicherzustellen!
+
+---
+
 ## Security & Sicherheit
 
 ### Wann nutze ich den **Security Scanner** (`velin-security`)?
@@ -904,9 +945,67 @@ VelinScript bietet eine umfassende Toolchain für moderne API-Entwicklung. Die m
 
 ---
 
+## 🆕 Neue Standard Library Module (Version 2.6)
+
+### Path - Pfad-Manipulation
+**Wann nutzen:** Cross-Platform Pfad-Operationen, Dateisystem-Zugriffe, URL-Pfad-Manipulation
+
+**Beispiel:**
+```velin
+let full_path = path.join(["dir", "subdir", "file.txt"]);
+let dir = path.dirname("/home/user/file.txt");
+let filename = path.basename("/home/user/file.txt");
+let ext = path.extname("file.txt");
+```
+
+### URL - URL-Manipulation
+**Wann nutzen:** API-URL-Konstruktion, Query-Parameter-Handling, URL-Validierung
+
+**Beispiel:**
+```velin
+let parsed = url.parse("https://example.com:8080/path?query=value");
+let params = url.parse_query("?name=John&age=30");
+let query = url.stringify_query({ name: "John", age: 30 });
+```
+
+### Stream - Stream-Verarbeitung
+**Wann nutzen:** Große Datenmengen verarbeiten, Real-time Datenverarbeitung, Event-Streaming
+
+**Beispiel:**
+```velin
+let stream = stream.create();
+let mapped = stream.map(stream, (item) => item * 2);
+let filtered = stream.filter(stream, (item) => item > 0);
+let result = stream.reduce(stream, (acc, item) => acc + item, 0);
+```
+
+### Redis - Redis-Integration
+**Wann nutzen:** Caching, Session-Management, Pub/Sub, Rate Limiting, Task-Queues
+
+**Beispiel:**
+```velin
+let client = redis.connect("redis://localhost:6379");
+redis.set(client, "key", "value");
+redis.hset(client, "user:123", "name", "John");
+redis.publish(client, "channel", "message");
+```
+
+### Tracing - Distributed Tracing
+**Wann nutzen:** Microservices-Tracing, Performance-Analyse, Debugging, Observability
+
+**Beispiel:**
+```velin
+let span = tracing.start_span("api.request");
+tracing.set_attribute(span, "http.method", "GET");
+let child = tracing.child_span(span, "database.query");
+tracing.end_span(child);
+tracing.end_span(span);
+```
+
 ## Weitere Ressourcen
 
 - [Tools Dokumentation](tools/) - Detaillierte Dokumentation aller Tools
 - [Getting Started Guide](guides/getting-started.md) - Erste Schritte
 - [VS Code Extension](tools/vscode-extension.md) - IDE-Integration
 - [API Dokumentation](api/) - API-Referenz
+- [Standard Library](api/standard-library.md) - Vollständige API-Referenz aller Module

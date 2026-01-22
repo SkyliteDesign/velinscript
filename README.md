@@ -57,6 +57,8 @@
 
 VelinScript 2.7 ist die nächste Generation einer speziell für KI-API-Entwicklung optimierten Programmiersprache namens Velisch. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
 
+**🚧 VelinScript 3.0.1 – Main Update in Arbeit - Die Arbeiten an VelinScript 3.0.1 laufen. Geplahnt für Freitag 23.01.2026 | Sei dabei🚧**
+Dieses Release wird das nächste große Main‑Update und bringt
 **Neu in Version 2.6**: 5 neue Standard Library Module (path, url, stream, redis, tracing) mit 50+ Funktionen hinzugefügt ✅  
 **Neu in Version 2.7**: Bibliotheks-Generator für automatische Standardbibliotheks-Generierung ✅
 

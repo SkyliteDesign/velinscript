@@ -8,7 +8,7 @@ $ProjectRoot = Split-Path -Parent $ScriptDir
 $DocsDir = Join-Path $ProjectRoot "docs"
 $WikiDir = Join-Path $ProjectRoot ".wiki"
 
-Write-Host "🚀 GitHub Wiki Generator für VelinScript" -ForegroundColor Cyan
+Write-Host "GitHub Wiki Generator fuer VelinScript" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -32,17 +32,20 @@ function Convert-ToWiki {
     }
     
     # Lese Datei
-    $Content = Get-Content $InputFile -Raw
+    $Content = Get-Content $InputFile -Raw -Encoding UTF8
     
     # Konvertiere Links
     $Content = $Content -replace '\[([^\]]+)\]\(([^)]+\.md)\)', '[${1}](${2})'
-    $Content = $Content -replace '\[([^\]]+)\]\(guides/([^)]+\.md)\)', '[${1}](guides-${2})'
-    $Content = $Content -replace '\[([^\]]+)\]\(architecture/([^)]+\.md)\)', '[${1}](architecture-${2})'
-    $Content = $Content -replace '\[([^\]]+)\]\(tools/([^)]+\.md)\)', '[${1}](tools-${2})'
-    $Content = $Content -replace '\[([^\]]+)\]\(api/([^)]+\.md)\)', '[${1}](api-${2})'
-    $Content = $Content -replace '\[([^\]]+)\]\(language/([^)]+\.md)\)', '[${1}](language-${2})'
+    $Content = $Content -replace '\[([^\]]+)\]\(guides/([^)]+\.md)\)', '[${1}](Guide-${2})'
+    $Content = $Content -replace '\[([^\]]+)\]\(architecture/([^)]+\.md)\)', '[${1}](Architecture-${2})'
+    $Content = $Content -replace '\[([^\]]+)\]\(tools/([^)]+\.md)\)', '[${1}](Tools-${2})'
+    $Content = $Content -replace '\[([^\]]+)\]\(api/([^)]+\.md)\)', '[${1}](API-${2})'
+    $Content = $Content -replace '\[([^\]]+)\]\(language/([^)]+\.md)\)', '[${1}](Language-${2})'
     $Content = $Content -replace '\.md\)', ')'
     $Content = $Content -replace '\(([^)]+)\.md\)', '(${1})'
+    
+    # Entferne .md aus Link-Namen
+    $Content = $Content -replace '\[([^\]]+)\]\(([^)]+)\.md\)', '[${1}](${2})'
     
     # Füge Navigation am Ende hinzu (außer für Home)
     if ($RelativePath -ne "Home.md") {
@@ -50,7 +53,7 @@ function Convert-ToWiki {
     }
     
     # Schreibe Datei
-    Set-Content -Path $OutputFile -Value $Content -NoNewline
+    Set-Content -Path $OutputFile -Value $Content -NoNewline -Encoding UTF8
 }
 
 # Funktion: Erstelle Wiki-Seite
@@ -63,35 +66,35 @@ function Create-WikiPage {
     $OutputFile = Join-Path $WikiDir "$WikiName.md"
     
     if (Test-Path $SourceFile) {
-        Write-Host "  ✓ $WikiName" -ForegroundColor Green
+        Write-Host "  OK $WikiName" -ForegroundColor Green
         Convert-ToWiki -InputFile $SourceFile -OutputFile $OutputFile -RelativePath "$WikiName.md"
     } else {
-        Write-Host "  ⚠️  $WikiName (Datei nicht gefunden: $SourceFile)" -ForegroundColor Yellow
+        Write-Host "  WARN $WikiName (Datei nicht gefunden: $SourceFile)" -ForegroundColor Yellow
     }
 }
 
-Write-Host "📝 Erstelle Wiki-Seiten..." -ForegroundColor Cyan
+Write-Host "Erstelle Wiki-Seiten..." -ForegroundColor Cyan
 Write-Host ""
 
 # Home-Seite
-Write-Host "📄 Home.md" -ForegroundColor Yellow
+Write-Host "Home.md" -ForegroundColor Yellow
 Create-WikiPage -SourceFile (Join-Path $DocsDir "README.md") -WikiName "Home"
 
 # Getting Started
 Write-Host ""
-Write-Host "📚 Getting Started..." -ForegroundColor Yellow
+Write-Host "Getting Started..." -ForegroundColor Yellow
 Create-WikiPage -SourceFile (Join-Path $DocsDir "guides\getting-started.md") -WikiName "Getting-Started"
 Create-WikiPage -SourceFile (Join-Path $ProjectRoot "QUICK_START.md") -WikiName "Quick-Start"
 
 # Language
 Write-Host ""
-Write-Host "📋 Language..." -ForegroundColor Yellow
+Write-Host "Language..." -ForegroundColor Yellow
 Create-WikiPage -SourceFile (Join-Path $DocsDir "language\specification.md") -WikiName "Language-Specification"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "language\basics.md") -WikiName "Language-Basics"
 
 # Architecture
 Write-Host ""
-Write-Host "🏛️  Architecture..." -ForegroundColor Yellow
+Write-Host "Architecture..." -ForegroundColor Yellow
 Create-WikiPage -SourceFile (Join-Path $DocsDir "architecture\compiler-architecture.md") -WikiName "Architecture-Compiler"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "architecture\pass-verlauf.md") -WikiName "Architecture-Pass-Verlauf"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "architecture\type-inference.md") -WikiName "Architecture-Type-Inference"
@@ -109,7 +112,7 @@ Create-WikiPage -SourceFile (Join-Path $DocsDir "architecture\system-generation.
 
 # Guides
 Write-Host ""
-Write-Host "📖 Guides..." -ForegroundColor Yellow
+Write-Host "Guides..." -ForegroundColor Yellow
 Create-WikiPage -SourceFile (Join-Path $DocsDir "guides\tutorial-1-basics.md") -WikiName "Guide-Basics"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "guides\tutorial-2-apis.md") -WikiName "Guide-APIs"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "guides\tutorial-3-security.md") -WikiName "Guide-Security"
@@ -138,7 +141,7 @@ Create-WikiPage -SourceFile (Join-Path $DocsDir "guides\plugin-development.md") 
 
 # Tools
 Write-Host ""
-Write-Host "🛠️  Tools..." -ForegroundColor Yellow
+Write-Host "Tools..." -ForegroundColor Yellow
 Create-WikiPage -SourceFile (Join-Path $DocsDir "tools\TOOLS_ÜBERSICHT.md") -WikiName "Tools-Overview"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "tools\vscode-extension.md") -WikiName "Tools-VS-Code-Extension"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "tools\auto-repair.md") -WikiName "Tools-Auto-Repair"
@@ -153,7 +156,7 @@ Create-WikiPage -SourceFile (Join-Path $DocsDir "tools\library-generator.md") -W
 
 # API
 Write-Host ""
-Write-Host "📚 API..." -ForegroundColor Yellow
+Write-Host "API..." -ForegroundColor Yellow
 Create-WikiPage -SourceFile (Join-Path $DocsDir "api\standard-library.md") -WikiName "API-Standard-Library"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "api\decorators.md") -WikiName "API-Decorators"
 Create-WikiPage -SourceFile (Join-Path $DocsDir "api\frameworks.md") -WikiName "API-Frameworks"
@@ -161,20 +164,20 @@ Create-WikiPage -SourceFile (Join-Path $DocsDir "api\openapi.md") -WikiName "API
 
 # Erstelle _Sidebar.md
 Write-Host ""
-Write-Host "📑 Erstelle _Sidebar.md..." -ForegroundColor Yellow
+Write-Host "Erstelle _Sidebar.md..." -ForegroundColor Yellow
 $SidebarContent = @"
 # Navigation
 
-## 🚀 Schnellstart
+## Schnellstart
 - [Home](Home)
 - [Getting Started](Getting-Started)
 - [Quick Start](Quick-Start)
 
-## 📋 Sprache
+## Sprache
 - [Language Specification](Language-Specification)
 - [Language Basics](Language-Basics)
 
-## 🏛️ Architektur
+## Architektur
 - [Compiler Architecture](Architecture-Compiler)
 - [Pass-Verlauf](Architecture-Pass-Verlauf)
 - [Type Inference](Architecture-Type-Inference)
@@ -190,7 +193,7 @@ $SidebarContent = @"
 - [Prompt Optimizer](Architecture-Prompt-Optimizer)
 - [System Generation](Architecture-System-Generation)
 
-## 📖 Guides
+## Guides
 - [Basics](Guide-Basics)
 - [APIs](Guide-APIs)
 - [Security](Guide-Security)
@@ -217,7 +220,7 @@ $SidebarContent = @"
 - [Auto Imports](Guide-Auto-Imports)
 - [Plugin Development](Guide-Plugin-Development)
 
-## 🛠️ Tools
+## Tools
 - [Tools Overview](Tools-Overview)
 - [VS Code Extension](Tools-VS-Code-Extension)
 - [Auto Repair](Tools-Auto-Repair)
@@ -230,27 +233,27 @@ $SidebarContent = @"
 - [API Doc Generator](Tools-API-Doc-Generator)
 - [Library Generator](Tools-Library-Generator)
 
-## 📚 API Reference
+## API Reference
 - [Standard Library](API-Standard-Library)
 - [Decorators](API-Decorators)
 - [Frameworks](API-Frameworks)
 - [OpenAPI](API-OpenAPI)
 "@
-Set-Content -Path (Join-Path $WikiDir "_Sidebar.md") -Value $SidebarContent
+Set-Content -Path (Join-Path $WikiDir "_Sidebar.md") -Value $SidebarContent -Encoding UTF8
 
 Write-Host ""
-Write-Host "✅ Wiki-Generierung abgeschlossen!" -ForegroundColor Green
+Write-Host "Wiki-Generierung abgeschlossen!" -ForegroundColor Green
 Write-Host ""
-Write-Host "📁 Wiki-Dateien erstellt in: $WikiDir" -ForegroundColor Cyan
+Write-Host "Wiki-Dateien erstellt in: $WikiDir" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "📝 Nächste Schritte:" -ForegroundColor Yellow
-Write-Host "   1. Prüfe die generierten Dateien in .wiki/"
+Write-Host "Naechste Schritte:" -ForegroundColor Yellow
+Write-Host "   1. Pruefe die generierten Dateien in .wiki/"
 Write-Host "   2. Push zu GitHub Wiki Repository:"
 Write-Host "      cd .wiki"
 Write-Host "      git init"
 Write-Host "      git add ."
-Write-Host "      git commit -m 'Update wiki'"
+Write-Host "      git commit -m `"Update wiki`""
 Write-Host "      git remote add origin https://github.com/SkyliteDesign/velinscript.wiki.git"
 Write-Host "      git push -u origin master"
 Write-Host ""
-Write-Host "   Oder verwende GitHub Actions für automatische Updates (siehe .github/workflows/wiki.yml)" -ForegroundColor Cyan
+Write-Host "   Oder verwende GitHub Actions fuer automatische Updates (siehe .github/workflows/wiki.yml)" -ForegroundColor Cyan

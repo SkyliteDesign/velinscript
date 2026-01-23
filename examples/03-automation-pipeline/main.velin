@@ -16,7 +16,7 @@ struct ProcessResult {
 }
 
 // Eingangsdaten prüfen
-fn validate(input: Data): bool {
+fn validate(input: Data): boolean {
     if (input.value < 0 || input.value > 100) {
         return false;
     }
@@ -36,15 +36,19 @@ fn evaluate(input: Data): number {
     // Kategorie-Bonus
     if (input.category == "critical") {
         score = score + 30;
-    } else if (input.category == "important") {
-        score = score + 15;
+    } else {
+        if (input.category == "important") {
+            score = score + 15;
+        }
     }
     
     // Priority-Bonus
     if (input.priority == "high") {
         score = score + 20;
-    } else if (input.priority == "medium") {
-        score = score + 10;
+    } else {
+        if (input.priority == "medium") {
+            score = score + 10;
+        }
     }
     
     return score;
@@ -53,7 +57,7 @@ fn evaluate(input: Data): number {
 // Benachrichtigung senden
 fn notify(message: string): void {
     // In Production: E-Mail, Slack, Webhook, etc.
-    log::info("Notification: {message}");
+    log.info("Notification: {message}");
 }
 
 // Pipeline: Eingangsdaten verarbeiten
@@ -79,12 +83,14 @@ fn process(input: Data): ProcessResult {
         action = "gold";
         message = "High priority item - immediate action required";
         notify(message);
-    } else if (score > 50) {
-        action = "silver";
-        message = "Medium priority item - process within 24h";
     } else {
-        action = "bronze";
-        message = "Low priority item - process when available";
+        if (score > 50) {
+            action = "silver";
+            message = "Medium priority item - process within 24h";
+        } else {
+            action = "standard";
+            message = "Standard processing";
+        }
     }
     
     return ProcessResult {

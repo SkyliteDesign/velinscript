@@ -1,0 +1,7 @@
+// VelinScript - Einfachstes Hello World Beispiel
+// Perfekt für absolute Anfänger
+
+@GET("/hello")
+fn hello(): string {
+    return "Hello, World!";
+}

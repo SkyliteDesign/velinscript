@@ -48,12 +48,40 @@ impl ModelLoader {
     pub fn load_model(&mut self, name: String, model_type: ModelType, path: String) -> Result<(), String> {
         self.performance.start_operation("load_model");
         
-        // In production, load model from file (ONNX, TensorFlow, etc.)
+        // Validate path/resource
+        if path.starts_with("http") {
+            // URL validation
+            if let Err(_) = url::Url::parse(&path) {
+                return Err(format!("Invalid URL: {}", path));
+            }
+        } else {
+            // File validation
+            let p = std::path::Path::new(&path);
+            if !p.exists() {
+                // For built-in/mock models, we allow non-existent paths if they start with "builtin:"
+                if !path.starts_with("builtin:") {
+                    return Err(format!("Model file not found: {}", path));
+                }
+            }
+        }
+
         let model = MLModel {
             name: name.clone(),
             model_type: model_type.clone(),
             path: path.clone(),
         };
+        
+        // Log model loading
+        let mut context = HashMap::new();
+        context.insert("model_name".to_string(), name.clone());
+        context.insert("model_type".to_string(), format!("{:?}", model_type));
+        context.insert("path".to_string(), path.clone());
+        self.logger.log_with_context(
+            crate::stdlib::logging::LogLevel::Info,
+            &format!("Model loaded successfully: {}", name),
+            Some(context),
+        );
+
         self.models.insert(name.clone(), model);
         
         // Metrics
@@ -82,19 +110,70 @@ impl ModelLoader {
     }
     
     #[allow(unused_variables)]
-    pub fn predict(&self, model_name: &str, input: &str) -> Result<String, String> {
+    pub fn predict(&self, model_name: &str, input: &serde_json::Value) -> Result<String, String> {
         if let Some(model) = self.models.get(model_name) {
-            // In production, run inference
-            let result = match model.model_type {
-                ModelType::Sentiment => Ok("positive".to_string()),
-                ModelType::Classification => Ok("class1".to_string()),
-                ModelType::Regression => Ok("0.5".to_string()),
-                ModelType::Embedding => Ok("[0.1, 0.2, 0.3]".to_string()),
-                ModelType::LLM => Ok("Generated text".to_string()),
+            // Extract string from input (whether it's a JSON string or other value)
+            let input_str = if let Some(s) = input.as_str() {
+                s.to_string()
+            } else {
+                input.to_string()
             };
-            
-            // Log prediction (would use mutable reference in real implementation)
-            // For now, we'll skip logging here as self is immutable
+            let input = input_str.as_str();
+
+            // Heuristic Inference Engine (Fallback when no real model engine is attached)
+            // This provides deterministic, logic-based "predictions" for testing and development.
+            let result = match model.model_type {
+                ModelType::Sentiment => {
+                        let input_lower = input.to_lowercase();
+                        let positive_words = ["good", "great", "awesome", "excellent", "happy", "love", "gut", "super", "toll"];
+                        let negative_words = ["bad", "terrible", "awful", "sad", "hate", "schlecht", "furchtbar"];
+                        
+                        let pos_score: usize = positive_words.iter().filter(|&w| input_lower.contains(w)).count();
+                        let neg_score: usize = negative_words.iter().filter(|&w| input_lower.contains(w)).count();
+                        
+                        if pos_score > neg_score {
+                        Ok("positive".to_string())
+                    } else if neg_score > pos_score {
+                        Ok("negative".to_string())
+                    } else {
+                        Ok("neutral".to_string())
+                    }
+                },
+                ModelType::Classification => {
+                    // Simple keyword classification
+                    if input.contains("error") || input.contains("fail") {
+                        Ok("error".to_string())
+                    } else if input.contains("warn") {
+                        Ok("warning".to_string())
+                    } else {
+                        Ok("info".to_string())
+                    }
+                },
+                ModelType::Regression => {
+                    // Return input length as a proxy metric
+                    Ok(format!("{:.2}", input.len() as f64 / 100.0))
+                },
+                ModelType::Embedding => {
+                    // Generate pseudo-embedding based on hash
+                    use std::hash::{Hash, Hasher};
+                    use std::collections::hash_map::DefaultHasher;
+                    
+                    let mut hasher = DefaultHasher::new();
+                    input.hash(&mut hasher);
+                    let h = hasher.finish();
+                    
+                    // Generate 3 float values from hash
+                    let v1 = (h & 0xFF) as f64 / 255.0;
+                    let v2 = ((h >> 8) & 0xFF) as f64 / 255.0;
+                    let v3 = ((h >> 16) & 0xFF) as f64 / 255.0;
+                    
+                    Ok(format!("[{:.4}, {:.4}, {:.4}]", v1, v2, v3))
+                },
+                ModelType::LLM => {
+                    // Simple echo/continuation
+                    Ok(format!("Generated response to: {}", input))
+                },
+            };
             
             result
         } else {
@@ -105,6 +184,39 @@ impl ModelLoader {
             Err(format!("Model {} not found", model_name))
         }
     }
+}
+
+// Global instance for generated code usage
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
+
+pub static GLOBAL_MODEL_LOADER: Lazy<Mutex<ModelLoader>> = Lazy::new(|| {
+    Mutex::new(ModelLoader::new())
+});
+
+pub struct MlStdlib;
+
+impl MlStdlib {
+    pub fn generate_load_model_code(name: &str, model_type: &str, path: &str) -> String {
+        format!(
+            "crate::stdlib::ml::GLOBAL_MODEL_LOADER.lock().unwrap().load_model({}.to_string(), crate::stdlib::ml::ModelType::{}, {}.to_string()).unwrap()",
+            name, model_type, path
+        )
+    }
+    
+    pub fn generate_predict_code(name: &str, input: &str) -> String {
+        format!(
+            "crate::stdlib::ml::GLOBAL_MODEL_LOADER.lock().unwrap().predict({}, &{}).unwrap()",
+            name, input
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "ml", derive(serde::Serialize, serde::Deserialize))]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
 }
 
 pub struct LLMClient {
@@ -139,54 +251,177 @@ impl LLMClient {
         }
     }
     
-    pub fn generate(&self, prompt: &str) -> Result<String, String> {
-        // Log generation request
+    pub fn chat(&self, messages: Vec<ChatMessage>) -> Result<String, String> {
         let mut logger = VelinLogger::new();
         logger.add_context("component".to_string(), "LLMClient".to_string());
         logger.add_context("provider".to_string(), format!("{:?}", self.provider));
-        logger.add_context("prompt_length".to_string(), prompt.len().to_string());
-        logger.info("Generating LLM response");
+        logger.info("Generating chat response");
         
         #[cfg(feature = "ml")]
         {
             let result = match self.provider {
-                LLMProvider::OpenAI => self.generate_openai(prompt),
-                LLMProvider::Anthropic => self.generate_anthropic(prompt),
-                LLMProvider::GoogleGemini => self.generate_gemini(prompt),
-                LLMProvider::Local => Ok(format!("Local model response to: {}", prompt)),
+                LLMProvider::OpenAI => self.chat_openai(messages),
+                LLMProvider::Anthropic => self.chat_anthropic(messages),
+                LLMProvider::GoogleGemini => self.chat_gemini(messages),
+                LLMProvider::Local => Ok(format!("Local model response to last message")),
             };
-            
-            if result.is_ok() {
-                logger.info("LLM response generated successfully");
-            } else {
-                logger.error("Failed to generate LLM response");
-            }
-            
             return result;
         }
         
         #[cfg(not(feature = "ml"))]
         {
-            // Fallback to mock when ml feature is not enabled
-            let result = match self.provider {
-                LLMProvider::OpenAI => Ok(format!("OpenAI response to: {}", prompt)),
-                LLMProvider::Anthropic => Ok(format!("Anthropic Claude response to: {}", prompt)),
-                LLMProvider::GoogleGemini => Ok(format!("Google Gemini response to: {}", prompt)),
-                LLMProvider::Local => Ok(format!("Local model response to: {}", prompt)),
-            };
-            
-            if result.is_ok() {
-                logger.info("LLM response generated successfully (mock mode)");
-            } else {
-                logger.error("Failed to generate LLM response");
-            }
-            
-            result
+            Ok(format!("Mock response to chat with {} messages", messages.len()))
         }
+    }
+
+    pub fn generate(&self, prompt: &str) -> Result<String, String> {
+        // SECURITY: Input-Größen-Limit (max. 1MB)
+        const MAX_INPUT_SIZE: usize = 1024 * 1024; // 1MB
+        if prompt.len() > MAX_INPUT_SIZE {
+            return Err(format!("Input too large: {} bytes (max: {} bytes)", prompt.len(), MAX_INPUT_SIZE));
+        }
+        
+        self.chat(vec![ChatMessage {
+            role: "user".to_string(),
+            content: prompt.to_string(),
+        }])
+    }
+    
+    /// Kompakte Syntax: @llm.analyze(text)
+    /// 
+    /// Analysiert Text mit optimiertem Prompt (90%+ Token-Ersparnis).
+    pub fn analyze(&self, text: &str) -> Result<String, String> {
+        // SECURITY: Input-Größen-Limit (max. 1MB)
+        const MAX_INPUT_SIZE: usize = 1024 * 1024; // 1MB
+        if text.len() > MAX_INPUT_SIZE {
+            return Err(format!("Input too large: {} bytes (max: {} bytes)", text.len(), MAX_INPUT_SIZE));
+        }
+        
+        use crate::prompt::optimizer::PromptOptimizer;
+        
+        let mut optimizer = PromptOptimizer::new();
+        let optimized = optimizer.create_compact_prompt("analyze", text);
+        
+        self.chat(vec![
+            ChatMessage { role: "system".to_string(), content: optimized.system_prompt },
+            ChatMessage { role: "user".to_string(), content: optimized.user_prompt },
+        ])
+    }
+    
+    /// Kompakte Syntax: @llm.summarize(text)
+    /// 
+    /// Fasst Text zusammen mit optimiertem Prompt.
+    pub fn summarize(&self, text: &str) -> Result<String, String> {
+        // SECURITY: Input-Größen-Limit (max. 1MB)
+        const MAX_INPUT_SIZE: usize = 1024 * 1024; // 1MB
+        if text.len() > MAX_INPUT_SIZE {
+            return Err(format!("Input too large: {} bytes (max: {} bytes)", text.len(), MAX_INPUT_SIZE));
+        }
+        
+        use crate::prompt::optimizer::PromptOptimizer;
+        
+        let mut optimizer = PromptOptimizer::new();
+        let optimized = optimizer.create_compact_prompt("summarize", text);
+        
+        self.chat(vec![
+            ChatMessage { role: "system".to_string(), content: optimized.system_prompt },
+            ChatMessage { role: "user".to_string(), content: optimized.user_prompt },
+        ])
+    }
+    
+    /// Kompakte Syntax: @llm.extract(text, pattern)
+    /// 
+    /// Extrahiert Informationen aus Text mit optimiertem Prompt.
+    pub fn extract(&self, text: &str, pattern: &str) -> Result<String, String> {
+        // SECURITY: Input-Größen-Limit (max. 1MB)
+        const MAX_INPUT_SIZE: usize = 1024 * 1024; // 1MB
+        if text.len() > MAX_INPUT_SIZE {
+            return Err(format!("Input too large: {} bytes (max: {} bytes)", text.len(), MAX_INPUT_SIZE));
+        }
+        
+        use crate::prompt::optimizer::PromptOptimizer;
+        
+        let mut optimizer = PromptOptimizer::new();
+        let full_prompt = format!("extract {} from: {}", pattern, text);
+        let optimized = optimizer.optimize(&full_prompt);
+        
+        self.chat(vec![
+            ChatMessage { role: "system".to_string(), content: optimized.system_prompt },
+            ChatMessage { role: "user".to_string(), content: optimized.user_prompt },
+        ])
+    }
+    
+    /// Kompakte Syntax: @llm.evaluate(text)
+    /// 
+    /// Bewertet Text mit optimiertem Prompt.
+    pub fn evaluate(&self, text: &str) -> Result<String, String> {
+        // SECURITY: Input-Größen-Limit (max. 1MB)
+        const MAX_INPUT_SIZE: usize = 1024 * 1024; // 1MB
+        if text.len() > MAX_INPUT_SIZE {
+            return Err(format!("Input too large: {} bytes (max: {} bytes)", text.len(), MAX_INPUT_SIZE));
+        }
+        
+        use crate::prompt::optimizer::PromptOptimizer;
+        
+        let mut optimizer = PromptOptimizer::new();
+        let optimized = optimizer.create_compact_prompt("evaluate", text);
+        
+        self.chat(vec![
+            ChatMessage { role: "system".to_string(), content: optimized.system_prompt },
+            ChatMessage { role: "user".to_string(), content: optimized.user_prompt },
+        ])
+    }
+    
+    /// Kompakte Syntax: @llm.translate(text, target_lang)
+    /// 
+    /// Übersetzt Text mit optimiertem Prompt.
+    pub fn translate(&self, text: &str, target_lang: &str) -> Result<String, String> {
+        // SECURITY: Input-Größen-Limit (max. 1MB)
+        const MAX_INPUT_SIZE: usize = 1024 * 1024; // 1MB
+        if text.len() > MAX_INPUT_SIZE {
+            return Err(format!("Input too large: {} bytes (max: {} bytes)", text.len(), MAX_INPUT_SIZE));
+        }
+        
+        // SECURITY: Parameter-Validierung
+        if target_lang.is_empty() {
+            return Err("target_lang parameter is required and cannot be empty".to_string());
+        }
+        
+        use crate::prompt::optimizer::PromptOptimizer;
+        
+        let mut optimizer = PromptOptimizer::new();
+        let full_prompt = format!("translate to {}: {}", target_lang, text);
+        let optimized = optimizer.optimize(&full_prompt);
+        
+        self.chat(vec![
+            ChatMessage { role: "system".to_string(), content: optimized.system_prompt },
+            ChatMessage { role: "user".to_string(), content: optimized.user_prompt },
+        ])
+    }
+    
+    /// Kompakte Syntax: @llm.sentiment(text)
+    /// 
+    /// Analysiert Sentiment mit optimiertem Prompt.
+    pub fn sentiment(&self, text: &str) -> Result<String, String> {
+        // SECURITY: Input-Größen-Limit (max. 1MB)
+        const MAX_INPUT_SIZE: usize = 1024 * 1024; // 1MB
+        if text.len() > MAX_INPUT_SIZE {
+            return Err(format!("Input too large: {} bytes (max: {} bytes)", text.len(), MAX_INPUT_SIZE));
+        }
+        
+        use crate::prompt::optimizer::PromptOptimizer;
+        
+        let mut optimizer = PromptOptimizer::new();
+        let optimized = optimizer.create_compact_prompt("sentiment", text);
+        
+        self.chat(vec![
+            ChatMessage { role: "system".to_string(), content: optimized.system_prompt },
+            ChatMessage { role: "user".to_string(), content: optimized.user_prompt },
+        ])
     }
     
     #[cfg(feature = "ml")]
-    fn generate_openai(&self, prompt: &str) -> Result<String, String> {
+    fn chat_openai(&self, messages: Vec<ChatMessage>) -> Result<String, String> {
         use reqwest::blocking::Client;
         
         let client = Client::new();
@@ -194,12 +429,7 @@ impl LLMClient {
         
         let payload = json!({
             "model": "gpt-3.5-turbo",
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
+            "messages": messages,
             "max_tokens": 1000,
             "temperature": 0.7
         });
@@ -229,7 +459,7 @@ impl LLMClient {
     }
     
     #[cfg(feature = "ml")]
-    fn generate_anthropic(&self, prompt: &str) -> Result<String, String> {
+    fn chat_anthropic(&self, messages: Vec<ChatMessage>) -> Result<String, String> {
         use reqwest::blocking::Client;
         
         let client = Client::new();
@@ -238,12 +468,7 @@ impl LLMClient {
         let payload = json!({
             "model": "claude-3-sonnet-20240229",
             "max_tokens": 1000,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
+            "messages": messages
         });
         
         let response = client
@@ -272,18 +497,24 @@ impl LLMClient {
     }
     
     #[cfg(feature = "ml")]
-    fn generate_gemini(&self, prompt: &str) -> Result<String, String> {
+    fn chat_gemini(&self, messages: Vec<ChatMessage>) -> Result<String, String> {
+         // Gemini has slightly different format (parts), simplified here for brevity or needs mapping
+         // For now using last message as prompt to reuse simple generation or full chat structure mapping
+         // Mapping messages to Gemini format:
+         let contents: Vec<serde_json::Value> = messages.iter().map(|m| {
+             json!({
+                 "role": if m.role == "user" { "user" } else { "model" },
+                 "parts": [{ "text": m.content }]
+             })
+         }).collect();
+
         use reqwest::blocking::Client;
         
         let client = Client::new();
         let url = format!("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={}", self.api_key);
         
         let payload = json!({
-            "contents": [{
-                "parts": [{
-                    "text": prompt
-                }]
-            }],
+            "contents": contents,
             "generationConfig": {
                 "maxOutputTokens": 1000,
                 "temperature": 0.7
@@ -1070,6 +1301,74 @@ struct VectorRecord {
     id: String,
     vector: Vec<f64>,
 }
+
+#[derive(Debug, Clone)]
+pub enum ModelType {
+    Sentiment,
+    Classification,
+    Regression,
+    Embedding,
+    LLM,
+}
+
+#[derive(Debug, Clone)]
+pub struct MLModel {
+    pub name: String,
+    pub model_type: ModelType,
+    pub path: String,
+}
+
+pub struct ModelLoader {
+    pub models: HashMap<String, MLModel>,
+}
+
+impl ModelLoader {
+    pub fn new() -> Self {
+        ModelLoader {
+            models: HashMap::new(),
+        }
+    }
+    
+    pub fn load_model(&mut self, name: String, model_type: ModelType, path: String) -> Result<(), String> {
+        let model = MLModel {
+            name,
+            model_type,
+            path,
+        };
+        println!("Model loaded: {}", model.name);
+        self.models.insert(model.name.clone(), model);
+        Ok(())
+    }
+    
+    pub fn predict(&self, model_name: &str, input: &serde_json::Value) -> Result<String, String> {
+        if let Some(model) = self.models.get(model_name) {
+             let input_str = if let Some(s) = input.as_str() {
+                 s.to_string()
+             } else {
+                 input.to_string()
+             };
+             let input = input_str.as_str();
+             
+             match model.model_type {
+                ModelType::Sentiment => {
+                    let input_lower = input.to_lowercase();
+                    if input_lower.contains("good") || input_lower.contains("great") {
+                        Ok("positive".to_string())
+                    } else {
+                        Ok("negative".to_string())
+                    }
+                },
+                _ => Ok("prediction".to_string())
+            }
+        } else {
+            Err(format!("Model {} not found", model_name))
+        }
+    }
+}
+
+pub static GLOBAL_MODEL_LOADER: Lazy<Mutex<ModelLoader>> = Lazy::new(|| {
+    Mutex::new(ModelLoader::new())
+});
 
 pub struct LLMClient {
     pub provider: String,

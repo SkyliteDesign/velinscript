@@ -1,32 +1,40 @@
 # Framework-Integration in VelinScript
 
-**Version:** 2.5.0  
+**Version:** 3.0.0  
 **Status:** ✅ Vollständig implementiert
 
 ---
 
 ## Übersicht
 
-VelinScript unterstützt automatische Framework-Erkennung und Code-Generierung für moderne Rust HTTP-Frameworks.
+VelinScript unterstützt automatische Framework-Erkennung und Code-Generierung für moderne HTTP-Frameworks in **Rust**, **PHP** und **Python**.
 
 ## Unterstützte Frameworks
 
-### Axum (Default)
+### Rust
+- **Axum** (Default): Moderne, async-first Architektur.
+- **Actix-Web**: High-Performance Framework.
 
-**Status:** ✅ Vollständig unterstützt
+### PHP
+- **Laravel** (Empfohlen): Generiert Controller-Klassen und `Route::get` Definitionen.
+- **Symfony**: Generiert Controller mit `#[Route]` Attributen.
 
-- Moderne, async-first Architektur
-- Type-safe Routing
-- Automatische Request/Response-Handling
-- Middleware-Integration
+### Python
+- **FastAPI** (Empfohlen): Generiert Pydantic-Modelle und Async-Handler.
+- **Flask**: Generiert Standard Flask-Routen und View-Functions.
 
-### Actix-Web
+### TypeScript
+- **Express** (Default): Generiert Router, Request-Handler und Interfaces.
+- **NestJS**: Generiert Controller (`@Controller`), Module und DTOs.
 
-**Status:** ✅ Vollständig unterstützt
+### Java
+- **Spring Boot**: Generiert RestController (`@RestController`), RequestMappings und Services.
 
-- Production-Ready Framework
-- Hohe Performance
-- Umfangreiche Middleware-Unterstützung
+### C#
+- **ASP.NET Core**: Generiert Controller (`Microsoft.AspNetCore.Mvc`), Attributes (`[HttpGet]`) und Models.
+
+### Go
+- **Gin** (Empfohlen): High-Performance HTTP Web Framework. Generiert Struct-Tags für JSON und Gin-Handler.
 
 ## Framework-Erkennung
 
@@ -37,14 +45,15 @@ Der Compiler erkennt das Framework auf drei Arten:
 ```json
 // velin.config.json
 {
-  "framework": "axum"
+  "target": "go",
+  "framework": "gin"
 }
 ```
 
 ### 2. Decorator-basiert
 
 ```velin
-@Axum
+@Gin
 @GET("/api/users")
 fn getUsers(): List<User> {
     // ...
@@ -53,46 +62,121 @@ fn getUsers(): List<User> {
 
 ### 3. Default
 
-Wenn nichts angegeben ist, verwendet der Compiler **Axum** als Default.
+- **Rust**: Axum
+- **PHP**: Laravel
+- **Python**: FastAPI
+- **TypeScript**: Express
+- **Java**: Spring Boot
+- **C#**: ASP.NET Core
+- **Go**: Gin
 
 ## Code-Generierung
 
 ### Automatische Imports
 
-Der Compiler generiert automatisch Framework-spezifische Imports:
+Der Compiler generiert automatisch Framework-spezifische Imports für alle unterstützten Sprachen.
 
-**Axum:**
-```rust
-use axum::{
-    Router, extract::{Path, Query, Json, State},
-    routing::{get, post, put, delete},
-    response::Response,
-    http::StatusCode
-};
+**Laravel (PHP):**
+```php
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Controller;
 ```
 
-**Actix-Web:**
-```rust
-use actix_web::{web, HttpResponse, Responder, HttpRequest};
+**FastAPI (Python):**
+```python
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+```
+
+**Gin (Go):**
+```go
+import (
+    "github.com/gin-gonic/gin"
+    "net/http"
+    "strconv"
+)
+```
+
+**Express (TypeScript):**
+```typescript
+import express, { Request, Response } from 'express';
+```
+
+**Spring Boot (Java):**
+```java
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import java.util.*;
+```
+
+**ASP.NET Core (C#):**
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
 ```
 
 ### Router-Initialisierung
 
-**Axum:**
-```rust
-pub fn create_router() -> Router {
-    Router::new()
-        .route("/api/users", get(get_users_handler))
-        .route("/api/users", post(create_user_handler))
+**Laravel:**
+Generiert Routen am Ende der Datei, die auf Controller-Methoden verweisen:
+```php
+Route::get('/api/users', [AppController::class, 'get_users']);
+```
+
+**Symfony:**
+Nutzt Attribute direkt an den Methoden:
+```php
+#[Route('/api/users', methods: ['GET'])]
+public function get_users() { ... }
+```
+
+**FastAPI:**
+```python
+app.add_api_route("/api/users", get_users, methods=["GET"])
+```
+
+**Gin:**
+```go
+func main() {
+    r := gin.Default()
+    r.GET("/api/users", getUsersHandler)
+    r.Run()
 }
 ```
 
-**Actix-Web:**
-```rust
-pub fn create_app() -> App {
-    App::new()
-        .route("/api/users", web::get().to(get_users_handler))
-        .route("/api/users", web::post().to(create_user_handler))
+**Express:**
+```typescript
+const app = express();
+app.get("/api/users", getUsers);
+```
+
+**NestJS:**
+```typescript
+@Controller("/api/users")
+export class UsersController {
+    @Get()
+    getUsers() { ... }
+}
+```
+
+**Spring Boot:**
+```java
+@RestController
+@RequestMapping("/api/users")
+public class UsersController {
+    @GetMapping
+    public List<User> getUsers() { ... }
+}
+```
+
+**ASP.NET Core:**
+```csharp
+[ApiController]
+[Route("/api/users")]
+public class UsersController : ControllerBase {
+    [HttpGet]
+    public ActionResult<List<User>> GetUsers() { ... }
 }
 ```
 
@@ -110,6 +194,13 @@ async fn get_users_handler() -> impl IntoResponse {
 **Actix-Web:**
 ```rust
 async fn get_users_handler(req: HttpRequest) -> impl Responder {
+    // ...
+}
+```
+
+**Gin:**
+```go
+func getUsersHandler(c *gin.Context) {
     // ...
 }
 ```
@@ -132,10 +223,10 @@ async fn get_user_handler(Path(id): Path<String>) -> impl IntoResponse {
 }
 ```
 
-**Actix-Web:**
-```rust
-async fn get_user_handler(req: HttpRequest) -> impl Responder {
-    let id = req.match_info().get("id").unwrap();
+**Gin:**
+```go
+func getUserHandler(c *gin.Context) {
+    id := c.Param("id")
     // ...
 }
 ```
@@ -156,6 +247,15 @@ async fn get_users_handler(Query(params): Query<GetUsersParams>) -> impl IntoRes
 }
 ```
 
+**Gin:**
+```go
+func getUsersHandler(c *gin.Context) {
+    limitStr := c.Query("limit")
+    limit, _ := strconv.ParseFloat(limitStr, 64)
+    // ...
+}
+```
+
 ### Body-Parameter
 
 ```velin
@@ -168,6 +268,18 @@ fn createUser(user: UserInput): User {
 **Axum:**
 ```rust
 async fn create_user_handler(Json(user): Json<UserInput>) -> impl IntoResponse {
+    // ...
+}
+```
+
+**Gin:**
+```go
+func createUserHandler(c *gin.Context) {
+    var user UserInput
+    if err := c.ShouldBindJSON(&user); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
     // ...
 }
 ```
@@ -254,5 +366,5 @@ async fn get_users_handler() -> impl IntoResponse {
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
-**Version:** 2.5.0
+**Letzte Aktualisierung:** 2026-02-01  
+**Version:** 3.0.0

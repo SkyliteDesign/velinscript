@@ -67,13 +67,15 @@ export function activate(context: vscode.ExtensionContext) {
 			provideTasks(token) {
 				const tasks: vscode.Task[] = [];
 				
+				const target = config.get<string>('target', 'rust');
+				
 				// Build task
 				tasks.push(new vscode.Task(
 					{ type: 'velin', task: 'build' },
 					vscode.TaskScope.Workspace,
 					'Build',
 					'velin',
-					new vscode.ShellExecution(`${compilerPath} compile -i main.velin`),
+					new vscode.ShellExecution(`${compilerPath} compile -i main.velin --target ${target}`),
 					'$velin'
 				));
 				
@@ -149,8 +151,11 @@ export function activate(context: vscode.ExtensionContext) {
 			const document = editor.document;
 			const filePath = document.fileName;
 
+			const config = vscode.workspace.getConfiguration('velin');
+			const target = config.get<string>('compiler.target', 'rust');
+
 			const terminal = vscode.window.createTerminal('VelinScript Compiler');
-			terminal.sendText(`${compilerPath} compile -i "${filePath}"`);
+			terminal.sendText(`${compilerPath} compile -i "${filePath}" --target ${target}`);
 			terminal.show();
 		}),
 
@@ -198,6 +203,17 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 
 		// Neue Template-Commands
+		vscode.commands.registerCommand('velin.generate.tsExpress', async () => {
+			await insertTemplate('ts-express-endpoint.velin');
+		}),
+
+		vscode.commands.registerCommand('velin.generate.javaSpring', async () => {
+			await insertTemplate('java-spring-controller.velin');
+		}),
+
+		vscode.commands.registerCommand('velin.generate.csharpAspNet', async () => {
+			await insertTemplate('csharp-aspnet-controller.velin');
+		})
 		vscode.commands.registerCommand('velin.generate.responses', async () => {
 			await insertTemplate('responses.velin');
 		}),

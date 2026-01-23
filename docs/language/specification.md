@@ -1,6 +1,6 @@
 # VelinScript Language Specification
 
-Version 2.6.0
+Version 3.1.0
 
 ## Übersicht
 
@@ -17,6 +17,20 @@ VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die
 - path, url, stream, redis, tracing Module hinzugefügt
 - Alle Mock-Funktionen durch echte Implementierungen ersetzt
 - Verbesserte Pipeline-Optimierung mit echter Dependency-Tracking
+
+**Neu in Version 3.0**: 
+- KI-Compiler-Passes für automatische Code-Analyse und -Generierung
+- System-Generierung für boilerplate-freie Systeme
+- Automatische Parallelisierung (Multithreading, GPU, Async, SIMD)
+
+**Neu in Version 3.0.1**: 
+- IR-Repräsentation (SSA-Format) für optimierte Code-Generierung
+- Borrow Checker (Ownership & Borrowing System)
+- Prompt Optimizer (90%+ Token-Ersparnis)
+
+**Neu in Version 3.1.0**: 
+- Multi-Target Compilation (Rust, PHP, Python, TypeScript, JavaScript, Go, Java, C#)
+- Erweiterte GPU-Acceleration und SIMD Vectorization
 
 ## Design-Prinzipien
 
@@ -65,6 +79,7 @@ fn example(name: string): string {
 - `if`, `else` - Bedingte Ausführung
 - `for`, `while` - Schleifen
 - `match` - Pattern Matching
+- `try`, `catch`, `finally` - Fehlerbehandlung (Syntaktischer Zucker, Version 3.0.1)
 - `struct` - Struktur definieren
 - `enum` - Enumeration definieren
 - `type` - Type Alias
@@ -293,6 +308,57 @@ enum Status {
 }
 ```
 
+### Ownership & Borrowing Types (Neu in 3.0.1)
+
+VelinScript unterstützt ein Ownership-System ähnlich Rust für Memory-Safety:
+
+```velin
+// Owned (Standard - Move Semantics)
+fn take_ownership(data: string) {
+    // data wird moved (owned)
+    // Nach dem Aufruf ist data nicht mehr gültig
+}
+
+// Immutable Borrow (&T)
+fn process(data: &string) {
+    // data ist eine immutable Referenz
+    // data kann nicht modifiziert werden
+}
+
+// Mutable Borrow (&mut T)
+fn modify(data: &mut string) {
+    // data ist eine mutable Referenz
+    // data kann modifiziert werden
+}
+
+// Shared Ownership (Arc<T> / Rc<T>)
+fn shared_data(data: shared<string>) {
+    // data wird geteilt (Arc/Rc)
+    // Mehrere Referenzen möglich
+}
+
+// Copy Semantics (primitive types)
+fn copy_value(x: number) {
+    // number ist Copy, wird kopiert
+    // x bleibt nach dem Aufruf gültig
+}
+```
+
+**Ownership-Typen:**
+- **Owned** (Standard) - Variable besitzt den Wert (move semantics)
+- **&T** - Immutable Referenz (Borrow)
+- **&mut T** - Mutable Referenz (Mutable Borrow)
+- **shared<T>** - Shared Ownership (Arc/Rc)
+- **Copy** - Copy-Semantik (primitive types: `number`, `boolean`)
+
+**Borrow-Regeln:**
+- Nur eine mutable Referenz (`&mut T`) gleichzeitig
+- Mehrere immutable Referenzen (`&T`) gleichzeitig möglich
+- Keine mutable und immutable Referenzen gleichzeitig
+- Use-After-Move wird erkannt
+
+**Siehe:** [Borrow Checker Dokumentation](../architecture/borrow-checker.md)
+
 ### Result Type
 
 Der `Result<T, E>` Type ermöglicht explizite Fehlerbehandlung:
@@ -323,6 +389,54 @@ if (result.isOk()) {
 - `unwrapOr(default)` - Extrahiert Ok-Wert oder gibt Default zurück
 - `map(fn)` - Transformiert Ok-Wert
 - `mapErr(fn)` - Transformiert Error-Wert
+
+### try-catch-finally (Syntaktischer Zucker) ✅ (Version 3.0.1)
+
+`try-catch-finally` ist syntaktischer Zucker, der automatisch in `Result`-basiertes Error-Handling desugared wird. Dies ermöglicht eine vertraute, exception-basierte Syntax, während die Typsicherheit von `Result<T, E>` erhalten bleibt.
+
+#### Einfacher try-catch
+
+```velin
+try {
+    let result = db.query("SELECT * FROM users");
+    return result;
+} catch (err) {
+    log.error("Database error: " + err.message);
+    return [];
+}
+```
+
+#### Mehrere catch-Blöcke mit Typ-Dispatch
+
+```velin
+try {
+    return processData(data);
+} catch (err: ValidationError) {
+    return Result.err("Validation failed");
+} catch (err: NetworkError) {
+    return Result.err("Network failed");
+} catch (err) {
+    return Result.err("Unknown error");
+}
+```
+
+#### try-catch mit finally
+
+```velin
+try {
+    return openFile(path);
+} catch (err) {
+    log.error(err.message);
+} finally {
+    closeResources();
+}
+```
+
+**Wichtige Hinweise:**
+- **Explizites return erforderlich**: Jedes `return` im try-Block wird automatisch in `Result.ok(...)` gewrappt
+- **Typ-Dispatch**: Mehrere catch-Blöcke mit spezifischen Fehlertypen werden zu `match`-Statements desugared
+- **finally immer ausgeführt**: Der finally-Block wird immer ausgeführt, unabhängig von Erfolg oder Fehler
+- **Desugaring**: Die Transformation erfolgt automatisch während der Kompilierung, der generierte Code nutzt `Result<T, E>`
 
 ### Traits
 
@@ -573,6 +687,53 @@ match (value) {
     Ok(x) if x > 0 => "positive",
     Ok(x) if x < 0 => "negative",
     Ok(0) => "zero",
+```
+
+### Try Statement ✅ (Version 3.0.1)
+
+Der `try-catch-finally` Statement ist syntaktischer Zucker für `Result`-basiertes Error-Handling:
+
+```velin
+// Einfacher try-catch
+try {
+    let result = someFunction();
+    return result;
+} catch (err) {
+    handleError(err);
+}
+
+// Mehrere catch-Blöcke mit Typ-Dispatch
+try {
+    return processData(data);
+} catch (err: ValidationError) {
+    handleValidationError(err);
+} catch (err: NetworkError) {
+    handleNetworkError(err);
+} catch (err) {
+    handleGenericError(err);
+}
+
+// Mit finally-Block
+try {
+    return openFile(path);
+} catch (err) {
+    log.error(err.message);
+} finally {
+    closeResources(); // Wird immer ausgeführt
+}
+```
+
+**Wichtige Hinweise:**
+- Jedes `return` im try-Block wird automatisch in `Result.ok(...)` gewrappt
+- Mehrere catch-Blöcke mit spezifischen Fehlertypen werden zu `match`-Statements desugared
+- Der finally-Block wird immer ausgeführt, unabhängig von Erfolg oder Fehler
+- Die Transformation erfolgt automatisch während der Kompilierung
+
+```velin
+match (value) {
+    Ok(x) if x > 0 => "positive",
+    Ok(x) if x < 0 => "negative",
+    Ok(0) => "zero",
     _ => "unknown"
 }
 ```
@@ -673,6 +834,34 @@ let multiply = (a: number, b: number) => {
 // Lambda mit Type Inference
 let square = (x) => x * x;
 ```
+
+### LLM-Call Expressions (Neu in 3.0.1)
+
+Kompakte Syntax für LLM-Aufrufe mit automatischer Prompt-Optimierung (90%+ Token-Ersparnis):
+
+```velin
+// Kompakte LLM-Syntax
+let result = await @llm.analyze(text);
+let summary = await @llm.summarize(long_text);
+let sentiment = await @llm.sentiment(comment);
+let translated = await @llm.translate(text, "en");
+let extracted = await @llm.extract(text, "email addresses");
+let evaluation = await @llm.evaluate(review_text);
+```
+
+**Syntax:**
+- `@llm.<method>(args...)` - Kompakte LLM-Call Syntax
+- Unterstützte Methoden: `analyze`, `summarize`, `extract`, `evaluate`, `translate`, `sentiment`
+- Automatische Prompt-Optimierung durch Prompt Optimizer
+- 90-95% Token-Ersparnis im Vergleich zu klassischen Prompts
+
+**Vorteile:**
+- Deutlich weniger Tokens (5-10 statt 100+)
+- Automatische Prompt-Optimierung
+- System-Prompt-Caching
+- Einfache, lesbare Syntax
+
+**Siehe:** [Prompt Optimizer Dokumentation](../architecture/prompt-optimizer.md)
 
 ## Standard Library
 
@@ -954,6 +1143,7 @@ let [mut] name[: type] = value;
 ## Implementierte Features (v0.1.0)
 
 ✅ **Result<T, E> Type** - Explizite Fehlerbehandlung mit Result Type
+✅ **try-catch-finally** (Version 3.0.1) - Syntaktischer Zucker für Result-basiertes Error-Handling
 ✅ **Traits/Interfaces** - Polymorphismus durch Traits und Interfaces
 ✅ **Generics mit Constraints** - Type-safe generische Programmierung mit Trait Constraints
 ✅ **Erweiterte Test-Features** - @describe, @fixture, @mock Decorators

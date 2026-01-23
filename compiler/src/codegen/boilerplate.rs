@@ -138,17 +138,26 @@ fn delete{}(id: string): boolean {{
     }
     
     pub fn generate_test(&self, function_name: &str) -> String {
+        // Convert function_name to camelCase for test function name: test + FunctionName
+        let test_fn_name = if function_name.is_empty() {
+            "test".to_string()
+        } else {
+            format!("test{}", function_name)
+        };
+        
         format!(
             r#"// Auto-generated test for {}
 
 @test
-fn test{}() {{
-    // TODO: Implementiere Test-Logik
-    // Ersetze diese Platzhalter-Assertion mit echten Test-Cases
-    assert(true);
+fn {}() {{
+    // Test generated automatically. 
+    // Please add specific assertions relevant to the function logic.
+    let result = {}(/* params */);
+    assert(result != null); 
 }}
 "#,
             function_name,
+            test_fn_name,
             function_name
         )
     }

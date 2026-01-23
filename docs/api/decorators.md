@@ -379,7 +379,7 @@ Die Reihenfolge ist wichtig:
 Alle HTTP Decorators werden automatisch in OpenAPI Specifications umgewandelt:
 
 ```bash
-velin-compiler open-api -i main.velin -o api.json
+velin open-api -i main.velin -o api.json
 ```
 
 Die generierte Spec enthält:

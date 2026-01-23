@@ -30,9 +30,11 @@ impl AuditStdlib {
 
     pub fn generate_query_code(filters: &str) -> String {
         format!(
-            "{{
-                use std::fs::File;
-                use std::io::{BufRead, BufReader};
+            "
+            {{
+                use std::io::{{BufRead, BufReader}};
+                use std::fs::OpenOptions;
+                use std::sync::{{Arc, Mutex}};
                 let filters: serde_json::Value = {};
                 let log_file = std::env::var(\"AUDIT_LOG_FILE\").unwrap_or_else(|_| \"audit.log\".to_string());
                 let file = File::open(&log_file).map_err(|e| e.to_string())?;

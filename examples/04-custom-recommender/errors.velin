@@ -1,5 +1,17 @@
+use logging;
+
 // Custom Recommender - Error Handling
-// Error-Definitionen und Error-Codes
+// Error Definitions and Error Codes
+
+// Application Error
+struct AppError {
+    code: ApiErrorCode,
+    message: string,
+    details: Map<string, string>,
+    cause: string,
+    stackTrace: string,
+    timestamp: string,
+}
 
 // API Error Codes
 enum ApiErrorCode {
@@ -17,52 +29,42 @@ enum ApiErrorCode {
     TimeoutError,
 }
 
-// Application Error
-struct AppError {
-    code: ApiErrorCode,
-    message: string,
-    details: Map<string, string>,
-    cause: string,
-    stackTrace: string,
-    timestamp: string,
-}
-
 // Error Code zu String Mapping
 fn errorCodeToString(code: ApiErrorCode): string {
-    match (code) {
-        ApiErrorCode::ValidationError => "VALIDATION_ERROR",
-        ApiErrorCode::NotFound => "NOT_FOUND",
-        ApiErrorCode::Unauthorized => "UNAUTHORIZED",
-        ApiErrorCode::Forbidden => "FORBIDDEN",
-        ApiErrorCode::RateLimitExceeded => "RATE_LIMIT_EXCEEDED",
-        ApiErrorCode::InternalServerError => "INTERNAL_SERVER_ERROR",
-        ApiErrorCode::DatabaseError => "DATABASE_ERROR",
-        ApiErrorCode::LLMError => "LLM_ERROR",
-        ApiErrorCode::VectorDBError => "VECTOR_DB_ERROR",
-        ApiErrorCode::CacheError => "CACHE_ERROR",
-        ApiErrorCode::ConfigurationError => "CONFIGURATION_ERROR",
-        ApiErrorCode::TimeoutError => "TIMEOUT_ERROR",
-        _ => "UNKNOWN_ERROR",
-    }
+    if (code == ApiErrorCode.ValidationError) { return "VALIDATION_ERROR"; }
+    if (code == ApiErrorCode.NotFound) { return "NOT_FOUND"; }
+    if (code == ApiErrorCode.Unauthorized) { return "UNAUTHORIZED"; }
+    if (code == ApiErrorCode.Forbidden) { return "FORBIDDEN"; }
+    if (code == ApiErrorCode.RateLimitExceeded) { return "RATE_LIMIT_EXCEEDED"; }
+    if (code == ApiErrorCode.InternalServerError) { return "INTERNAL_SERVER_ERROR"; }
+    if (code == ApiErrorCode.DatabaseError) { return "DATABASE_ERROR"; }
+    if (code == ApiErrorCode.LLMError) { return "LLM_ERROR"; }
+    if (code == ApiErrorCode.VectorDBError) { return "VECTOR_DB_ERROR"; }
+    if (code == ApiErrorCode.CacheError) { return "CACHE_ERROR"; }
+    if (code == ApiErrorCode.ConfigurationError) { return "CONFIGURATION_ERROR"; }
+    if (code == ApiErrorCode.TimeoutError) { return "TIMEOUT_ERROR"; }
+    return "UNKNOWN_ERROR";
 }
 
 // Error Code zu HTTP Status Mapping
 fn errorCodeToHttpStatus(code: ApiErrorCode): number {
-    match (code) {
-        ApiErrorCode::ValidationError => 400,
-        ApiErrorCode::NotFound => 404,
-        ApiErrorCode::Unauthorized => 401,
-        ApiErrorCode::Forbidden => 403,
-        ApiErrorCode::RateLimitExceeded => 429,
-        ApiErrorCode::InternalServerError => 500,
-        ApiErrorCode::DatabaseError => 500,
-        ApiErrorCode::LLMError => 502,
-        ApiErrorCode::VectorDBError => 502,
-        ApiErrorCode::CacheError => 500,
-        ApiErrorCode::ConfigurationError => 500,
-        ApiErrorCode::TimeoutError => 504,
-        _ => 500,
-    }
+    if (code == ApiErrorCode.ValidationError) { return 400; }
+    if (code == ApiErrorCode.NotFound) { return 404; }
+    if (code == ApiErrorCode.Unauthorized) { return 401; }
+    if (code == ApiErrorCode.Forbidden) { return 403; }
+    if (code == ApiErrorCode.RateLimitExceeded) { return 429; }
+    if (code == ApiErrorCode.InternalServerError) { return 500; }
+    if (code == ApiErrorCode.DatabaseError) { return 500; }
+    if (code == ApiErrorCode.LLMError) { return 502; }
+    if (code == ApiErrorCode.VectorDBError) { return 502; }
+    if (code == ApiErrorCode.CacheError) { return 500; }
+    if (code == ApiErrorCode.ConfigurationError) { return 500; }
+    if (code == ApiErrorCode.TimeoutError) { return 504; }
+    return 500;
+}
+
+fn getStackTrace(): string {
+    return "";
 }
 
 // createError - Erstellt AppError
@@ -73,17 +75,18 @@ fn createError(code: ApiErrorCode, message: string, details: Map<string, string>
         details: details,
         cause: cause,
         stackTrace: getStackTrace(),
-        timestamp: getCurrentTimestamp(),
+        timestamp: logging.getCurrentTimestamp(),
     };
 }
 
 // createValidationError - Erstellt Validierungs-Fehler
 fn createValidationError(field: string, message: string): AppError {
-    let details = Map<string, string>();
-    details["field"] = field;
+    let details = models.createEmptyMapStringString();
+    details.insert("field", field);
     
+    let code = ApiErrorCode.ValidationError;
     return createError(
-        ApiErrorCode::ValidationError,
+        code,
         message,
         details,
         "Validation failed"
@@ -92,26 +95,28 @@ fn createValidationError(field: string, message: string): AppError {
 
 // createNotFoundError - Erstellt Not-Found-Fehler
 fn createNotFoundError(resource: string, id: string): AppError {
-    let details = Map<string, string>();
-    details["resource"] = resource;
-    details["id"] = id;
+    let details = models.createEmptyMapStringString();
+    details.insert("resource", resource);
+    details.insert("id", id);
     
+    let code = ApiErrorCode.NotFound;
     return createError(
-        ApiErrorCode::NotFound,
-        format("{} not found: {}", resource, id),
+        code,
+        "Resource not found: " + resource,
         details,
-        "Resource lookup failed"
+        "Not Found"
     );
 }
 
 // createUnauthorizedError - Erstellt Unauthorized-Fehler
 fn createUnauthorizedError(reason: string): AppError {
-    let details = Map<string, string>();
-    details["reason"] = reason;
+    let details = models.createEmptyMapStringString();
+    details.insert("reason", reason);
     
+    let code = ApiErrorCode.Unauthorized;
     return createError(
-        ApiErrorCode::Unauthorized,
-        format("Unauthorized: {}", reason),
+        code,
+        "Unauthorized: " + reason,
         details,
         "Authentication failed"
     );
@@ -119,13 +124,15 @@ fn createUnauthorizedError(reason: string): AppError {
 
 // createRateLimitError - Erstellt Rate-Limit-Fehler
 fn createRateLimitError(limit: number, window: string): AppError {
-    let details = Map<string, string>();
-    details["limit"] = limit.toString();
-    details["window"] = window;
+    let details = models.createEmptyMapStringString();
+    // Convert number to string workaround or simplification
+    details.insert("limit", "limit_exceeded");
+    details.insert("window", window);
     
+    let code = ApiErrorCode.RateLimitExceeded;
     return createError(
-        ApiErrorCode::RateLimitExceeded,
-        format("Rate limit exceeded: {} requests per {}", limit, window),
+        code,
+        "Rate limit exceeded",
         details,
         "Rate limiting"
     );
@@ -133,12 +140,13 @@ fn createRateLimitError(limit: number, window: string): AppError {
 
 // createLLMError - Erstellt LLM-Fehler
 fn createLLMError(provider: string, message: string): AppError {
-    let details = Map<string, string>();
-    details["provider"] = provider;
+    let details = models.createEmptyMapStringString();
+    details.insert("provider", provider);
     
+    let code = ApiErrorCode.LLMError;
     return createError(
-        ApiErrorCode::LLMError,
-        format("LLM error ({})", provider),
+        code,
+        "LLM error (" + provider + ")",
         details,
         message
     );
@@ -146,38 +154,27 @@ fn createLLMError(provider: string, message: string): AppError {
 
 // createVectorDBError - Erstellt Vector-DB-Fehler
 fn createVectorDBError(operation: string, message: string): AppError {
-    let details = Map<string, string>();
-    details["operation"] = operation;
+    let details = models.createEmptyMapStringString();
+    details.insert("operation", operation);
     
+    let code = ApiErrorCode.VectorDBError;
     return createError(
-        ApiErrorCode::VectorDBError,
-        format("Vector DB error during {}", operation),
+        code,
+        "Vector DB error during " + operation,
         details,
         message
     );
 }
 
-// getStackTrace - Gibt Stack Trace zurück
-fn getStackTrace(): string {
-    // In Production: Verwende echte Stack Trace
-    return "Stack trace not available in VelinScript";
-}
-
-// isRetryableError - Prüft ob Fehler wiederholbar ist
-fn isRetryableError(error: AppError): boolean {
-    match (error.code) {
-        ApiErrorCode::TimeoutError => true,
-        ApiErrorCode::DatabaseError => true,
-        ApiErrorCode::LLMError => true,
-        ApiErrorCode::VectorDBError => true,
-        ApiErrorCode::CacheError => true,
-        ApiErrorCode::RateLimitExceeded => true,
-        _ => false,
-    }
-}
-
-// shouldLogError - Prüft ob Fehler geloggt werden soll
-fn shouldLogError(error: AppError): boolean {
-    // Logge alle Fehler außer Validation Errors (die sind erwartet)
-    return error.code != ApiErrorCode::ValidationError;
+// createInternalServerError - Erstellt Internal-Server-Fehler
+fn createInternalServerError(message: string): AppError {
+    let details = models.createEmptyMapStringString();
+    
+    let code = ApiErrorCode.InternalServerError;
+    return createError(
+        code,
+        message,
+        details,
+        "Internal server error"
+    );
 }

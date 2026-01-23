@@ -45,6 +45,11 @@ impl Formatter {
             Item::Impl(_i) => {
                 // Impls are formatted as-is for now
             }
+            Item::TopLevelCode(expr_stmt) => {
+                // Format top-level code statements
+                self.format_expression(&expr_stmt.expression);
+                self.output.push_str(";\n");
+            }
         }
     }
     
@@ -300,6 +305,9 @@ impl Formatter {
             Statement::Break(_) => {
                 self.write("break;");
             }
+            Statement::Try(try_stmt) => {
+                self.format_try_statement(try_stmt);
+            }
         }
     }
     
@@ -392,6 +400,46 @@ impl Formatter {
         self.writeln("");
         self.indent();
         self.write("}");
+    }
+    
+    fn format_try_statement(&mut self, try_stmt: &TryStatement) {
+        self.write("try ");
+        self.format_block(&try_stmt.try_block);
+        
+        for catch_block in &try_stmt.catch_blocks {
+            self.format_catch_block(catch_block);
+        }
+        
+        if let Some(ref finally_block) = try_stmt.finally_block {
+            self.format_finally_block(finally_block);
+        }
+    }
+    
+    fn format_catch_block(&mut self, catch_block: &CatchBlock) {
+        self.write(" catch");
+        
+        if catch_block.error_var.is_some() || catch_block.error_type.is_some() {
+            self.write(" (");
+            
+            if let Some(ref var_name) = catch_block.error_var {
+                self.write(var_name);
+            }
+            
+            if let Some(ref error_type) = catch_block.error_type {
+                self.write(": ");
+                self.format_type(error_type);
+            }
+            
+            self.write(")");
+        }
+        
+        self.write(" ");
+        self.format_block(&catch_block.body);
+    }
+    
+    fn format_finally_block(&mut self, finally_block: &Block) {
+        self.write(" finally ");
+        self.format_block(finally_block);
     }
     
     fn format_pattern(&mut self, pattern: &Pattern) {
@@ -605,6 +653,18 @@ impl Formatter {
                 self.format_expression(target);
                 self.write(" = ");
                 self.format_expression(value);
+            }
+            Expression::LLMCall { method, args } => {
+                self.write("@llm.");
+                self.write(method);
+                self.write("(");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.format_expression(arg);
+                }
+                self.write(")");
             }
             Expression::FormatString { parts } => {
                 self.write("\"");

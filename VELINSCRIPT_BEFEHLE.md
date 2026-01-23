@@ -1,6 +1,6 @@
 # 📋 VelinScript - Alle verfügbaren Befehle
 
-Eine vollständige Übersicht aller nützlichen Befehle von VelinScript 2.0.
+Eine vollständige Übersicht aller nützlichen Befehle von VelinScript 3.1.0.
 
 ---
 
@@ -9,11 +9,11 @@ Eine vollständige Übersicht aller nützlichen Befehle von VelinScript 2.0.
 ### Grundlegende Befehle
 
 ```bash
-# Kompiliert eine VelinScript Datei zu Rust
-velin compile -i <datei> [-o <output>] [--no-type-check] [--show-code]
+# Kompiliert eine VelinScript Datei zu Rust (oder andere Zielsprachen)
+velin compile -i <datei> [-o <output>] [--no-type-check] [--show-code] [--autofix] [--target <sprache>] [--framework <framework>] [--ai-semantic] [--ai-bug-detection] [--ai-codegen] [--ai-optimization] [--ai-provider <provider>] [--ai-api-key <key>]
 
 # Code prüfen (Parsing & Type Checking)
-velin check -i <datei>
+velin check -i <datei> [--autofix]
 
 # Code formatieren
 velin format -i <datei> [--in-place]
@@ -23,6 +23,13 @@ velin info -i <datei>
 
 # Neues Projekt initialisieren
 velin init [<projektname>] [--current-dir]
+# oder
+velin new [<projektname>] [--current-dir]
+
+# Development-Server starten
+velin serve [-i <datei>] [--port <port>] [--host <host>] [--watch]
+# oder
+velin run [-i <datei>] [--port <port>] [--host <host>] [--watch]
 
 # OpenAPI Specification generieren
 velin open-api -i <datei> [-o <output>]
@@ -415,4 +422,4 @@ Falls die VS Code Extension installiert ist, stehen folgende Commands zur Verfü
 
 ---
 
-**Stand**: VelinScript 2.0 (Alpha → Beta)
+**Stand**: VelinScript 3.1.0

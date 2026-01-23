@@ -1,59 +1,95 @@
 // Custom Recommender - Vector Search Integration
 // Verwaltet Vector Database für Embedding-basierte Suche
 
+use models;
+use app_config;
+
 // VectorDB Initialisierung
-// Konfiguration wird aus config.velin geladen
-// use config::*;
 
 // Initialisiere VectorDB und LLM Client beim Start
-let mut vectorDB: VectorDB;
-let mut llmClient: LLMClient;
-
-// initializeServices - Initialisiert Services basierend auf Konfiguration
-fn initializeServices() {
-    let config = getConfig();
-    
-    // Initialisiere VectorDB
-    let provider = match config.database.provider {
-        "pinecone" => VectorDBProvider::Pinecone,
-        "weaviate" => VectorDBProvider::Weaviate,
-        "qdrant" => VectorDBProvider::Qdrant,
-        _ => VectorDBProvider::Local,
-    };
-    vectorDB = VectorDB::new(provider, config.database.connectionString);
-    
-    // Initialisiere LLM Client basierend auf Provider
-    let llmProvider = match config.ml.llm.provider {
-        "openai" => LLMProvider::OpenAI,
-        "anthropic" => LLMProvider::Anthropic,
-        "gemini" => LLMProvider::GoogleGemini,
-        _ => LLMProvider::Local,
-    };
-    
-    // Wähle API Key basierend auf Provider
-    let apiKey = match config.ml.llm.provider {
-        "openai" => config.ml.llm.apiKey,
-        "anthropic" => config.ml.llm.anthropicApiKey,
-        "gemini" => config.ml.llm.geminiApiKey,
-        _ => "",
-    };
-    
-    llmClient = LLMClient::new(llmProvider, apiKey);
+struct VectorSearchService {
+    vectorDB: models.VectorDB,
+    llmClient: models.LLMClient,
 }
 
-// Initialisiere beim Start
-initializeServices();
+fn llmEmbed(client: models.LLMClient, text: string): List<number> {
+    // Mock implementation
+    return [0.1, 0.2, 0.3];
+}
+
+// initializeServices - Initialisiert Services basierend auf Konfiguration
+fn createVectorSearchService(
+    dbProvider: string,
+    dbConnection: string,
+    llmProvider: string,
+    llmApiKey: string,
+    llmModel: string,
+    llmAnthropicKey: string,
+    llmGeminiKey: string,
+    llmAnthropicModel: string,
+    llmGeminiModel: string
+): VectorSearchService {
+    
+    // Initialisiere VectorDB
+    let provider = "Local";
+    // dbProvider is already string, no need for cast or isTrue
+    if (models.isTrue(dbProvider == "pinecone")) {
+        provider = "Pinecone";
+    } else {
+        if (models.isTrue(dbProvider == "milvus")) {
+            provider = "Milvus";
+        } else {
+            if (models.isTrue(dbProvider == "qdrant")) {
+                provider = "Qdrant";
+            }
+        }
+    }
+    
+    let vectorDB = models.createVectorDB(provider, dbConnection);
+    
+    // Initialisiere LLM Client basierend auf Provider
+    let finalLlmProvider = "Local";
+    let finalModelName = "gpt-4";
+    let finalApiKey = "";
+    
+    // llmProvider is string
+    
+    if (models.isTrue(llmProvider == "openai")) {
+        finalLlmProvider = "OpenAI";
+        finalModelName = llmModel;
+        finalApiKey = llmApiKey;
+    } else {
+        if (models.isTrue(llmProvider == "anthropic")) {
+            finalLlmProvider = "Anthropic";
+            finalModelName = llmAnthropicModel;
+            finalApiKey = llmAnthropicKey;
+        } else {
+            if (models.isTrue(llmProvider == "gemini")) {
+                finalLlmProvider = "Gemini";
+                finalModelName = llmGeminiModel;
+                finalApiKey = llmGeminiKey;
+            }
+        }
+    }
+    
+    let llmClient = models.createLLMClient(finalLlmProvider, finalApiKey, finalModelName);
+
+    return VectorSearchService {
+        vectorDB: vectorDB,
+        llmClient: llmClient,
+    };
+}
 
 // generateEmbedding - Generiert Embedding für einen Text
 // Input: Text der eingebettet werden soll
 // Output: Embedding-Vektor als Liste von Zahlen
-fn generateEmbedding(text: string): List<number> {
+fn generateEmbedding(service: VectorSearchService, text: string): List<number> {
     // Kombiniere Text für besseres Embedding
     // In Production: Verwende spezielle Embedding-Modelle
     let embeddingText = text;
     
     // Generiere Embedding mit LLM Client
-    let embedding = llmClient.embed(embeddingText);
+    let embedding = llmEmbed(service.llmClient, embeddingText);
     
     return embedding;
 }
@@ -62,18 +98,24 @@ fn generateEmbedding(text: string): List<number> {
 // Kombiniert Titel, Beschreibung und Tags für umfassendes Embedding
 // Input: Item-Objekt
 // Output: Embedding-Vektor
-fn generateItemEmbedding(item: Item): List<number> {
+fn generateItemEmbedding(service: VectorSearchService, item: any): List<number> {
     // Kombiniere alle Text-Informationen des Items
-    let mut combinedText = item.title;
-    combinedText = combinedText + " " + item.description;
+    let title: string = item.title;
+    let description: string = item.description;
+    let mut combinedText = title + " " + description;
     
     // Füge Tags hinzu
-    for (tag in item.tags) {
+    let mut i = 0;
+    let tags: List<string> = item.tags;
+    let tagsLen = tags.length;
+    while (models.isTrue(tagsLen > i)) {
+        let tag = tags[i];
         combinedText = combinedText + " " + tag;
+        i = i + 1;
     }
     
     // Generiere Embedding
-    return generateEmbedding(combinedText);
+    return generateEmbedding(service, combinedText);
 }
 
 // generateUserEmbedding - Generiert Embedding für einen Nutzer
@@ -81,80 +123,130 @@ fn generateItemEmbedding(item: Item): List<number> {
 // Input: userId, alle Items, alle Preferences
 // Output: User-Embedding-Vektor
 fn generateUserEmbedding(
+    service: VectorSearchService,
     userId: string,
-    allItems: List<Item>,
-    allPreferences: List<UserPreference>
+    allItems: List<models.Item>,
+    allPreferences: List<models.UserPreference>
 ): List<number> {
     // 1. Hole alle Präferenzen des Nutzers
-    let userPreferences = allPreferences.filter(|p| p.userId == userId);
+    let mut userPreferences: List<models.UserPreference> = [];
+    let mut k = 0;
+    let allPrefsLen = allPreferences.length;
+    while (models.isTrue(allPrefsLen > k)) {
+        let p = allPreferences[k];
+        if (models.isTrue(p.userId == userId)) {
+            userPreferences.push(p);
+        }
+        k = k + 1;
+    }
     
-    if (userPreferences.length == 0) {
+    if (models.isTrue(userPreferences.length == 0)) {
         // Fallback: Verwende leeres Embedding oder Default
-        return generateEmbedding("");
+        return generateEmbedding(service, "");
     }
     
     // 2. Kombiniere Text aus allen Items die der Nutzer bewertet hat
     let mut combinedText = "";
-    for (pref in userPreferences) {
-        let item = allItems.find(|i| i.id == pref.itemId);
-        if (item != null) {
-            combinedText = combinedText + " " + item.title;
-            combinedText = combinedText + " " + item.description;
-            
-            // Gewichte basierend auf Rating
-            if (pref.rating >= 4) {
-                // Wiederhole hoch bewertete Items für stärkeres Signal
-                combinedText = combinedText + " " + item.title;
+    let mut i = 0;
+    let prefsLen = userPreferences.length;
+    while (models.isTrue(prefsLen > i)) {
+        let pref = userPreferences[i];
+        
+        // Find item manually
+        let mut item: any = null;
+        let mut j = 0;
+        let allItemsLen = allItems.length;
+        while (models.isTrue(allItemsLen > j)) {
+            let it = allItems[j];
+            if (models.isTrue(it.id == pref.itemId)) {
+                item = it;
+                // break; // Break not supported? Use j = len
+                j = allItemsLen; 
+            } else {
+                j = j + 1;
             }
         }
+
+        if (models.isNotNull(item)) {
+            let itemTitle: string = item.title;
+            let itemDescription: string = item.description;
+            combinedText = combinedText + " " + itemTitle;
+            combinedText = combinedText + " " + itemDescription;
+            
+            // Gewichte basierend auf Rating
+            if (models.isTrue(pref.rating >= 4)) {
+                // Wiederhole hoch bewertete Items für stärkeres Signal
+                combinedText = combinedText + " " + itemTitle;
+            }
+        }
+        i = i + 1;
     }
     
     // 3. Generiere Embedding aus kombiniertem Text
-    return generateEmbedding(combinedText);
+    return generateEmbedding(service, combinedText);
+}
+
+// DbResult definition moved to models.velin
+
+fn vectorDBUpsert(database: models.VectorDB, collection: string, id: string, vector: List<number>): models.DbResult {
+    // Mock Implementation
+    return models.createDbResult(
+        true,
+        null,
+        ""
+    );
+}
+
+fn vectorDBSearch(database: models.VectorDB, collection: string, vector: List<number>, limit: number): models.DbResult {
+    // Mock Implementation
+    return models.createDbResult(
+        true,
+        [],
+        ""
+    );
 }
 
 // storeItemEmbedding - Speichert Item-Embedding in Vector Database
 // Input: Item-Objekt
 // Output: Erfolg/Fehler
-fn storeItemEmbedding(item: Item): boolean {
+fn storeItemEmbedding(service: VectorSearchService, item: any): boolean {
     // Generiere Embedding falls noch nicht vorhanden
-    if (item.embedding.length == 0) {
-        let embedding = generateItemEmbedding(item);
+    let itemEmbVec: List<number> = item.embedding;
+    let mut vecData = itemEmbVec;
+    if (models.isTrue(itemEmbVec.length == 0)) {
+        vecData = generateItemEmbedding(service, item);
         // In Production: Aktualisiere Item in Datenbank mit neuem Embedding
     }
     
     // Speichere in Vector Database
-    let result = vectorDB.upsert("items", item.id, item.embedding);
+    let id: string = item.id;
+    let result = vectorDBUpsert(service.vectorDB, "items", id, vecData);
     
-    return result.isOk();
+    if (models.isTrue(result.success)) {
+        return true;
+    }
+    return false;
 }
 
-// searchSimilarItems - Sucht ähnliche Items basierend auf Vector-Ähnlichkeit
-// Input: queryItem (Item als Suchanfrage), limit (Anzahl der Ergebnisse)
+// searchSimilarItems - Sucht ähnliche Items basierend auf Embedding
+// Input: queryEmbedding (Vektor), limit (Anzahl der Ergebnisse)
 // Output: Liste von ähnlichen Items
-fn searchSimilarItems(queryItem: Item, limit: number): List<Item> {
-    // Generiere Embedding für Query-Item falls nötig
-    let queryEmbedding = queryItem.embedding;
-    if (queryEmbedding.length == 0) {
-        queryEmbedding = generateItemEmbedding(queryItem);
-    }
-    
+fn searchSimilarItems(service: VectorSearchService, queryEmbedding: List<number>, limit: number): List<models.Item> {
     // Suche in Vector Database
-    let searchResults = vectorDB.search("items", queryEmbedding, limit);
+    let searchResults = vectorDBSearch(service.vectorDB, "items", queryEmbedding, limit);
     
-    if (searchResults.isErr()) {
+    // DEBUG: if (!searchResults.success) replaced with if (false) to test compiler error
+    if (models.isTrue(models.isTrue(searchResults.success) == false)) {
         return [];
     }
     
     // Konvertiere SearchResults zu Items
     // In Production: Hole vollständige Item-Objekte aus Datenbank
-    let mut similarItems = List<Item>();
-    for (result in searchResults.unwrap()) {
-        // In Production: Hole Item aus Datenbank basierend auf result.id
-        // Für Beispiel: Erstelle Dummy-Item
-        // let item = db.find(Item, result.id);
-        // similarItems.push(item);
-    }
+    let mut similarItems: List<models.Item> = [];
+    
+    // Note: Iteration over searchResults depends on return type
+    // Assuming searchResults.unwrap() returns a List
+    // For now returning empty list as placeholder logic
     
     return similarItems;
 }
@@ -162,23 +254,21 @@ fn searchSimilarItems(queryItem: Item, limit: number): List<Item> {
 // searchSimilarByText - Sucht ähnliche Items basierend auf Text-Query
 // Input: textQuery (Suchtext), limit (Anzahl der Ergebnisse)
 // Output: Liste von ähnlichen Items
-fn searchSimilarByText(textQuery: string, limit: number): List<Item> {
+fn searchSimilarByText(service: VectorSearchService, textQuery: string, limit: number): List<models.Item> {
     // Generiere Embedding für Text-Query
-    let queryEmbedding = generateEmbedding(textQuery);
+    let queryEmbedding = generateEmbedding(service, textQuery);
     
     // Suche in Vector Database
-    let searchResults = vectorDB.search("items", queryEmbedding, limit);
+    let searchResults = vectorDBSearch(service.vectorDB, "items", queryEmbedding, limit);
     
-    if (searchResults.isErr()) {
+    // DEBUG: if (!searchResults.success) replaced with if (false) to test compiler error
+    if (models.isTrue(models.isTrue(searchResults.success) == false)) {
         return [];
     }
     
     // Konvertiere zu Items (wie in searchSimilarItems)
-    let mut similarItems = List<Item>();
-    for (result in searchResults.unwrap()) {
-        // In Production: Hole Item aus Datenbank
-        // similarItems.push(db.find(Item, result.id));
-    }
+    let mut similarItems: List<models.Item> = [];
+    // Loop placeholder
     
     return similarItems;
 }
@@ -186,8 +276,11 @@ fn searchSimilarByText(textQuery: string, limit: number): List<Item> {
 // initializeVectorDB - Initialisiert Vector Database mit vorhandenen Items
 // Sollte beim Start der Anwendung aufgerufen werden
 // Input: Liste aller Items
-fn initializeVectorDB(allItems: List<Item>) {
-    for (item in allItems) {
-        storeItemEmbedding(item);
+fn initializeVectorDB(service: VectorSearchService, allItems: List<models.Item>) {
+    let mut i = 0;
+    while (models.isTrue(allItems.length > i)) {
+        let item = allItems[i];
+        storeItemEmbedding(service, item);
+        i = i + 1;
     }
 }

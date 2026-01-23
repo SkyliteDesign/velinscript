@@ -248,9 +248,43 @@ Dies ist extrem mächtig für Konfigurationen, Event-Handler oder funktionale Ko
 ---
 
 ## 5. Kontrollfluss und Pattern Matching
-
+ 
 Neben Standard-Konstrukten wie `if/else`, `for` und `while` bietet VelinScript modernes **Pattern Matching**.
-
+ 
+### Standard-Kontrollstrukturen (Optional Parentheses)
+ 
+Seit Version 3.0 sind Klammern um Bedingungen in `if`, `for` und `while` optional, ähnlich wie in Rust oder Swift.
+ 
+**If / Else:**
+```velin
+let x = 10;
+ 
+// Mit Klammern (klassisch)
+if (x > 5) {
+    log.info("Groß");
+}
+ 
+// Ohne Klammern (modern)
+if x > 5 {
+    log.info("Groß");
+} else {
+    log.info("Klein");
+}
+```
+ 
+**Schleifen:**
+```velin
+// For-Schleife über Range
+for i in 0..10 {
+    log.info(i);
+}
+ 
+// While-Schleife
+while x > 0 {
+    x = x - 1;
+}
+```
+ 
 ### Das `match`-Statement
 `match` ist wie ein `switch` auf Steroiden. Es prüft einen Wert gegen eine Reihe von Mustern und führt den ersten passenden Zweig aus. Der Compiler prüft (bei Enums), ob alle Fälle abgedeckt sind ("Exhaustiveness Check").
 
@@ -348,6 +382,65 @@ if (user) {
     log.info("Kein User gefunden");
 }
 ```
+
+**Result:** Ein Wert oder ein Fehler (explizite Fehlerbehandlung).
+```velin
+fn parseNumber(input: string): Result<number, string> {
+    // ... Parsing-Logik
+    if (isValid) {
+        return Result.ok(parsedValue);
+    } else {
+        return Result.err("Invalid number");
+    }
+}
+
+// Verwendung mit Result
+let result = parseNumber("42");
+if (result.isOk()) {
+    let value = result.unwrap();
+} else {
+    let error = result.unwrapErr();
+}
+```
+
+**try-catch-finally (Syntaktischer Zucker)** ✅ (Version 3.0.1)
+`try-catch-finally` ist syntaktischer Zucker, der automatisch in `Result`-basiertes Error-Handling desugared wird:
+
+```velin
+// Einfacher try-catch
+try {
+    let result = db.query("SELECT * FROM users");
+    return result;
+} catch (err) {
+    log.error("Database error: " + err.message);
+    return [];
+}
+
+// Mehrere catch-Blöcke mit Typ-Dispatch
+try {
+    return processData(data);
+} catch (err: ValidationError) {
+    handleValidationError(err);
+} catch (err: NetworkError) {
+    handleNetworkError(err);
+} catch (err) {
+    handleGenericError(err);
+}
+
+// Mit finally-Block
+try {
+    return openFile(path);
+} catch (err) {
+    log.error(err.message);
+} finally {
+    closeResources(); // Wird immer ausgeführt
+}
+```
+
+**Wichtige Hinweise:**
+- Jedes `return` im try-Block wird automatisch in `Result.ok(...)` gewrappt
+- Mehrere catch-Blöcke mit spezifischen Fehlertypen werden zu `match`-Statements desugared
+- Der finally-Block wird immer ausgeführt, unabhängig von Erfolg oder Fehler
 
 ---
 

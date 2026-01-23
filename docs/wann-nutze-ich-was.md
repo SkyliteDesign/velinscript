@@ -67,6 +67,82 @@ Diese Dokumentation hilft Ihnen dabei, das richtige Tool oder Feature für Ihre 
 
 ## Entwicklung & Code-Qualität
 
+### Wann nutze ich **Automatic Code Ordering**? ✅ (Neu in 3.1.0)
+
+**Nutzen Sie Automatic Code Ordering, wenn:**
+- ✅ Sie Code in natürlicher Reihenfolge schreiben möchten (ohne über Abhängigkeiten nachzudenken)
+- ✅ Sie große Projekte mit vielen Abhängigkeiten haben
+- ✅ Sie Multi-File-Projekte mit komplexen Modul-Abhängigkeiten entwickeln
+- ✅ Sie sicherstellen möchten, dass Code in der korrekten Reihenfolge generiert wird
+
+**Automatisch aktiviert:**
+- ✅ Code wird automatisch nach dem Desugaring-Pass sortiert
+- ✅ Keine manuelle Konfiguration nötig
+- ✅ Funktioniert für Single-File und Multi-File-Projekte
+
+**Beispiel:**
+```velin
+// Sie können Code in beliebiger Reihenfolge schreiben:
+fn processUser(user: User) {
+    return user.name.toUpperCase();
+}
+
+struct User {
+    name: string;
+    email: string;
+}
+
+// Der Compiler sortiert automatisch zu:
+struct User {
+    name: string;
+    email: string;
+}
+
+fn processUser(user: User) {
+    return user.name.toUpperCase();
+}
+```
+
+**Siehe auch:**
+- [Code Ordering Dokumentation](../architecture/code-ordering.md)
+- [Type Inference Tutorial](../guides/tutorial-type-inference.md)
+
+---
+
+### Wann nutze ich **Type::Any Member-Access**? ✅ (Neu in 3.1.0)
+
+**Nutzen Sie Type::Any Member-Access, wenn:**
+- ✅ Sie mit dynamischen Daten arbeiten (z.B. JSON, API-Responses)
+- ✅ Sie flexible Member-Zugriffe benötigen
+- ✅ Sie automatische Type-Inference basierend auf Member-Namen nutzen möchten
+
+**Automatisch aktiviert:**
+- ✅ Type-Inference basierend auf Member-Namen (z.B. `length` → `Number`, `startsWith` → `Boolean`)
+- ✅ Unterstützung für String-, List- und Map-ähnliche Methoden
+- ✅ Fallback zu `Type::Any` für unbekannte Member (kein Fehler)
+
+**Beispiel:**
+```velin
+fn processData(data: any) {
+    // Automatische Type-Inference
+    if (data.startsWith("http://")) {
+        // data.startsWith() → Boolean (automatisch inferiert)
+        return data.toUpperCase(); // → String
+    }
+    
+    if (data.length > 0) {
+        // data.length → Number
+        return data.trim(); // → String
+    }
+}
+```
+
+**Siehe auch:**
+- [Type Inference Dokumentation](../architecture/type-inference.md)
+- [Type Inference Tutorial](../guides/tutorial-type-inference.md)
+
+---
+
 ### Wann nutze ich den **Linter** (`velin-lint`)?
 
 **Nutzen Sie den Linter, wenn:**
@@ -689,7 +765,7 @@ fn processOrder(order: Order): Result<Order, Error> {
 
 **Beispiel:**
 ```bash
-velin-compiler insight -i main.velin
+velin insight -i main.velin
 ```
 
 **Wann NICHT:**
@@ -860,7 +936,7 @@ let results = await vectorDB.search(embeddings, limit: 10);
 5. `velin-security scan` - Security-Vulnerabilities
 6. `velin-security audit` - Dependency-Audit
 7. `velin-api-doc generate` - API-Dokumentation
-8. `velin-compiler insight` - Code-Analyse
+8. `velin insight` - Code-Analyse (falls verfügbar)
 
 ### Bei neuen Features
 
@@ -896,7 +972,7 @@ let results = await vectorDB.search(embeddings, limit: 10);
 
 1. `velin-lint check --fix` - Automatische Fixes
 2. `velin format` - Code formatieren
-3. `velin-compiler insight` - Code-Analyse
+3. `velin insight` - Code-Analyse (falls verfügbar)
 4. Manuelle Verbesserungen
 
 ### "Ich möchte Security prüfen"

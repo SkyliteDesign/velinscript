@@ -3,12 +3,23 @@ use crate::error::CompilerError;
 use crate::compiler::language::VELISCH_LANGUAGE_NAME;
 use std::collections::HashMap;
 
+/// Metadaten für KI-basierte Code-Analyse
+#[derive(Debug, Clone, Default)]
+pub struct SemanticMetadata {
+    pub context_type: Option<String>, // "api", "service", "library", etc.
+    pub dependencies: Vec<String>,
+    pub security_requirements: Vec<String>,
+    pub missing_components: Vec<String>,
+}
+
 #[derive(Debug)]
 pub struct CompilationContext {
     pub source_map: HashMap<String, String>, // filename -> source
     pub program: Option<Program>,
     pub errors: Vec<CompilerError>,
     pub root_file: String,
+    /// KI-basierte semantische Metadaten
+    pub semantic_metadata: SemanticMetadata,
 }
 
 impl CompilationContext {
@@ -24,6 +35,7 @@ impl CompilationContext {
             program: None,
             errors: Vec::new(),
             root_file,
+            semantic_metadata: SemanticMetadata::default(),
         }
     }
 

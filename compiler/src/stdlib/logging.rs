@@ -34,7 +34,7 @@ impl LogLevel {
 /// Velin Logger mit erweiterten Features
 pub struct VelinLogger {
     level: LogLevel,
-    output: Box<dyn Write>,
+    output: Box<dyn Write + Send>,
     context: HashMap<String, String>,
     file_output: Option<File>,
     json_format: bool,
@@ -46,7 +46,7 @@ pub struct VelinLogger {
 /// Logger-Struktur (Legacy, für Rückwärtskompatibilität)
 pub struct Logger {
     level: LogLevel,
-    output: Box<dyn Write>,
+    output: Box<dyn Write + Send>,
 }
 
 impl Logger {

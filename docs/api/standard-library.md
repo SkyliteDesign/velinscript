@@ -1,10 +1,12 @@
 # Standard Library API Reference
 
-VelinScript provides a rich standard library for common tasks. Version 2.5 includes 50+ modules with over 150+ functions.
+VelinScript provides a rich standard library for common tasks. Version 3.1.0 includes 50+ modules with over 200+ functions.
 
 **Neu in Version 2.5**: 13 neue Module mit 117+ Funktionen hinzugefügt ✅  
 **Neu in Version 2.6**: 5 neue Module mit 50+ Funktionen hinzugefügt ✅  
-**Neu in Version 2.7**: 17 neue Module mit 120+ Funktionen hinzugefügt ✅
+**Neu in Version 2.7**: 17 neue Module mit 120+ Funktionen hinzugefügt ✅  
+**Neu in Version 3.0.1**: IR, Borrow Checker, Prompt Optimizer ✅  
+**Neu in Version 3.1.0**: Multi-Target Compilation, erweiterte Parallelisierung ✅
 
 ## Table of Contents
 
@@ -48,6 +50,8 @@ VelinScript provides a rich standard library for common tasks. Version 2.5 inclu
 - [Mocks](#mocks)
 - [Template](#template)
 - [Env](#env)
+- [Metrics](#metrics)
+- [Cache](#cache)
 
 ## String
 
@@ -910,4 +914,48 @@ env.load(".env");
 let db_host = env.get("DB_HOST", "localhost");
 let db_port = env.get_number("DB_PORT", 5432);
 env.validate({ "DB_HOST": { required: true, type: "string" } });
+```
+
+## Metrics
+
+Global object: `metrics`
+
+**Neu in Version 3.0** ✅
+
+Performance Monitoring und Metriken-Sammlung.
+
+- `increment(name: string, labels?: string) -> void` - Erhöht Counter
+- `gauge(name: string, value: number, labels?: string) -> void` - Setzt Gauge
+- `histogram(name: string, value: number, labels?: string) -> void` - Zeichnet Histogramm auf
+
+**Beispiel:**
+```velin
+metrics.increment("api.requests");
+metrics.gauge("api.active_connections", 42);
+metrics.histogram("api.response_time", 150.5);
+```
+
+## Cache
+
+Global object: `cache`
+
+**Neu in Version 3.0** ✅
+
+Caching-System für Performance-Optimierung.
+
+- `get(key: string) -> Option<any>` - Holt Wert aus Cache
+- `set(key: string, value: any) -> void` - Setzt Wert in Cache
+- `remove(key: string) -> boolean` - Löscht Wert aus Cache
+- `clear() -> void` - Leert gesamten Cache
+- `exists(key: string) -> boolean` - Prüft ob Key existiert
+- `size() -> number` - Gibt Anzahl Einträge zurück
+
+**Beispiel:**
+```velin
+let cached = cache.get("user:123");
+if (cached.isSome()) {
+    return cached.unwrap();
+}
+let user = db.find(User, "123");
+cache.set("user:123", user);
 ```

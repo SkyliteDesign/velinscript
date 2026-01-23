@@ -77,7 +77,7 @@ impl TemplateStdlib {
         format!(
             "{{
                 use std::collections::HashMap;
-                use std::sync::{Arc, Mutex};
+                use std::sync::{{Arc, Mutex}};
                 static TEMPLATE_CACHE: once_cell::sync::Lazy<Arc<Mutex<HashMap<String, String>>>> = once_cell::sync::Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
                 let key = {};
                 let template_str = {};

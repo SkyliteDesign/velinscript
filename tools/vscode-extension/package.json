@@ -29,6 +29,35 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "configuration": {
+      "type": "object",
+      "title": "VelinScript Configuration",
+      "properties": {
+        "velin.compiler.path": {
+          "type": "string",
+          "default": "velin",
+          "description": "Path to the VelinScript compiler executable."
+        },
+        "velin.lsp.path": {
+          "type": "string",
+          "default": "velin-lsp",
+          "description": "Path to the VelinScript Language Server executable."
+        },
+        "velin.target": {
+          "type": "string",
+          "default": "rust",
+          "enum": [
+            "rust",
+            "ts",
+            "python",
+            "php",
+            "java",
+            "csharp"
+          ],
+          "description": "Target language for code generation (Multi-Target Backend)."
+        }
+      }
+    },
     "grammars": [
       {
         "language": "velin",
@@ -166,11 +195,40 @@
       {
         "command": "velin.autodoc",
         "title": "%velin.autodoc.title%"
+      },
+      {
+        "command": "velin.generate.tsExpress",
+        "title": "Velin: Generate Express Endpoint (TS)"
+      },
+      {
+        "command": "velin.generate.javaSpring",
+        "title": "Velin: Generate Spring Controller (Java)"
+      },
+      {
+        "command": "velin.generate.csharpAspNet",
+        "title": "Velin: Generate ASP.NET Controller (C#)"
       }
     ],
     "configuration": {
       "title": "VelinScript",
       "properties": {
+        "velin.compiler.target": {
+          "type": "string",
+          "default": "rust",
+          "enum": [
+            "rust",
+            "php",
+            "python",
+            "ts",
+            "java",
+            "csharp"
+          ],
+          "description": "The target language for compilation."
+        },
+        "velin.compiler.framework": {
+          "type": "string",
+          "description": "The target framework (optional). Overrides default framework for the target language."
+        },
         "velin.lsp.path": {
           "type": "string",
           "default": "velin-lsp",

@@ -63,10 +63,33 @@ impl Environment {
     }
     
     pub fn define_module(&mut self, name: String, env: Environment) {
+        // Debug logging for module definition
+        {
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+                writeln!(file, "DEBUG: Env::define_module({})", name).ok();
+                writeln!(file, "DEBUG: Before insert, modules: {:?}", self.modules.keys().collect::<Vec<_>>()).ok();
+            }
+        }
         self.modules.insert(name, Box::new(env));
+        {
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+                writeln!(file, "DEBUG: After insert, modules: {:?}", self.modules.keys().collect::<Vec<_>>()).ok();
+            }
+        }
     }
 
     pub fn get_module(&self, name: &str) -> Option<Environment> {
+        // Debug logging for module lookup
+        {
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+                let keys: Vec<_> = self.modules.keys().collect();
+                writeln!(file, "DEBUG: Env::get_module({}) - Available: {:?}", name, keys).ok();
+            }
+        }
+
         if let Some(env) = self.modules.get(name) {
             Some(*env.clone())
         } else if let Some(ref parent) = self.parent {
@@ -105,9 +128,31 @@ impl Environment {
     }
     
     pub fn get_function(&self, name: &str) -> Option<FunctionSignature> {
+        // Debug logging for function lookup
+        {
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+                writeln!(file, "DEBUG: Env::get_function({})", name).ok();
+            }
+        }
+
         if let Some((module_name, rest)) = name.split_once('.') {
             if let Some(module_env) = self.get_module(module_name) {
+                {
+                    use std::io::Write;
+                    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+                        writeln!(file, "DEBUG: Env::get_function - Found module {}, looking for {}", module_name, rest).ok();
+                        writeln!(file, "DEBUG: Module functions: {:?}", module_env.functions.keys().collect::<Vec<_>>()).ok();
+                    }
+                }
                 return module_env.get_function(rest);
+            } else {
+                {
+                    use std::io::Write;
+                    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+                        writeln!(file, "DEBUG: Env::get_function - Module {} NOT found", module_name).ok();
+                    }
+                }
             }
         }
         

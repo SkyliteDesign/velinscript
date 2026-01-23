@@ -1,0 +1,258 @@
+// Custom Recommender - Konfiguration
+// Lädt Einstellungen aus velin.config.json und Umgebungsvariablen
+
+use models;
+
+// Custom Recommender - Configuration
+// Definiert die Konfigurationsstruktur und lädt Umgebungsvariablen
+
+// Mock getEnv since env module is not registered in checker
+// Removed duplicate definition
+
+// Helper to create collections map
+fn createCollectionsMap(): Map<string, string> {
+    let mut m = Map<string, string>();
+    m.insert("items", "items");
+    m.insert("users", "users");
+    return m;
+}
+
+struct CorsConfig {
+    enabled: boolean,
+    origins: List<string>,
+}
+
+struct ApiConfig {
+    port: number,
+    host: string,
+    cors: CorsConfig,
+}
+
+struct DatabaseConfig {
+    dbType: string,
+    provider: string,
+    connectionString: string,
+    collections: Map<string, string>,
+}
+
+struct LLMConfig {
+    provider: string,
+    apiKey: string,
+    anthropicApiKey: string,
+    geminiApiKey: string,
+    model: string,
+    anthropicModel: string,
+    geminiModel: string,
+    embeddingModel: string,
+}
+
+struct RecommendationConfig {
+    embeddingWeight: number,
+    collaborativeWeight: number,
+    maxRecommendations: number,
+    minScore: number,
+}
+
+struct MLConfig {
+    llm: LLMConfig,
+    recommendation: RecommendationConfig,
+}
+
+struct CacheConfig {
+    enabled: boolean,
+    ttl: number,
+    provider: string,
+}
+
+struct LoggingConfig {
+    level: string,
+    format: string,
+    output: string,
+}
+
+struct JWTConfig {
+    enabled: boolean,
+    secret: string,
+    expiration: number,
+}
+
+struct RateLimitConfig {
+    enabled: boolean,
+    requestsPerMinute: number,
+    burst: number,
+}
+
+struct SecurityCorsConfig {
+    allowedOrigins: List<string>,
+    allowedMethods: List<string>,
+    allowedHeaders: List<string>,
+    maxAge: number,
+}
+
+struct HTTPSConfig {
+    enabled: boolean,
+    redirectHttp: boolean,
+}
+
+struct SecurityHeadersConfig {
+    xFrameOptions: string,
+    xContentTypeOptions: string,
+    xXSSProtection: string,
+    strictTransportSecurity: string,
+}
+
+struct InputValidationConfig {
+    enabled: boolean,
+    maxRequestSize: number,
+    maxArrayLength: number,
+}
+
+struct SecurityConfig {
+    apiKeyRequired: boolean,
+    apiKeyHeader: string,
+    jwt: JWTConfig,
+    rateLimit: RateLimitConfig,
+    cors: SecurityCorsConfig,
+    https: HTTPSConfig,
+    headers: SecurityHeadersConfig,
+    inputValidation: InputValidationConfig,
+}
+
+struct WASMConfig {
+    enabled: boolean,
+    target: string,
+    optimization: string,
+    features: List<string>,
+}
+
+struct AppConfig {
+    version: string,
+    api: ApiConfig,
+    database: DatabaseConfig,
+    ml: MLConfig,
+    cache: CacheConfig,
+    logging: LoggingConfig,
+    security: SecurityConfig,
+    wasm: WASMConfig,
+}
+
+// Globale Config-Variable entfernt
+// let mut appConfig: AppConfig;
+
+// loadConfig - Lädt Konfiguration aus velin.config.json
+// Ersetzt ${VAR_NAME} mit Umgebungsvariablen
+fn loadConfig(): AppConfig {
+    // Environment Variables
+    let vectorDbConn = getEnv("VECTOR_DB_CONNECTION", "local://vectors");
+    let openaiKey = getEnv("OPENAI_API_KEY", "");
+    let anthropicKey = getEnv("ANTHROPIC_API_KEY", "");
+    let geminiKey = getEnv("GOOGLE_GEMINI_API_KEY", "");
+    let logLevel = getEnv("LOG_LEVEL", "info");
+    let jwtSecret = getEnv("JWT_SECRET", "");
+
+    // In Production: Lade aus velin.config.json
+    // Verwende JSON.parse() und env.get() für Umgebungsvariablen
+    
+    // Beispiel-Konfiguration (in Production aus Datei geladen)
+    return AppConfig {
+        version: "1.0.0",
+        api: ApiConfig {
+            port: 8080,
+            host: "localhost",
+            cors: CorsConfig {
+                enabled: true,
+                origins: ["http://localhost:3000", "http://localhost:5173"],
+            },
+        },
+        database: DatabaseConfig {
+            dbType: "vector",
+            provider: "local",
+            connectionString: vectorDbConn,
+            collections: createCollectionsMap(),
+        },
+        ml: MLConfig {
+            llm: LLMConfig {
+                provider: "openai",
+                apiKey: openaiKey,
+                anthropicApiKey: anthropicKey,
+                geminiApiKey: geminiKey,
+                model: "gpt-4",
+                anthropicModel: "claude-3-opus-20240229",
+                geminiModel: "gemini-pro",
+                embeddingModel: "text-embedding-ada-002",
+            },
+            recommendation: RecommendationConfig {
+                embeddingWeight: 0.6,
+                collaborativeWeight: 0.4,
+                maxRecommendations: 50,
+                minScore: 0.3,
+            },
+        },
+        cache: CacheConfig {
+            enabled: true,
+            ttl: 3600,
+            provider: "memory",
+        },
+        logging: LoggingConfig {
+            level: logLevel,
+            format: "json",
+            output: "console",
+        },
+        security: SecurityConfig {
+            apiKeyRequired: true,
+            apiKeyHeader: "X-API-Key",
+            jwt: JWTConfig {
+                enabled: true,
+                secret: jwtSecret,
+                expiration: 3600,
+            },
+            rateLimit: RateLimitConfig {
+                enabled: true,
+                requestsPerMinute: 100,
+                burst: 20,
+            },
+            cors: SecurityCorsConfig {
+                allowedOrigins: ["http://localhost:3000"],
+                allowedMethods: ["GET", "POST", "PUT", "DELETE"],
+                allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+                maxAge: 3600,
+            },
+            https: HTTPSConfig {
+                enabled: true,
+                redirectHttp: true,
+            },
+            headers: SecurityHeadersConfig {
+                xFrameOptions: "DENY",
+                xContentTypeOptions: "nosniff",
+                xXSSProtection: "1; mode=block",
+                strictTransportSecurity: "max-age=31536000",
+            },
+            inputValidation: InputValidationConfig {
+                enabled: true,
+                maxRequestSize: 10485760,
+                maxArrayLength: 1000,
+            },
+        },
+        wasm: WASMConfig {
+            enabled: true,
+            target: "wasm32-unknown-unknown",
+            optimization: "size",
+            features: ["std", "web"],
+        },
+    };
+}
+
+// getEnv - Ruft Umgebungsvariable ab mit Fallback
+fn getEnv(key: string, defaultValue: string): string {
+    // In Production: return env.get(key) ?? defaultValue;
+    // Für Beispiel: Simuliere Umgebungsvariablen
+    return defaultValue;
+}
+
+// getConfig - Gibt geladene Konfiguration zurück
+fn getConfig(): AppConfig {
+    return loadConfig();
+}
+
+// Initialisiere Config beim Start
+// appConfig = loadConfig();

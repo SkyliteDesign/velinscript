@@ -241,7 +241,84 @@ let plain = crypto.decrypt(encrypted, secretKey);
 
 ---
 
-## 4. Sicherheitsscanner (SAST)
+## 4. AI-Code-Sicherheit (Neu in 3.0.1)
+
+VelinScript 3.0.1 führt umfassende Sicherheitsmaßnahmen für AI-generierten Code ein:
+
+### Prompt-Sanitization
+
+Alle LLM-Prompts werden automatisch sanitized, um Prompt-Injection-Angriffe zu verhindern:
+
+- **Geschützte Patterns:** "Ignore previous instructions", "You are now", Command injection, Code block injection
+- **Automatische Integration:** Wird in allen AI-Passes verwendet (AISemanticPass, AIBugDetectionPass, AICodeGenerationPass, AIOptimizationPass)
+
+**Beispiel:**
+```rust
+// Automatisch in allen AI-Passes aktiviert
+let sanitizer = PromptSanitizer::new();
+let safe_prompt = sanitizer.sanitize(user_input);
+```
+
+### AI-Code-Sandbox
+
+AI-generierter Code wird in einer isolierten Sandbox validiert:
+
+- **Erlaubte Funktionen:** Nur sichere Operationen (add, subtract, multiply, etc.)
+- **Verbotene Funktionen:** File-Operationen, System-Operationen, Network-Operationen
+- **Vollständige AST-Durchsuchung:** Rekursive Prüfung aller Statements und Expressions
+
+**Beispiel:**
+```rust
+let sandbox = AICodeSandbox::new();
+match sandbox.execute_safely(generated_code) {
+    Ok(result) if result.success => {
+        // Code ist sicher
+    }
+    _ => {
+        // Code wurde abgelehnt
+    }
+}
+```
+
+### AI-Code-Review
+
+AI-generierter Code wird automatisch reviewt:
+
+- **Syntax-Validierung:** Parse-Check
+- **Type-Checking:** Undefinierte Typen erkennen
+- **Security-Checks:** Fehlende Auth, Input-Validation
+- **Complexity-Check:** Zyklomatische Komplexität (max 50)
+- **Import-Check:** Nur erlaubte Module
+- **Pattern-Check:** Gefährliche Patterns erkennen
+
+**Beispiel:**
+```rust
+let reviewer = AICodeReviewer::new();
+match reviewer.review_code(generated_code) {
+    Ok(result) if result.approved => {
+        // Code approved
+    }
+    Ok(result) => {
+        // Code rejected: result.errors, result.security_issues
+    }
+    Err(e) => {
+        // Review fehlgeschlagen
+    }
+}
+```
+
+### Aktivierung
+
+```bash
+velin compile --input app.velin \
+  --ai-codegen \
+  --ai-code-review \
+  --ai-sandbox \
+  --ai-provider openai \
+  --ai-api-key $OPENAI_API_KEY
+```
+
+## 5. Sicherheitsscanner (SAST)
 
 VelinScript bringt einen eigenen Static Application Security Testing (SAST) Scanner mit. Dieser analysiert Ihren Quellcode auf bekannte Sicherheitsmuster, *bevor* Sie deployen.
 

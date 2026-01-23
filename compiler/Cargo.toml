@@ -1,6 +1,6 @@
 [package]
 name = "velin-compiler"
-version = "2.7.0"
+version = "3.1.0"
 edition = "2021"
 
 [dependencies]
@@ -14,11 +14,8 @@ md5 = "0.7"
 rand = "0.8"
 uuid = { version = "1.6", features = ["v4"] }
 base64 = "0.21"
-tokio = { version = "1.0", features = ["full"], optional = true }
-async-std = { version = "1.12", features = ["attributes"], optional = true }
-axum = { version = "0.7", features = ["macros"], optional = true }
-actix-web = { version = "4.4", features = ["macros"], optional = true }
-sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "postgres", "mysql", "sqlite"], optional = true }
+# Minimal tokio ohne TLS für Tests
+tokio = { version = "1.0", features = ["macros", "rt", "rt-multi-thread", "time"] }
 tar = "0.4"
 flate2 = "1.0"
 zip = "0.6"
@@ -30,20 +27,6 @@ rayon = "1.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 derive_more = { version = "1.0", features = ["add", "display", "from", "into", "deref"] }
-sea-orm = { version = "0.12", features = ["sqlx-postgres", "sqlx-mysql", "sqlx-sqlite", "runtime-tokio-native-tls"], optional = true }
-oauth2 = { version = "4.4", optional = true }
-openidconnect = { version = "2.0", optional = true }
-jsonwebtoken = { version = "9.2", optional = true }
-rustls = { version = "0.21", optional = true }
-rustls-pemfile = { version = "1.0", optional = true }
-vaultrs = { version = "0.5", optional = true }
-zeroize = { version = "1.6", features = ["zeroize_derive"], optional = true }
-secrecy = { version = "0.8", features = ["serde", "alloc"], optional = true }
-reqwest = { version = "0.11", features = ["json", "blocking"], optional = true }
-qdrant-client = { version = "1.7", optional = true }
-bcrypt = { version = "0.15", optional = true }
-aes-gcm = { version = "0.10", optional = true }
-redis = { version = "0.24", features = ["tokio-comp"], optional = true }
 url = "2.5"
 pathdiff = "0.2"
 futures = "0.3"
@@ -52,18 +35,41 @@ once_cell = "1.19"
 tempfile = "3.10"
 hex = "0.4"
 csv = "1.3"
+fernet = { version = "0.1", optional = true }
+
+# Optional dependencies für spätere Verwendung (nicht in default)
+# Diese sind für die Tests nicht erforderlich
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "mysql", "sqlite"], optional = true }
+async-std = { version = "1.12", features = ["attributes"], optional = true }
+axum = { version = "0.7", features = ["macros"], optional = true }
+actix-web = { version = "4.4", features = ["macros"], optional = true }
+sea-orm = { version = "0.12", features = ["sqlx-postgres", "sqlx-mysql", "sqlx-sqlite", "runtime-tokio-rustls"], optional = true }
+oauth2 = { version = "4.4", optional = true }
+openidconnect = { version = "2.0", optional = true }
+jsonwebtoken = { version = "9.2", optional = true }
+rustls = { version = "0.21", optional = true }
+rustls-pemfile = { version = "1.0", optional = true }
+vaultrs = { version = "0.5", optional = true }
+zeroize = { version = "1.6", features = ["zeroize_derive"], optional = true }
+secrecy = { version = "0.8", features = ["serde", "alloc"], optional = true }
+reqwest = { version = "0.11", default-features = false, features = ["json", "blocking", "rustls-tls"], optional = true }
+qdrant-client = { version = "1.7", optional = true }
+bcrypt = { version = "0.15", optional = true }
+aes-gcm = { version = "0.10", optional = true }
+redis = { version = "0.24", features = ["tokio-comp"], optional = true }
 mongodb = { version = "2.8", optional = true }
-lettre = { version = "0.11", optional = true }
-fernet = "0.1"
+lettre = { version = "0.11", default-features = false, features = ["rustls-tls"], optional = true }
 rsa = { version = "0.9", optional = true }
-# ort = { version = "2.0.0-rc.11", optional = true }  # ONNX Runtime - nur RC verfügbar
+validator = { version = "0.20.0", features = ["derive"] }
+petgraph = "0.6"
+indexmap = "2.0"
 
 [features]
-default = ["dep:tokio", "dep:axum", "axum", "dep:reqwest"]
-# Note: mongodb, smtp, and encryption require additional system dependencies
-# mongodb requires MongoDB client libraries
-# smtp (lettre) requires OpenSSL
-# encryption (rsa, aes-gcm) are part of security feature
+# Minimal default für Tests ohne OpenSSL-Abhängigkeiten
+default = []
+# Vollständige Features für Produktion
+full = ["dep:axum", "axum", "dep:reqwest", "dep:async-std", "dep:actix-web", "dep:sqlx", "dep:sea-orm", "dep:oauth2", "dep:openidconnect", "dep:jsonwebtoken", "dep:rustls", "dep:rustls-pemfile", "dep:vaultrs", "dep:zeroize", "dep:secrecy", "dep:reqwest", "dep:qdrant-client", "dep:bcrypt", "dep:aes-gcm", "dep:redis", "dep:mongodb", "dep:lettre", "dep:rsa"]
+
 async-std = ["dep:async-std"]
 axum = ["dep:axum"]
 actix = ["dep:actix-web"]
@@ -73,10 +79,12 @@ vault = ["dep:vaultrs"]
 privacy = ["dep:zeroize", "dep:secrecy"]
 tls = ["dep:rustls", "dep:rustls-pemfile"]
 ml = ["dep:reqwest", "dep:qdrant-client"]
-security = ["dep:bcrypt", "dep:aes-gcm", "dep:redis", "dep:rsa"]
+security = ["dep:bcrypt", "dep:aes-gcm", "dep:redis", "dep:rsa", "dep:fernet"]
 mongodb = ["dep:mongodb"]
 smtp = ["dep:lettre"]
 qdrant-client = ["dep:qdrant-client"]
+
+
 
 [[test]]
 name = "parser_test"
@@ -121,5 +129,9 @@ path = "tests/collections_test.rs"
 [[test]]
 name = "http_client_test"
 path = "tests/http_client_test.rs"
+
+[[test]]
+name = "ai_performance_test"
+path = "tests/performance/ai_performance_test.rs"
 
 [dev-dependencies]

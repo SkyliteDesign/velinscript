@@ -198,14 +198,58 @@
     "prefix": "velin-pipeline",
     "body": [
       "@VelinPipeline",
-      "async fn ${1:pipelineName}() {",
-      "    // Velin parallelisiert diese Aufrufe automatisch",
-      "    let a = await ${2:step1}();",
-      "    let b = await ${3:step2}();",
-      "    return combine(a, b);",
+      "mod ${1:pipelineName} {",
+      "    // Pipeline steps",
       "}"
     ],
-    "description": "Optimierte Daten-Pipeline"
+    "description": "Daten-Pipeline Modul"
+  },
+  "TypeScript Express Endpoint": {
+    "prefix": "ts-express",
+    "body": [
+      "@Express",
+      "@GET(\"/$1\")",
+      "fn get${2:Resource}(): List<${3:Type}> {",
+      "    return [];",
+      "}"
+    ],
+    "description": "Express.js Endpoint (TypeScript)"
+  },
+  "Java Spring Controller": {
+    "prefix": "java-spring",
+    "body": [
+      "@Spring",
+      "@Controller(\"/$1\")",
+      "struct ${2:Name}Controller {",
+      "    // Dependency Injection here",
+      "}",
+      "",
+      "impl ${2:Name}Controller {",
+      "    @Get(\"/\")",
+      "    fn index(self): List<${3:Type}> {",
+      "        return [];",
+      "    }",
+      "}"
+    ],
+    "description": "Spring Boot Controller (Java)"
+  },
+  "C# ASP.NET Controller": {
+    "prefix": "csharp-aspnet",
+    "body": [
+      "@AspNet",
+      "@Controller(\"/$1\")",
+      "struct ${2:Name}Controller {",
+      "    // Dependency Injection here",
+      "}",
+      "",
+      "impl ${2:Name}Controller {",
+      "    @Get(\"/\")",
+      "    fn index(self): List<${3:Type}> {",
+      "        return [];",
+      "    }",
+      "}"
+    ],
+    "description": "ASP.NET Core Controller (C#)"
   },
   "Insight Project": {
     "prefix": "velin-insight",

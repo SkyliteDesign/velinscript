@@ -3,6 +3,37 @@
 #[cfg(feature = "oauth2")]
 use jsonwebtoken::{encode, decode, DecodingKey, EncodingKey, Header, Validation, Algorithm};
 use serde::{Deserialize, Serialize};
+use sha2::{Sha256, Digest};
+
+fn hmac_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
+    let mut key = key.to_vec();
+    if key.len() > 64 {
+        let mut hasher = Sha256::new();
+        hasher.update(&key);
+        key = hasher.finalize().to_vec();
+    }
+    while key.len() < 64 {
+        key.push(0);
+    }
+    
+    let mut o_key_pad = vec![0x5c; 64];
+    let mut i_key_pad = vec![0x36; 64];
+    
+    for i in 0..64 {
+        o_key_pad[i] ^= key[i];
+        i_key_pad[i] ^= key[i];
+    }
+    
+    let mut inner_hasher = Sha256::new();
+    inner_hasher.update(&i_key_pad);
+    inner_hasher.update(message);
+    let inner_hash = inner_hasher.finalize();
+    
+    let mut outer_hasher = Sha256::new();
+    outer_hasher.update(&o_key_pad);
+    outer_hasher.update(&inner_hash);
+    outer_hasher.finalize().to_vec()
+}
 
 pub struct JWTToken {
     pub token: String,
@@ -231,11 +262,39 @@ pub struct MFAService;
 
 impl MFAService {
     pub fn verify_totp(token: &str, secret: &str) -> bool {
-        // TOTP verification logic
-        // TODO: In production, use a TOTP library like totp-rs
-        // Aktuell: Basis-Validierung (nur Länge prüfen)
-        // Zukünftig: Vollständige TOTP-Verifizierung mit Zeitfenster
-        !token.is_empty() && !secret.is_empty()
+        // TOTP verification logic (HMAC-SHA256 based)
+        if token.is_empty() || secret.is_empty() {
+            return false;
+        }
+
+        // Current time / 30 (Step size)
+        let time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or(std::time::Duration::from_secs(0))
+            .as_secs() / 30;
+            
+        // Check current window and previous window (allow 30s drift)
+        for i in 0..2 {
+            let t = time - i;
+            let t_bytes = t.to_be_bytes();
+            // Use local hmac_sha256 helper
+            let hmac = hmac_sha256(secret.as_bytes(), &t_bytes);
+            
+            let offset = (hmac[hmac.len() - 1] & 0xf) as usize;
+            let code = ((hmac[offset] as u32 & 0x7f) << 24)
+                | ((hmac[offset + 1] as u32 & 0xff) << 16)
+                | ((hmac[offset + 2] as u32 & 0xff) << 8)
+                | (hmac[offset + 3] as u32 & 0xff);
+            
+            // 6 digits
+            let code = code % 1_000_000;
+            let code_str = format!("{:06}", code);
+            
+            if code_str == token {
+                return true;
+            }
+        }
+        false
     }
     
     pub fn verify_sms_code(code: &str, expected: &str) -> bool {
@@ -254,8 +313,6 @@ impl MFAService {
         }
     }
 }
-
-pub struct AuthStdlib;
 
 impl AuthStdlib {
     pub fn generate_mfa_runtime_code() -> String {
@@ -304,17 +361,67 @@ impl MFAService {
             totp.check_current(token).unwrap_or(false)
         }
 
-        // Fallback/Dev: Simple check (should be replaced by real TOTP in production)
+        // Fallback/Dev: HMAC-SHA256 based TOTP (requires 'sha2' crate)
         #[cfg(not(feature = "totp"))]
         {
-            // For development without external deps, we accept a specific magic token
-            // or perform a basic length check.
-            // REAL IMPLEMENTATION:
-            // This is a placeholder for the actual TOTP algorithm if you don't use the crate.
-            // RFC 6238 implementation would go here.
+            use sha2::{Sha256, Digest};
             
-            // For now, we enforce 6 digits
-            token.len() == 6 && token.chars().all(|c| c.is_digit(10))
+            // Local helper inside the block
+            fn hmac_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
+                let mut key = key.to_vec();
+                if key.len() > 64 {
+                    let mut hasher = Sha256::new();
+                    hasher.update(&key);
+                    key = hasher.finalize().to_vec();
+                }
+                while key.len() < 64 {
+                    key.push(0);
+                }
+                
+                let mut o_key_pad = vec![0x5c; 64];
+                let mut i_key_pad = vec![0x36; 64];
+                
+                for i in 0..64 {
+                    o_key_pad[i] ^= key[i];
+                    i_key_pad[i] ^= key[i];
+                }
+                
+                let mut inner_hasher = Sha256::new();
+                inner_hasher.update(&i_key_pad);
+                inner_hasher.update(message);
+                let inner_hash = inner_hasher.finalize();
+                
+                let mut outer_hasher = Sha256::new();
+                outer_hasher.update(&o_key_pad);
+                outer_hasher.update(&inner_hash);
+                outer_hasher.finalize().to_vec()
+            }
+            
+            // Current time / 30
+            let time = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or(std::time::Duration::from_secs(0))
+                .as_secs() / 30;
+                
+            for i in 0..2 {
+                let t = time - i;
+                let t_bytes = t.to_be_bytes();
+                let hmac = hmac_sha256(secret.as_bytes(), &t_bytes);
+                
+                let offset = (hmac[hmac.len() - 1] & 0xf) as usize;
+                let code = ((hmac[offset] as u32 & 0x7f) << 24)
+                    | ((hmac[offset + 1] as u32 & 0xff) << 16)
+                    | ((hmac[offset + 2] as u32 & 0xff) << 8)
+                    | (hmac[offset + 3] as u32 & 0xff);
+                
+                let code = code % 1_000_000;
+                let code_str = format!("{:06}", code);
+                
+                if code_str == token {
+                    return true;
+                }
+            }
+            false
         }
     }
     

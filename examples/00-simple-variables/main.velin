@@ -1,0 +1,20 @@
+// VelinScript - Variablen Beispiel
+// Zeigt grundlegende Variablen-Verwendung
+
+@GET("/test")
+fn test(): string {
+    // Type Inference
+    let name = "John";
+    let age = 30;
+    let active = true;
+    
+    // Explizite Typen
+    let email: string = "john@example.com";
+    let score: number = 95.5;
+    
+    // Mutable Variable
+    let mut counter = 0;
+    counter = counter + 1;
+    
+    return "Name: {name}, Age: {age}, Active: {active}, Counter: {counter}";
+}

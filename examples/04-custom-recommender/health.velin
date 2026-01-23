@@ -1,6 +1,9 @@
 // Custom Recommender - Health Check und Metrics
 // Monitoring-Endpoints für Production
 
+use app_config;
+use models;
+
 // Health Check Response
 struct HealthResponse {
     status: string,
@@ -93,13 +96,13 @@ fn initMetrics() {
         failed: 0,
         averageResponseTime: 0.0,
         requestsPerMinute: 0.0,
-        byEndpoint: Map<string, number>(),
+        byEndpoint: models.createEmptyMapStringNumber(),
     };
     
     errorMetrics = ErrorMetrics {
         total: 0,
-        byCode: Map<string, number>(),
-        recentErrors: List<ErrorEntry>(),
+        byCode: models.createEmptyMapStringNumber(),
+        recentErrors: [],
     };
     
     performanceMetrics = PerformanceMetrics {
@@ -121,12 +124,15 @@ fn healthCheck(): HealthResponse {
         cache: checkCache(),
     };
     
-    let allHealthy = services.database.status == "healthy" &&
-                     services.vectorDB.status == "healthy" &&
-                     services.llm.status == "healthy" &&
-                     services.cache.status == "healthy";
+    let allHealthy = false;
+    if (models.isTrue(services.database.status == "healthy") &&
+        models.isTrue(services.vectorDB.status == "healthy") &&
+        models.isTrue(services.llm.status == "healthy") &&
+        models.isTrue(services.cache.status == "healthy")) {
+        allHealthy = true;
+    }
     
-    let config = getConfig();
+    let config = app_config.getConfig();
     
     return HealthResponse {
         status: allHealthy ? "healthy" : "degraded",
@@ -160,14 +166,14 @@ fn getMetrics(): MetricsResponse {
 // GET /ready - Readiness Check
 @GET("/ready")
 fn readinessCheck(): ReadyResponse {
-    let services = List<ServiceStatus>();
+    let services: List<ServiceStatus> = [];
     services.push(checkDatabase());
     services.push(checkVectorDB());
     services.push(checkLLM());
     
     let allReady = true;
     for (service in services) {
-        if (service.status != "healthy") {
+        if (models.isTrue(service.status == "healthy") == false) {
             allReady = false;
             break;
         }
@@ -235,7 +241,7 @@ fn checkVectorDB(): ServiceStatus {
 // checkLLM - Prüft LLM-Verbindung
 fn checkLLM(): ServiceStatus {
     let startTime = getCurrentTime();
-    let config = getConfig();
+    let config = app_config.getConfig();
     
     try {
         // In Production: Teste echte LLM-Verbindung
@@ -261,9 +267,9 @@ fn checkLLM(): ServiceStatus {
 
 // checkCache - Prüft Cache-Status
 fn checkCache(): ServiceStatus {
-    let config = getConfig();
+    let config = app_config.getConfig();
     
-    if (!config.cache.enabled) {
+    if (models.isTrue(config.cache.enabled) == false) {
         return ServiceStatus {
             status: "disabled",
             responseTime: 0,

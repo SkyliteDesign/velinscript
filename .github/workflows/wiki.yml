@@ -1,0 +1,55 @@
+name: Update GitHub Wiki
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'docs/**'
+      - 'QUICK_START.md'
+      - 'scripts/generate-wiki.*'
+  workflow_dispatch:
+
+jobs:
+  update-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Generate Wiki
+        run: |
+          chmod +x scripts/generate-wiki.sh
+          bash scripts/generate-wiki.sh
+
+      - name: Checkout Wiki repository
+        uses: actions/checkout@v4
+        with:
+          repository: SkyliteDesign/velinscript.wiki
+          path: wiki-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy Wiki files
+        run: |
+          cp -r .wiki/* wiki-repo/
+          cd wiki-repo
+          git add .
+          git diff --staged --quiet || git commit -m "Update wiki from docs/ - $(date +'%Y-%m-%d %H:%M:%S')"
+          git push origin HEAD:master
+
+      - name: Summary
+        run: |
+          echo "✅ Wiki erfolgreich aktualisiert!"
+          echo "📁 Dateien in .wiki/ generiert"
+          echo "🚀 Wiki auf GitHub aktualisiert"

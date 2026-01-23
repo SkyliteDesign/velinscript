@@ -6,6 +6,36 @@
 
 ## 🚀 Wo anfangen?
 
+### 🟢 Absolute Anfänger? → `00-simple-hello` ⭐ NEU
+
+**Das einfachste Beispiel - 1 Minute.**
+
+- Ein einziger Endpoint
+- Minimaler Code
+- Perfekt für den ersten Einstieg
+
+[→ Zu 00-simple-hello](./00-simple-hello/)
+
+### 🟢 Variablen lernen? → `00-simple-variables` ⭐ NEU
+
+**Grundlegende Variablen-Verwendung.**
+
+- Type Inference
+- Explizite Typen
+- Mutable Variablen
+
+[→ Zu 00-simple-variables](./00-simple-variables/)
+
+### 🟢 Structs lernen? → `00-simple-structs` ⭐ NEU
+
+**Grundlegende Struct-Verwendung.**
+
+- Struct-Definition
+- Struct-Erstellung
+- Struct als Rückgabewert
+
+[→ Zu 00-simple-structs](./00-simple-structs/)
+
 ### Neu hier? → `01-hello-api`
 
 **Einstieg in 3 Minuten.**

@@ -1,4 +1,4 @@
-# 🚀 VelinScript 2.7
+# 🚀 VelinScript 3.1.0
 
 <div align="center">
 
@@ -10,13 +10,13 @@
  ╚████╔╝ ███████╗███████╗██║██║ ╚████║    ███████║╚██████╗██║  ██║██║██║  ██║   ██║   
   ╚═══╝  ╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝    ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝   ╚═╝   
                                                                                         
-                    V E L I N S C R I P T  2.7.0
-                    Velisch Eine moderne Programmiersprache für KI-APIs
+                    V E L I N S C R I P T  3.1.0
+                    Velisch - Eine moderne Programmiersprache für KI-APIs
 ```
 
-**Eine moderne Programmiersprache für KI-APIs mit den Namen (Velisch), die zu Rust kompiliert.**
+**Eine moderne Programmiersprache für KI-APIs, die zu Rust, PHP, Python, TypeScript, JavaScript, Go, Java und C# kompiliert.**
 
-[![Version](https://img.shields.io/badge/version-2.7.0-blue?style=for-the-badge&logo=rust)](https://github.com/SkyliteDesign/velinscript)
+[![Version](https://img.shields.io/badge/version-3.1.0-blue?style=for-the-badge&logo=rust)](https://github.com/SkyliteDesign/velinscript)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 [![Build](https://github.com/SkyliteDesign/velinscript/workflows/CI/badge.svg?style=for-the-badge)](https://github.com/SkyliteDesign/velinscript/actions)
@@ -53,26 +53,44 @@
 
 ---
 
-## 🎯 VelinScript(Velisch) 2.7
+## 🎯 VelinScript 3.1.0 - Die Zukunft der KI-API-Entwicklung
 
-VelinScript 2.7 ist die nächste Generation einer speziell für KI-API-Entwicklung optimierten Programmiersprache namens Velisch. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
+VelinScript (Velisch) ist eine moderne, speziell für KI-API-Entwicklung optimierte Programmiersprache. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
 
-**🚧 VelinScript 3.0.1 – Main Update in Arbeit - Die Arbeiten an VelinScript 3.0.1 laufen. Geplahnt für Freitag 23.01.2026 | Sei dabei🚧**
-Dieses Release wird das nächste große Main‑Update und bringt
-**Neu in Version 2.6**: 5 neue Standard Library Module (path, url, stream, redis, tracing) mit 50+ Funktionen hinzugefügt ✅  
-**Neu in Version 2.7**: Bibliotheks-Generator für automatische Standardbibliotheks-Generierung ✅
+### 🆕 Neu in Version 3.1.0
 
-### ✨  Kernpunkte
+- ✅ **Multi-Target Compilation** - Kompiliert zu Rust, PHP, Python, TypeScript, JavaScript, Go, Java, C#
+- ✅ **Type Inference System** - Automatische Type-Inference mit Member-Access und Result-Type-Auflösung
+- ✅ **Automatic Code Ordering** - Automatische Sortierung basierend auf Abhängigkeiten
+- ✅ **IR Representation** - SSA-Format für optimierte Code-Generierung
+- ✅ **Borrow Checker** - Ownership & Borrowing System für Memory Safety
+- ✅ **Prompt Optimizer** - 90%+ Token-Ersparnis bei LLM-API-Calls
+- ✅ **Vollständige CLI-Referenz** - Alle Befehle dokumentiert
+- ✅ **Vektor-Datenbanken** - Vollständige Dokumentation für semantische Suche & RAG
+
+### 🆕 Neu in Version 3.0.1
+
+- ✅ **IR Representation** - SSA-Format für optimierte Code-Generierung
+- ✅ **Borrow Checker** - Ownership & Borrowing System
+- ✅ **Prompt Optimizer** - 90%+ Token-Ersparnis
+- ✅ **KI-Compiler-Passes** - Automatische Code-Analyse und -Generierung
+- ✅ **System-Generierung** - Boilerplate-freie Systeme
+- ✅ **Automatische Parallelisierung** - Multithreading, GPU, Async, SIMD
+
+### ✨ Kernpunkte
 
 <div align="center">
 
 | Feature | Beschreibung | Status |
 |---------|-------------|--------|
 | 🎯 **KI-First Design** | Native Unterstützung für Machine Learning, LLM-Integration und Vector Databases | ✅ |
-| ⚡ **Rust-Performance** | Kompiliert zu nativem Rust-Code für maximale Geschwindigkeit und Sicherheit | ✅ |
+| ⚡ **Multi-Target Compilation** | Kompiliert zu 8 Zielsprachen (Rust, PHP, Python, TS, JS, Go, Java, C#) | ✅ |
 | 🔒 **Velin Security** | Eingebaute Security-Features von Anfang an (Auth, Rate Limiting, Validation) | ✅ |
-| 🛠️ **Developer Excellence** | Vollständige Toolchain mit Linter, Formatter, Hot Reload und mehr | ✅ |
-| 📚 **Erweiterte Standardbibliothek** | Neue Module für String, Math, Date, FS, Process, Agent, WebSocket und mehr (Neu in 2.5) | ✅ |
+| 🛠️ **Developer Excellence** | Vollständige Toolchain mit Linter, Formatter, Hot Reload, Debugger und mehr | ✅ |
+| 📚 **Erweiterte Standardbibliothek** | 50+ Module mit 200+ Funktionen für alle Anwendungsfälle | ✅ |
+| 🧠 **Type Inference** | Automatische Type-Inference für bessere Entwicklererfahrung | ✅ |
+| 🔄 **Code Ordering** | Automatische Sortierung basierend auf Abhängigkeiten | ✅ |
+| 💾 **Memory Safety** | Borrow Checker für Ownership & Borrowing | ✅ |
 
 </div>
 
@@ -80,19 +98,21 @@ Dieses Release wird das nächste große Main‑Update und bringt
 
 ## 🤖 KI & Machine Learning Features
 
-VelinScript 2.7 bietet native Unterstützung für moderne KI- und ML-Workflows:
+VelinScript 3.1.0 bietet native Unterstützung für moderne KI- und ML-Workflows:
 
 ### LLM Integration
 
-- **LLMClient**: Native Unterstützung für OpenAI, Anthropic und lokale LLMs
+- **LLMClient**: Native Unterstützung für OpenAI, Anthropic, Google Gemini und lokale LLMs
 - **Embedding Generation**: Automatische Embedding-Erstellung für Vector Search
 - **Chat Completion**: Einfache Integration von Chat-Funktionalitäten
 - **Streaming Support**: Echtzeit-Streaming von LLM-Responses
+- **Prompt Optimizer**: 90%+ Token-Ersparnis bei LLM-API-Calls
 
 ### Vector Databases
 
 - **VectorDB Support**: Native Integration für Pinecone, Weaviate, Qdrant
 - **Semantic Search**: Embedding-basierte Ähnlichkeitssuche
+- **RAG (Retrieval Augmented Generation)**: Vollständige RAG-Implementierung
 - **Hybrid Search**: Kombination aus Keyword- und Vector-Search
 - **Automatic Indexing**: Automatische Indexierung von Embeddings
 
@@ -117,7 +137,7 @@ VelinScript 2.7 bietet native Unterstützung für moderne KI- und ML-Workflows:
 @POST("/api/chat")
 @Auth
 fn chat(message: string): string {
-    let client = LLMClient.new("openai");
+    let client = LLMClient.new(LLMProvider::OpenAI, apiKey);
     let response = await client.complete({
         model: "gpt-4",
         messages: [{ role: "user", content: message }]
@@ -126,14 +146,21 @@ fn chat(message: string): string {
 }
 ```
 
-### Beispiel: Vector Search
+### Beispiel: Vector Search & RAG
 
 ```velin
-@GET("/api/search")
-fn search(query: string): List<Item> {
-    let embeddings = await generateEmbeddings(query);
-    let results = await vectorDB.search(embeddings, limit: 10);
-    return results;
+@POST("/api/search")
+fn search(query: string): List<Document> {
+    let llmClient = LLMClient.new(LLMProvider::OpenAI, apiKey);
+    let vectorDB = VectorDB.new(VectorDBProvider::Pinecone, connectionString);
+    
+    // Embedding generieren
+    let queryEmbedding = llmClient.embed(query);
+    
+    // Semantische Suche
+    let results = vectorDB.search("documents", queryEmbedding, 10);
+    
+    return results.map(|r| db.find(Document, r.id));
 }
 ```
 
@@ -143,42 +170,46 @@ fn search(query: string): List<Item> {
 
 ### Performance & Compilation
 
+- **Multi-Target Compilation**: Kompiliert zu 8 Zielsprachen
+  - **Rust** (Default) - High-Performance, Type-Safe
+  - **PHP** - Laravel, Symfony Support
+  - **Python** - FastAPI, Flask Support
+  - **TypeScript/JavaScript** - Express, NestJS Support
+  - **Go** - Native Go Code Generation
+  - **Java** - Spring Boot Support
+  - **C#** - ASP.NET Core Support
 - **Native Rust Compilation**: VelinScript kompiliert zu optimiertem Rust-Code
 - **Zero-Cost Abstractions**: Moderne Sprachfeatures ohne Performance-Einbußen
 - **Advanced Optimizer**: ✅ Vollständig aktiviert - Function Inlining, Loop Unrolling, Dead Code Elimination, Constant Folding
+- **IR Representation**: SSA-Format für optimierte Code-Generierung
+- **Borrow Checker**: Ownership & Borrowing System für Memory Safety
 - **Type Safety**: Starke Typisierung mit Type Inference für bessere Entwicklererfahrung
+
+### Type System
+
+- **Type Inference**: Automatische Type-Inference mit Member-Access und Result-Type-Auflösung
+- **Code Ordering**: Automatische Sortierung von Funktionen, Typen und Blöcken basierend auf Abhängigkeiten
+- **Result<T, E>**: Explizite Fehlerbehandlung ohne Exceptions
+- **Traits & Interfaces**: Polymorphismus und Code-Wiederverwendung
+- **Generics mit Constraints**: Type-safe generische Programmierung
+- **Pattern Matching**: Erweiterte Pattern Matching mit Guards, Range Patterns und Destructuring
 
 ### Standard Library
 
+- **50+ Module** mit **200+ Funktionen** für alle Anwendungsfälle
 - **API Standard Library**: Eingebaute Funktionen für REST-API-Entwicklung
 - **Database Integration**: Native Support für Datenbankoperationen (SeaORM, SQL)
 - **Security Library**: Production-Grade Auth mit JWT, OAuth2 und TOTP-Support ✅
 - **ML Library**: Echte Integration von OpenAI/Anthropic/Gemini und In-Memory Vector Search ✅
+- **Vector Database Library**: Integration für Vector Databases (Pinecone, Weaviate, Qdrant)
 - **Collections Library**: Umfangreiche Collections (List, Map, Set) mit funktionalen Methoden
 - **HTTP Client Library**: Vollständige Client-Library für HTTP-Requests
 - **Rate Limiting**: Erweiterte Rate Limiting Library mit verschiedenen Strategien (inkl. @RateLimit Decorator) ✅
-- **DateTime Library**: Datum- und Zeit-Operationen (now, format, parse, etc.) ✅
-- **Regex Library**: Reguläre Ausdrücke für Pattern-Matching (find, replace, match, etc.) ✅
-- **Crypto Library**: Kryptografische Funktionen (SHA-256, UUID, Base64, etc.) ✅
-- **ML/LLM Library**: Native Unterstützung für Machine Learning und LLM-Integration
-- **Vector Database Library**: Integration für Vector Databases (Pinecone, Weaviate, Qdrant)
 - **VelinLogger**: Strukturiertes Logging mit Context, JSON-Format und File-Rotation
 - **Metrics Framework**: Performance Monitoring mit Counters, Gauges und Histograms
 - **VelinError**: Umfassendes Error-Handling mit Context, Stack Traces und Recovery-Mechanismen
-- **String Library** (Neu in 2.5): Erweiterte String-Manipulation (split, join, slugify, capitalize, etc.) ✅
-- **Math Library** (Neu in 2.5): Mathematische Utilities (clamp, lerp, random_range, round_to, etc.) ✅
-- **Date Library** (Neu in 2.5): Erweiterte Datum/Zeit-Funktionen (add_days, is_weekend, format_relative, etc.) ✅
-- **FS Library** (Neu in 2.5): Dateisystem-Operationen (read_json, write_json, copy, get_size, etc.) ✅
-- **LLM Library** (Neu in 2.5): KI/LLM-Integration (summarize, chat, translate, sentiment, etc.) ✅
-- **Embedding Library** (Neu in 2.5): Vector Embedding Utilities (similarity, find_nearest, cluster, etc.) ✅
-- **Agent Library** (Neu in 2.5): AI Agent Capabilities (memory.store, task.plan, think, etc.) ✅
-- **Process Library** (Neu in 2.5): System-Prozess-Management (spawn, kill, status, get_output, etc.) ✅
-- **Sandbox Library** (Neu in 2.5): Code-Ausführung und Validierung (run, lint, test, optimize, etc.) ✅
-- **WebSocket Library** (Neu in 2.5): Echtzeit-Kommunikation (connect, send, on_message, etc.) ✅
-- **Utils Library** (Neu in 2.5): Utility-Funktionen (uuid, sleep, retry, debounce, throttle, etc.) ✅
-- **Log Library** (Neu in 2.5): Erweiterte Logging-Funktionen (trace, to_file, with_context, etc.) ✅
-- **Config Library** (Neu in 2.5): Konfiguration und Environment-Management (get_env, load_dotenv) ✅
-- **Flow Library** (Neu in 2.5): VelinFlow Runtime mit @Flow Decorator, automatischem Rollback/Commit ✅
+
+**Vollständige Liste:** [Standard Library API Reference](docs/api/standard-library.md)
 
 ### Package Management
 
@@ -229,27 +260,6 @@ let doubled = list.map((x: number) => x * 2);
 let evens = list.filter((x: number) => x % 2 == 0);
 ```
 
-### Collections Library
-
-```velin
-let list = List<number>([1, 2, 3, 4, 5]);
-let evens = list.filter((x: number) => x % 2 == 0);
-let sum = list.reduce((acc: number, x: number) => acc + x, 0);
-let found = list.find((x: number) => x > 3);
-
-let map = Map<string, number>();
-map.set("key", 42);
-let value = map.get("key");
-```
-
-### HTTP Client
-
-```velin
-let client = HttpClient.new();
-let response = await client.get("https://api.example.com/users");
-let data = response.json();
-```
-
 ### String Interpolation
 
 ```velin
@@ -274,15 +284,14 @@ let result = "Sum: {x + y}";
   - Unused Variables Detection
   - Complexity Analysis
   - Naming Conventions
-  - Erweiterbare Regel-Architektur
+  - Erweiterte Regel-Architektur
 
-- **AutoFix Engine** (Neu in 2.5): ✅
+- **AutoFix Engine**: ✅
   - Automatische Fehlerkorrektur während der Kompilierung
   - Behebt unausgeglichene Klammern automatisch
   - Korrigiert fehlende Funktionssignaturen
   - Repariert unvollständige Generic-Typen
   - Aktivierbar mit `--autofix` Flag
-  - CLI-Integration: `velin compile --autofix` oder `velin check --autofix`
 
 - **Code Formatter**: Vollständige Formatierung von VelinScript-Code
   - Konfigurierbare Formatierungsregeln
@@ -295,58 +304,37 @@ let result = "Sum: {x + y}";
   - Interactive Docs (Swagger UI)
   - OpenAPI 3.0 Integration
 
-- **Code Generation Tools** (Neu in 2.5): ✅
+- **Code Generation Tools**: ✅
   - **Boilerplate Generator**: Automatische API- und CRUD-Code-Generierung
-    - `velin generate api --name User --path /api/users`
-    - `velin generate crud --name Product --fields "id:string,name:string,price:number"`
   - **Client Generator**: Generiert TypeScript/JavaScript/Rust Clients aus OpenAPI
-    - `velin generate client --openapi api.json --language typescript`
-  - **Framework Selector**: Automatische Erkennung und Codegen für Axum/Actix-Web
+  - **Framework Selector**: Automatische Erkennung und Codegen für alle unterstützten Frameworks
 
-- **Bibliotheks-Generator** (Neu in 2.7): ✅
-  - **Automatische Standardbibliotheks-Generierung**: Erstellt neue Bibliotheks-Module mit vollständiger Integration
-    - `velin-library-generator generate --interactive` - Interaktiver Modus
-    - `velin-library-generator generate --config library.yaml` - Mit YAML-Konfiguration
-    - `velin-library-generator validate --config library.yaml` - Konfiguration validieren
-  - **Vollständige Integration**: Automatische Integration in mod.rs, Type Checker, Code Generator
-  - **Template-System**: 3 Modul-Typen (Simple Functions, Struct Based, Service Based)
-  - **Test-Generierung**: Automatische Unit Tests für alle Funktionen
-  - **Dokumentation**: Vollständige API-Dokumentation wird automatisch generiert
-  - **Siehe**: [Bibliotheks-Generator Dokumentation](tools/library-generator/README.md)
-
-- **VelinAutoDoc** (Neu in 2.5): ✅
+- **VelinAutoDoc**: ✅
   - Automatische Dokumentationsgenerierung aus `///` Doc-Comments
   - Strukturierte JSON-Exporte mit API-Dokumentation
   - LLM-freundliche Kontextinformationen für KI-gestützte Dokumentation
   - Integration mit `@VelinAutoDoc` Decorator
-  - Knowledge Base Generation für RAG/LLM-Systeme
 
-- **VelinAutoTest** (Neu in 2.5): ✅
+- **VelinAutoTest**: ✅
   - Automatische Test-Generierung für Funktionen mit `@VelinAutoTest`
   - Generiert Mock-Daten basierend auf Funktionsparametern
   - Erstellt Test-Stubs mit grundlegenden Assertions
-  - Integration in Codegen-Pipeline
 
-- **VelinInsight** (Neu in 2.5): ✅
+- **VelinInsight**: ✅
   - Code-Analyse und Qualitätsprüfung
   - Erkennt ungenutzte Structs
-  - Identifiziert komplexe Funktionen (Statement Count > 20)
+  - Identifiziert komplexe Funktionen
   - Findet redundante Datenbank-Queries
-  - Integration mit `@VelinInsight` Decorator
-  - VS Code Extension Integration
 
-- **VelinPipeline** (Neu in 2.5): ✅
+- **VelinPipeline**: ✅
   - Pipeline-Optimizer für Datenfluss-Analyse
   - Automatische Erkennung parallelisierbarer async Blöcke
   - Codegen-Optimierung mit `tokio::join!` für unabhängige Operationen
-  - Integration mit `@VelinPipeline` Decorator
 
 - **Hot Reload (velin-hot-reload)**: 
   - Automatisches Neuladen bei Dateiänderungen
   - File System Watching
   - Watch-Mode und Server-Mode
-
-- **Dead Code Detector**: Automatische Erkennung von ungenutztem Code
 
 - **Debugger (velin-debugger)**: DAP Server für Debugging
   - Breakpoints setzen/entfernen
@@ -391,6 +379,22 @@ let result = "Sum: {x + y}";
 
 **Siehe:** [VS Code Extension Dokumentation](docs/tools/vscode-extension.md)
 
+### CLI-Referenz
+
+**Vollständige CLI-Referenz verfügbar:** [CLI-Referenz](docs/guides/cli-reference.md)
+
+**Hauptbefehle:**
+- `velin compile` - Kompilierung mit Multi-Target Support
+- `velin check` - Code-Prüfung (Parsing & Type Checking)
+- `velin format` - Code-Formatierung
+- `velin serve` / `velin run` - Development-Server
+- `velin generate` - Code-Generierung (API, CRUD, Client)
+- `velin test` - Tests ausführen
+- `velin config` - Config-Verwaltung
+- `velin cache` - Cache-Management
+- `velin backup` - Backup-Management
+- `velin rollback` - Rollback-Management
+
 ---
 
 ## 🔒 Security und Betrieb
@@ -420,7 +424,7 @@ let result = "Sum: {x + y}";
 - **Metrics & Performance**: MetricsCollector und PerformanceMonitor für Application Metrics
 - **VelinError**: Umfassendes Error-Handling mit Context, Stack Traces, Recovery-Mechanismen und Error Reporting
 - **Backup & Rollback**: Transaktions-Management mit Rollback-Support
-- **VelinFlow Runtime** (Neu in 2.5): ✅
+- **VelinFlow Runtime**: ✅
   - Automatisches State-Tracking für transaktionale Flows
   - Input-Snapshot-Management
   - Automatisches Rollback/Commit bei Erfolg/Fehler
@@ -433,54 +437,221 @@ let result = "Sum: {x + y}";
 
 ### Modulare Architektur
 
-VelinScript 2.7 folgt einer klaren, modularen Architektur für maximale Wartbarkeit und Skalierbarkeit:
+VelinScript 3.1.0 folgt einer klaren, modularen Architektur für maximale Wartbarkeit und Skalierbarkeit:
 
 ```
 velinscript/
-├── compiler/              # Compiler Implementation
-│   ├── parser/            # Parser & Lexer
-│   ├── type_checker/      # Type Checking
-│   ├── codegen/           # Code Generation
-│   │   ├── autodoc.rs     # VelinAutoDoc Generator ✅
-│   │   ├── autotest.rs    # VelinAutoTest Generator ✅
-│   │   ├── boilerplate.rs # Boilerplate Generator ✅
-│   │   ├── client.rs      # Client Generator ✅
-│   │   └── framework.rs   # Framework Selector ✅
-│   ├── optimizer/         # Advanced Optimizer
-│   │   └── pipeline.rs    # VelinPipeline Optimizer ✅
-│   ├── passes/            # Compiler Passes
-│   │   ├── autofix.rs     # AutoFix Pass ✅
-│   │   ├── parser.rs      # Parser Pass mit Modul-Auflösung ✅
-│   │   ├── type_check.rs  # Type Check Pass
-│   │   └── codegen.rs     # Codegen Pass
-│   ├── analysis/          # Code Analysis
-│   │   └── insight.rs     # VelinInsight Analyzer ✅
-│   ├── autofix/           # AutoFix Engine ✅
-│   ├── compiler/          # Core Compiler
-│   │   ├── mod.rs         # VelinCompiler Core ✅
-│   │   ├── config.rs      # CompilerConfig ✅
-│   │   ├── context.rs      # CompilationContext ✅
-│   │   └── pass.rs        # Pass Trait ✅
-│   └── stdlib/            # Standard Library (50+ Module)
-├── tools/                 # Entwickler-Tools
-│   ├── lsp/              # Language Server Protocol
-│   ├── vscode-extension/  # VS Code Extension ✅
-│   ├── package-manager/   # Package Manager
-│   ├── security-scanner/  # Security Scanner
-│   ├── debugger/          # DAP Debugger Server
-│   ├── linter/            # Linter Tool
-│   ├── api-doc-generator/ # API Documentation Generator
-│   └── hot-reload/        # Hot Reload Tool
-├── docs/                  # Dokumentation
-│   ├── architecture/      # Architektur-Dokumentation ✅
-│   ├── api/               # API-Referenz
-│   ├── guides/            # Tutorials
-│   └── tools/             # Tools-Dokumentation ✅
-└── examples/              # Beispiel-Projekte
-    └── 05-ultimate-showcase/ # Ultimate Showcase ✅
+├── compiler/                    # Compiler Implementation (Rust)
+│   ├── src/
+│   │   ├── compiler/            # Orchestrierung & Kontext
+│   │   │   ├── orchestrator.rs  # Multi-File Dependency Management
+│   │   │   ├── context.rs       # Shared Compilation Metadata
+│   │   │   ├── config.rs        # Compiler Configuration
+│   │   │   ├── pass.rs          # Pass Trait Definition
+│   │   │   ├── language.rs      # Language Identity Validation
+│   │   │   └── error.rs         # Compiler Errors
+│   │   ├── passes/              # Compiler Passes (Pipeline)
+│   │   │   ├── autofix.rs       # Pass 1: Syntax Auto-Correction
+│   │   │   ├── parser.rs        # Pass 2: AST & Module Resolution
+│   │   │   ├── desugar.rs       # Pass 2.5: Desugaring
+│   │   │   ├── code_order.rs    # Pass 3: Dependency-based Sorting
+│   │   │   ├── type_check.rs    # Pass 4: Type Inference & Checking
+│   │   │   ├── codegen.rs       # Pass 5: Code Generation
+│   │   │   ├── ai_semantic.rs   # AI: Semantic Analysis
+│   │   │   ├── ai_bug_detection.rs  # AI: Bug Detection
+│   │   │   ├── ai_codegen.rs    # AI: Code Generation
+│   │   │   ├── ai_optimization.rs   # AI: Optimization
+│   │   │   ├── ai_code_review.rs    # AI: Code Review
+│   │   │   └── ai_sandbox.rs    # AI: Sandbox Testing
+│   │   ├── parser/              # Parser Module (separate)
+│   │   │   ├── lexer.rs         # Lexical Analysis
+│   │   │   ├── parser.rs        # Syntax Parser
+│   │   │   └── ast.rs           # Abstract Syntax Tree
+│   │   ├── type_checker/        # Type System (separate)
+│   │   │   ├── checker.rs       # Type Checker Implementation
+│   │   │   ├── environment.rs   # Type Environment
+│   │   │   └── errors.rs        # Type Errors
+│   │   ├── borrow/              # Ownership & Lifetimes (separate)
+│   │   │   ├── checker.rs       # Borrow Checker
+│   │   │   ├── ownership.rs     # Ownership Rules
+│   │   │   └── lifetime.rs      # Lifetime Analysis
+│   │   ├── ir/                  # Intermediate Representation
+│   │   │   ├── ir.rs            # IR Definition
+│   │   │   ├── builder.rs       # IR Builder
+│   │   │   ├── optimizer.rs     # IR Optimizer
+│   │   │   └── validator.rs     # IR Validator
+│   │   ├── codegen/             # Multi-Target Generatoren
+│   │   │   ├── rust.rs          # Rust Backend
+│   │   │   ├── typescript.rs    # TS/Express/NestJS Backend
+│   │   │   ├── java.rs          # Java/Spring Backend
+│   │   │   ├── csharp.rs        # C#/ASP.NET Backend
+│   │   │   ├── python.rs        # Python Backend
+│   │   │   ├── go.rs            # Go Backend
+│   │   │   ├── php.rs           # PHP Backend
+│   │   │   ├── javascript.rs    # JavaScript Backend
+│   │   │   ├── openapi.rs       # OpenAPI Generator
+│   │   │   ├── framework.rs     # Framework Detection
+│   │   │   ├── infrastructure.rs # Infrastructure Code
+│   │   │   ├── distributed.rs   # Distributed Systems
+│   │   │   ├── system_generator.rs # System Generation
+│   │   │   ├── autodoc.rs       # Auto Documentation
+│   │   │   ├── autotest.rs      # Auto Test Generation
+│   │   │   ├── boilerplate.rs   # Boilerplate Generation
+│   │   │   ├── client.rs        # Client Generation
+│   │   │   ├── ir_codegen.rs    # IR-based Codegen
+│   │   │   ├── traits.rs        # Codegen Traits
+│   │   │   └── templates/       # Code Templates
+│   │   │       ├── api_server.rs
+│   │   │       ├── auth.rs
+│   │   │       ├── deployment.rs
+│   │   │       ├── rate_limit.rs
+│   │   │       └── ai_client.rs
+│   │   ├── optimizer/           # Parallelisierung & Performance
+│   │   │   ├── pipeline.rs      # Pipeline Optimization
+│   │   │   ├── parallelization.rs # Parallelization Analysis
+│   │   │   ├── profiling.rs     # Performance Profiling
+│   │   │   └── learning.rs      # Learning-based Optimization
+│   │   ├── analysis/            # Code Analysis
+│   │   │   ├── insight.rs       # Code Insights
+│   │   │   └── mod.rs
+│   │   ├── autofix/             # Auto-Fix Module
+│   │   │   ├── mod.rs
+│   │   │   └── report.rs        # Fix Reports
+│   │   ├── formatter/           # Code Formatter
+│   │   │   ├── formatter.rs     # Formatting Logic
+│   │   │   ├── config.rs        # Format Config
+│   │   │   └── mod.rs
+│   │   ├── prompt/              # AI Prompt Management
+│   │   │   ├── optimizer.rs     # Prompt Optimization
+│   │   │   ├── sanitizer.rs     # Prompt Sanitization
+│   │   │   └── mod.rs
+│   │   ├── error/               # Error Handling
+│   │   │   └── suggestions.rs   # Error Suggestions
+│   │   ├── stdlib/              # Standard Library (VelinScript)
+│   │   │   ├── ml.rs            # LLM & AI Module
+│   │   │   ├── llm.rs           # LLM Integration
+│   │   │   ├── embedding.rs     # Embeddings
+│   │   │   ├── nlp.rs           # NLP
+│   │   │   ├── net.rs           # HTTP & Networking
+│   │   │   ├── http.rs          # HTTP Client/Server
+│   │   │   ├── http_client.rs   # HTTP Client
+│   │   │   ├── websocket.rs     # WebSocket
+│   │   │   ├── sys.rs           # System & Metrics
+│   │   │   ├── metrics.rs       # Metrics
+│   │   │   ├── logging.rs       # Logging
+│   │   │   ├── tracing.rs       # Tracing
+│   │   │   ├── process.rs       # Process Management
+│   │   │   ├── env.rs           # Environment
+│   │   │   ├── database.rs      # Database
+│   │   │   ├── mongodb.rs       # MongoDB
+│   │   │   ├── redis.rs         # Redis
+│   │   │   ├── seaorm.rs        # SeaORM
+│   │   │   ├── cache.rs         # Caching
+│   │   │   ├── queue.rs         # Queue
+│   │   │   ├── auth.rs          # Authentication
+│   │   │   ├── oauth2.rs        # OAuth2
+│   │   │   ├── security.rs      # Security
+│   │   │   ├── encryption.rs    # Encryption
+│   │   │   ├── crypto.rs        # Cryptography
+│   │   │   ├── tls.rs           # TLS
+│   │   │   ├── privacy.rs       # Privacy
+│   │   │   ├── vault.rs         # Vault
+│   │   │   ├── validation.rs    # Validation
+│   │   │   ├── collections.rs   # Collections
+│   │   │   ├── string.rs        # String Utils
+│   │   │   ├── math.rs          # Math
+│   │   │   ├── date.rs          # Date
+│   │   │   ├── datetime.rs      # DateTime
+│   │   │   ├── json.rs          # JSON
+│   │   │   ├── yaml.rs          # YAML
+│   │   │   ├── csv.rs           # CSV
+│   │   │   ├── regex.rs         # Regex
+│   │   │   ├── url.rs           # URL
+│   │   │   ├── path.rs          # Path
+│   │   │   ├── fileio.rs        # File I/O
+│   │   │   ├── fs.rs            # Filesystem
+│   │   │   ├── encoding.rs      # Encoding
+│   │   │   ├── serialization.rs # Serialization
+│   │   │   ├── template.rs      # Templates
+│   │   │   ├── stream.rs       # Streams
+│   │   │   ├── iterators.rs    # Iterators
+│   │   │   ├── async_ops.rs    # Async Operations
+│   │   │   ├── result.rs       # Result Types
+│   │   │   ├── utils.rs        # Utilities
+│   │   │   ├── extensions.rs   # Extensions
+│   │   │   ├── flow.rs         # Control Flow
+│   │   │   ├── workflow.rs     # Workflows
+│   │   │   ├── scheduler.rs    # Scheduler
+│   │   │   ├── event_bus.rs    # Event Bus
+│   │   │   ├── api.rs          # API Utils
+│   │   │   ├── config.rs       # Configuration
+│   │   │   ├── fixtures.rs     # Test Fixtures
+│   │   │   ├── mocks.rs        # Mocks
+│   │   │   ├── testing.rs      # Testing
+│   │   │   ├── test_module.rs  # Test Module
+│   │   │   ├── sandbox.rs      # Sandbox
+│   │   │   ├── audit.rs        # Audit
+│   │   │   ├── alerting.rs     # Alerting
+│   │   │   ├── backup.rs       # Backup
+│   │   │   ├── rollback.rs     # Rollback
+│   │   │   ├── rate_limit.rs   # Rate Limiting
+│   │   │   ├── smtp.rs         # SMTP
+│   │   │   ├── actix.rs        # Actix Framework
+│   │   │   ├── axum.rs         # Axum Framework
+│   │   │   ├── agent.rs        # Agent Framework
+│   │   │   └── mod.rs
+│   │   ├── cli.rs               # CLI Interface
+│   │   ├── lib.rs               # Library Root
+│   │   └── main.rs              # Binary Entry Point
+│   └── Cargo.toml
+├── tools/                       # CLI, LSP & Dev-Tools
+│   ├── cli/                     # Command Line Interface
+│   ├── lsp/                     # Language Server Protocol
+│   ├── ide/                     # IDE Integration
+│   ├── repl/                    # REPL
+│   ├── debugger/                # Debugger
+│   ├── profiler/                # Profiler
+│   ├── linter/                  # Linter
+│   ├── test-runner/             # Test Runner
+│   ├── benchmark-runner/        # Benchmark Runner
+│   ├── dependency-graph/        # Dependency Graph
+│   ├── dead-code-detector/      # Dead Code Detector
+│   ├── bundle-analyzer/         # Bundle Analyzer
+│   ├── security-scanner/        # Security Scanner
+│   ├── runtime-inspector/       # Runtime Inspector
+│   ├── hot-reload/              # Hot Reload
+│   ├── library-generator/       # Library Generator
+│   ├── api-doc-generator/       # API Doc Generator
+│   ├── package-manager/         # Package Manager
+│   ├── example-plugin/          # Example Plugin
+│   └── vscode-extension/        # VS Code Extension
+├── docs/                        # Dokumentation
+├── examples/                    # Beispiel-Projekte
+├── tests/                       # Tests
+└── README.md
 ```
 
 **Siehe:** [Compiler Architektur Dokumentation](docs/architecture/compiler-architecture.md)
+
+### Compiler Passes
+
+VelinScript verwendet ein Pass-basiertes System mit 13 Compiler-Passes:
+
+1. **AutoFixPass** - Automatische Fehlerkorrektur
+2. **ParserPass** - Lexikalische und Syntax-Analyse
+3. **DesugaringPass** - Syntaktischer Zucker → Core-Syntax
+4. **CodeOrderingPass** - Automatische Sortierung basierend auf Abhängigkeiten
+5. **AISemanticPass** - KI-Semantik-Analyse
+6. **AIBugDetectionPass** - KI-Bug-Erkennung
+7. **TypeCheckPass** - Type Checking & Inference
+8. **ParallelizationAnalyzer** - Parallelisierungs-Analyse
+9. **AICodeGenerationPass** - KI-Code-Generierung
+10. **AICodeReviewPass** - KI-Code-Review
+11. **AISandboxPass** - KI-Sandbox-Testing
+12. **AIOptimizationPass** - KI-Optimierung
+13. **CodegenPass** - Multi-Target Code-Generierung
+
+**Siehe:** [Pass-Verlauf Dokumentation](docs/architecture/pass-verlauf.md)
 
 ### Design-Prinzipien
 
@@ -489,123 +660,8 @@ velinscript/
 3. **API-First**: Built-in Support für REST APIs
 4. **Security First**: Security-Features von Anfang an
 5. **KI/ML Ready**: Native Unterstützung für KI/ML-Integration
-
----
-
-## ⚠️ Reifegrad & Status
-
-**Aktueller Status: Beta (Production-Ready Features verfügbar)**
-
-VelinScript 2.7 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Checker, Code Generator) ist funktionsfähig. Die Standard Library ist größtenteils nutzbar und getestet (50+ Module mit 150+ Funktionen registriert und validiert).
-
-### ✅ Was funktioniert zuverlässig
-- Parser für grundlegende Syntax (Funktionen, Structs, Enums, Decorators)
-- Type Checker für einfache Typen und Standard Library Funktionen
-- Code Generation zu Rust
-- CLI-Befehle (`compile`, `check`, `format`, `init`)
-- String-Interpolation
-- Collections-Methoden (`List.length()`, `List.join()`, etc.)
-- Pattern Matching (grundlegend)
-
-### ⚠️ Was funktioniert mit Einschränkungen
-
-#### Standard Library
-- **Funktioniert und getestet**: 
-  - Database (`db.find()`, `db.save()`, `db.findAll()`, `db.delete()`) ✅
-  - File I/O (`file.read()`, `file.write()`, `file.exists()`) ✅
-  - JSON (`json.parse()`, `json.stringify()`) ✅
-  - HTTP Client (`HttpClient.new()`, `client.get()`, `client.post()`, etc.) ✅
-  - Validation (`Validator.new()`, `validator.required()`, `validator.isValid()`, etc.) ✅
-  - Auth (`AuthService.new()`, `authService.generateToken()`, `authService.verifyToken()`, etc.) ✅
-  - Security (`@Auth` Decorator mit JWT-Validierung, `@Role` Decorator mit RBAC) ✅
-  - Rate Limiting (In-Memory mit Cache, Redis-Support vorbereitet) ✅
-  - Logging (`Logger.new()`, `VelinLogger.new()`, `logger.info()`, etc.) ✅
-  - Metrics (`MetricsCollector.new()`, `collector.incrementCounter()`, etc.) ✅
-  - ML/LLM (`LLMClient.new()`, `ModelLoader.new()`, `TrainingService.new()`, etc.) ✅
-- **Status**: ~55+ Module mit über 200+ Funktionen sind im Type Checker registriert und vollständig getestet ✅
-- **Neu in Version 2.5 registriert**: 
-  - Rate Limiting Decorator (`@RateLimit`) mit vollständiger Validierung ✅
-  - DateTime Module (`datetime.now()`, `datetime.format()`, `datetime.parse()`, etc.) ✅
-  - Regex Module (`regex.find()`, `regex.replace()`, `regex.findAll()`, etc.) ✅
-  - Crypto Module (`crypto.sha256()`, `crypto.uuid()`, `crypto.base64Encode()`, etc.) ✅
-  - String Module (`string.split()`, `string.join()`, `string.slugify()`, etc.) ✅
-  - Math Module (`math.clamp()`, `math.lerp()`, `math.random_range()`, etc.) ✅
-  - Date Module (`date.add_days()`, `date.is_weekend()`, `date.format_relative()`, etc.) ✅
-  - FS Module (`fs.read_json()`, `fs.write_json()`, `fs.copy()`, etc.) ✅
-  - LLM Module (`llm.summarize()`, `llm.chat()`, `llm.translate()`, etc.) ✅
-  - Embedding Module (`embedding.similarity()`, `embedding.find_nearest()`, etc.) ✅
-  - Agent Module (`agent.memory.store()`, `agent.task.plan()`, etc.) ✅
-  - Process Module (`process.spawn()`, `process.kill()`, `process.status()`, etc.) ✅
-  - Sandbox Module (`sandbox.run()`, `sandbox.lint()`, `sandbox.test()`, etc.) ✅
-  - WebSocket Module (`websocket.connect()`, `websocket.send()`, etc.) ✅
-  - Utils Module (`utils.uuid()`, `utils.sleep()`, `utils.retry()`, etc.) ✅
-  - Log Module (`log.trace()`, `log.to_file()`, `log.with_context()`, etc.) ✅
-  - Config Module (`config.get_env()`, `config.load_dotenv()`) ✅
-  - Flow Module (`@Flow` Decorator, `flow.snapshot_input()`, automatisches Rollback/Commit) ✅
-- **Neu in Version 2.6 registriert**:
-  - Path Module (`path.join()`, `path.dirname()`, `path.basename()`, `path.extname()`, etc.) ✅
-  - URL Module (`url.parse()`, `url.protocol()`, `url.hostname()`, `url.parse_query()`, etc.) ✅
-  - Stream Module (`stream.create()`, `stream.map()`, `stream.filter()`, `stream.reduce()`, etc.) ✅
-  - Redis Module (`redis.connect()`, `redis.set()`, `redis.get()`, `redis.publish()`, etc.) ✅
-  - Tracing Module (`tracing.start_span()`, `tracing.set_attribute()`, `tracing.child_span()`, etc.) ✅
-
-#### ML/LLM Features
-- **Funktioniert und getestet**: `LLMClient.new()`, `ModelLoader.new()`, `TrainingService.new()` sind registriert und getestet ✅
-- **Funktioniert**: Methoden (`generate()`, `embed()`, `predict()`, `train()`) sind registriert und Type-Checking funktioniert ✅
-- **Code Generation**: Alle ML/LLM Funktionen generieren korrekten Rust-Code ✅
-- **LLM API Integration**: ✅ Vollständig implementiert mit echten API-Calls für:
-  - OpenAI (Chat Completions, Embeddings)
-  - Anthropic Claude (Messages API)
-  - Google Gemini (Generate Content, Embeddings)
-- **Vector Databases**: ✅ Vollständig implementiert für:
-  - Pinecone (REST API Integration)
-  - Weaviate (REST API & GraphQL Integration)
-  - Qdrant (Native Rust Client & REST API Fallback)
-
-#### Developer Tools
-- **LSP Server**: ✅ Kompiliert ohne Warnungen, vollständig funktionsfähig
-- **Debugger**: ✅ Kompiliert ohne Warnungen, DAP-Server vollständig implementiert
-- **Package Manager**: ✅ Kompiliert ohne Warnungen, vollständig funktionsfähig
-- **Security Scanner**: ✅ Kompiliert ohne Warnungen, vollständig funktionsfähig
-- **API Doc Generator**: ✅ Kompiliert ohne Warnungen, vollständig funktionsfähig
-- **Linter**: ✅ Kompiliert ohne Warnungen, vollständig funktionsfähig
-- **Dead Code Detector**: ✅ Kompiliert ohne Warnungen, vollständig funktionsfähig
-- **Hot Reload**: ✅ Kompiliert ohne Warnungen, vollständig funktionsfähig mit:
-  - File Watching (kontinuierliches Monitoring)
-  - Watch Mode (automatische Kompilierung bei Änderungen)
-  - Server Mode (automatischer Server-Neustart mit Graceful Shutdown)
-
-### 🚧 Was ist geplant
-
-#### Kurzfristig (nächste Versionen)
-- **Standard Library**: ✅ Alle wichtigen Funktionen registriert und getestet (50+ Module, 150+ Funktionen)
-- **Developer Tools**: ✅ Alle Tools kompilieren ohne Warnungen, vollständig funktionsfähig
-- **Code-Qualität**: ✅ Alle Warnungen behoben (unused imports, dead code, unreachable code)
-- **Type Inference**: ✅ Verbessert für Konstruktor-Aufrufe ohne explizite Typen
-- **VelinAutoDoc**: ✅ Vollständig implementiert - Automatische Dokumentationsgenerierung
-- **VelinPipeline**: ✅ Vollständig implementiert - Pipeline-Optimierung mit automatischer Parallelisierung
-- **VelinFlow**: ✅ Vollständig implementiert - Transaktionales Flow-Management mit Rollback
-
-#### Mittelfristig
-- **ML/LLM-Integration**: ✅ Vollständig implementiert - Echte API-Calls für OpenAI, Anthropic, Google Gemini
-- **Vector Database Integration**: ✅ Vollständig implementiert - Pinecone, Weaviate, Qdrant Support
-- **Security-Framework**: ✅ Vollständig implementiert - JWT/OAuth2, RBAC, Rate Limiting
-- **Hot Reloading**: ✅ Vollständig implementiert - File Watching, Watch Mode, Server Mode
-- **Vollständige Tool-Integration**: ✅ Alle Tools vollständig funktionsfähig
-- **Standard Library Expansion**: ✅ 18 neue Module mit 167+ Funktionen in Version 2.5-2.6 hinzugefügt
-  - Version 2.5: 13 Module (string, math, date, fs, llm, embedding, agent, process, sandbox, websocket, utils, log, config)
-  - Version 2.6: 5 Module (path, url, stream, redis, tracing)
-- **Bibliotheks-Generator** (Neu in 2.7): ✅ Vollständig implementiert
-  - Automatische Generierung neuer Standardbibliotheks-Module
-  - Interaktiver Modus und YAML-Konfiguration
-  - Vollständige Integration in alle System-Komponenten
-
-#### Langfristig
-- **Production-Ready Status**: Beta-Release mit vollständiger Standard Library und getesteten Tools
-- **Performance-Optimierung**: ✅ Advanced Optimizer vollständig aktiviert (inkl. LoopOptimization)
-- **Dokumentation**: Vollständige API-Dokumentation für alle Features
-
-**Für Production-Use wird Beta-Status empfohlen.**
+6. **Multi-Target**: Unterstützung für 8 Zielsprachen
+7. **Performance**: Zero-Cost Abstractions und Advanced Optimizer
 
 ---
 
@@ -624,16 +680,7 @@ VelinScript 2.7 ist in aktiver Entwicklung. Der Compiler-Kern (Parser, Type Chec
 
 ```bash
 $ git clone https://github.com/SkyliteDesign/velinscript.git
-Cloning into 'velinscript'...
-remote: Enumerating objects: 1234, done.
-remote: Counting objects: 100% (1234/1234), done.
-remote: Compressing objects: 100% (567/567), done.
-remote: Total 1234 (delta 667), reused 1234 (delta 667), pack-reused 0
-Receiving objects: 100% (1234/1234), 2.5 MiB | 1.2 MiB/s, done.
-Resolving deltas: 100% (667/667), done.
-
 $ cd velinscript
-✓ Repository erfolgreich geklont
 ```
 
 </details>
@@ -644,113 +691,41 @@ $ cd velinscript
 ```bash
 $ cd compiler
 $ cargo build --release
-   Compiling velin-compiler v2.7.0
-   Compiling dependencies...
-   [========================================] 100%
-   Finished release [optimized] target(s) in 45.2s
-
-✓ Compiler erfolgreich gebaut
-✓ Binary verfügbar unter: target/release/velin-compiler.exe (Windows)
-                          target/release/velin-compiler (Linux/Mac)
 ```
 
 </details>
 
-### Erste Schritte
-
 <details>
-<summary><b>🎯 Neues Projekt erstellen</b></summary>
+<summary><b>🎯 Schritt 3: Neues Projekt erstellen</b></summary>
 
 ```bash
-$ velin-compiler.exe init my-project
-✓ Projekt-Verzeichnis erstellt: my-project
-✓ Config-Datei generiert: velin.config.json
-✓ Beispiel-Code hinzugefügt: main.velin
-✓ README.md erstellt
-
+$ velin init my-project
 $ cd my-project
-✓ Projekt erfolgreich initialisiert
 ```
 
 </details>
 
 <details>
-<summary><b>✅ Code prüfen</b></summary>
+<summary><b>✅ Schritt 4: Code prüfen</b></summary>
 
 ```bash
-$ velin-compiler.exe check -i main.velin
-🔍 Parsing main.velin...
-  ✓ Syntax valid
-  ✓ 3 Funktionen gefunden
-  ✓ 1 Struct definiert
-
-🔍 Type Checking...
-  ✓ Alle Typen korrekt
-  ✓ Standard Library Funktionen validiert
-  ✓ Keine Fehler gefunden
-
-✓ Code ist fehlerfrei!
+$ velin check -i main.velin
 ```
 
 </details>
 
 <details>
-<summary><b>🔧 Code kompilieren</b></summary>
+<summary><b>🔧 Schritt 5: Code kompilieren</b></summary>
 
 ```bash
-$ velin-compiler.exe compile -i main.velin
-🔨 Kompilierung gestartet...
-  → Parsing... ✓
-  → Type Checking... ✓
-  → Code Generation... ✓
-  → Optimierung... ✓
+# Zu Rust (Default)
+$ velin compile -i main.velin
 
-📦 Rust-Code generiert: target/main.rs
-✓ Kompilierung erfolgreich abgeschlossen
-```
+# Zu PHP
+$ velin compile -i main.velin --target php
 
-</details>
-
-<details>
-<summary><b>✨ Code formatieren</b></summary>
-
-```bash
-$ velin-compiler.exe format -i main.velin
-📝 Formatierung gestartet...
-  → Einrückung korrigiert... ✓
-  → Leerzeichen normalisiert... ✓
-  → Zeilenumbrüche optimiert... ✓
-
-✓ Code erfolgreich formatiert
-```
-
-</details>
-
-<details>
-<summary><b>🛠️ Code generieren (API, CRUD, Client)</b></summary>
-
-```bash
-$ velin-compiler.exe generate api --name User --path /api/users
-📝 API-Boilerplate generiert...
-  ✓ Endpoint: GET /api/users
-  ✓ Endpoint: POST /api/users
-  ✓ Endpoint: GET /api/users/:id
-  ✓ Endpoint: PUT /api/users/:id
-  ✓ Endpoint: DELETE /api/users/:id
-  ✓ Struct User erstellt
-  ✓ Validierung hinzugefügt
-
-✓ API-Code erfolgreich generiert
-
-$ velin-compiler.exe generate crud --name Product --fields "id:string,name:string,price:number"
-📝 CRUD-Operationen generiert...
-  ✓ Create Operation
-  ✓ Read Operation
-  ✓ Update Operation
-  ✓ Delete Operation
-  ✓ Struct Product erstellt
-
-✓ CRUD-Code erfolgreich generiert
+# Zu Python
+$ velin compile -i main.velin --target python
 ```
 
 </details>
@@ -763,10 +738,10 @@ $ velin-compiler.exe generate crud --name Product --fields "id:string,name:strin
 // Einfache API-Funktion
 @GET("/api/hello")
 fn hello(): string {
-    return "Hello, VelinScript 2.7! 🚀";
+    return "Hello, VelinScript 3.1.0! 🚀";
 }
 
-// Mit Parametern und Validation
+// Mit Parametern, Validation und Rate Limiting
 @POST("/api/users")
 @Auth
 @RateLimit(requests: 100, window: "1m", strategy: "fixed-window")
@@ -778,24 +753,6 @@ fn createUser(name: string, email: string): User {
         createdAt: datetime.now(),
     };
     return user;
-}
-
-// DateTime, Regex und Crypto Beispiele
-@GET("/api/timestamp")
-fn getTimestamp(): string {
-    let now = datetime.now();
-    return datetime.formatISO8601(now);
-}
-
-@POST("/api/validate-email")
-fn validateEmail(email: string): boolean {
-    let result = regex.find("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", email);
-    return result.isOk();
-}
-
-@POST("/api/hash")
-fn hashPassword(password: string): string {
-    return crypto.sha256(password);
 }
 
 // Struct-Definition
@@ -810,587 +767,102 @@ fn parseNumber(input: string): Result<number, string> {
     // ... Parsing-Logik
 }
 
-// Traits für Polymorphismus
-trait Serialize {
-    fn toJson(): string;
-}
-
-impl Serialize for User {
-    fn toJson(): string {
-        // ... Implementation
-    }
+// Pattern Matching
+match (result) {
+    Ok(value) => return value,
+    Err(error) => return 0,
 }
 ```
-
----
-
-## 🛠️ Verfügbare Befehle
-
-### Compiler
-
-<details>
-<summary><b>🔨 Kompilieren</b></summary>
-
-```bash
-$ velin-compiler.exe compile -i main.velin -o target/main.rs
-🔨 Kompilierung gestartet...
-  → Parsing main.velin... ✓
-  → Type Checking... ✓
-  → Code Generation... ✓
-  → Optimierung... ✓
-
-📦 Rust-Code generiert: target/main.rs
-✓ Kompilierung erfolgreich (0.45s)
-```
-
-</details>
-
-<details>
-<summary><b>✅ Code prüfen (Parsing & Type Checking)</b></summary>
-
-```bash
-$ velin-compiler.exe check -i main.velin
-🔍 Parsing main.velin...
-  ✓ Syntax valid
-  ✓ 5 Funktionen gefunden
-  ✓ 2 Structs definiert
-  ✓ 1 Enum definiert
-
-🔍 Type Checking...
-  ✓ Alle Typen korrekt
-  ✓ Standard Library Funktionen validiert
-  ✓ Keine Fehler gefunden
-
-✓ Code ist fehlerfrei!
-```
-
-</details>
-
-<details>
-<summary><b>✨ Code formatieren</b></summary>
-
-```bash
-$ velin-compiler.exe format -i main.velin
-📝 Formatierung gestartet...
-  → Einrückung korrigiert... ✓
-  → Leerzeichen normalisiert... ✓
-  → Zeilenumbrüche optimiert... ✓
-  → Decorators formatiert... ✓
-
-✓ Code erfolgreich formatiert
-```
-
-</details>
-
-<details>
-<summary><b>ℹ️ Informationen anzeigen</b></summary>
-
-```bash
-$ velin-compiler.exe info -i main.velin
-📊 Projekt-Informationen:
-  Datei: main.velin
-  Größe: 2.5 KB
-  Zeilen: 87
-  Funktionen: 5
-  Structs: 2
-  Enums: 1
-  Decorators: 8
-  Standard Library Imports: 12
-```
-
-</details>
-
-<details>
-<summary><b>🚀 Neues Projekt initialisieren</b></summary>
-
-```bash
-$ velin-compiler.exe init my-project
-✓ Projekt-Verzeichnis erstellt: my-project
-✓ Config-Datei generiert: velin.config.json
-✓ Beispiel-Code hinzugefügt: main.velin
-✓ README.md erstellt
-✓ .gitignore erstellt
-
-✓ Projekt erfolgreich initialisiert
-```
-
-</details>
-
-<details>
-<summary><b>📄 OpenAPI Specification generieren</b></summary>
-
-```bash
-$ velin-compiler.exe open-api -i main.velin -o openapi.json
-📄 OpenAPI-Spezifikation generiert...
-  → Endpoints analysiert... ✓
-  → Schemas extrahiert... ✓
-  → Security Schemes erkannt... ✓
-  → Dokumentation generiert... ✓
-
-✓ OpenAPI 3.0 Spezifikation erstellt: openapi.json
-```
-
-</details>
-
-<details>
-<summary><b>🛠️ Code generieren (Boilerplate, CRUD, etc.)</b></summary>
-
-```bash
-$ velin-compiler.exe generate api --name User --path /api/users
-📝 API-Boilerplate generiert...
-  ✓ Endpoint: GET /api/users
-  ✓ Endpoint: POST /api/users
-  ✓ Endpoint: GET /api/users/:id
-  ✓ Endpoint: PUT /api/users/:id
-  ✓ Endpoint: DELETE /api/users/:id
-  ✓ Struct User erstellt
-  ✓ Validierung hinzugefügt
-
-✓ API-Code erfolgreich generiert
-
-$ velin-compiler.exe generate crud --name Product --fields "id:string,name:string,price:number"
-📝 CRUD-Operationen generiert...
-  ✓ Create Operation
-  ✓ Read Operation
-  ✓ Update Operation
-  ✓ Delete Operation
-  ✓ Struct Product erstellt
-
-✓ CRUD-Code erfolgreich generiert
-
-$ velin-compiler.exe generate client --openapi api.json --language typescript
-📝 TypeScript Client generiert...
-  ✓ API Client Klasse erstellt
-  ✓ Type Definitions generiert
-  ✓ Request/Response Handler
-
-✓ TypeScript Client erfolgreich generiert
-```
-
-</details>
-
-<details>
-<summary><b>🔧 Mit AutoFix</b></summary>
-
-```bash
-$ velin-compiler.exe compile -i main.velin --autofix
-🔨 Kompilierung mit AutoFix gestartet...
-  → Parsing... ⚠️ Fehler gefunden
-  → AutoFix aktiviert...
-    ✓ Unausgeglichene Klammer behoben
-    ✓ Fehlende Funktionssignatur korrigiert
-  → Type Checking... ✓
-  → Code Generation... ✓
-
-✓ Kompilierung erfolgreich (AutoFix: 2 Korrekturen)
-```
-
-</details>
-
-### Package Manager (velin-pkg)
-
-<details>
-<summary><b>📦 Projekt initialisieren</b></summary>
-
-```bash
-$ velin-pkg init my-project
-✓ Package-Manager initialisiert
-✓ velin.toml erstellt
-✓ Dependencies-Verzeichnis erstellt
-
-✓ Projekt bereit für Dependencies
-```
-
-</details>
-
-<details>
-<summary><b>➕ Dependency hinzufügen</b></summary>
-
-```bash
-$ velin-pkg add github.com/user/repo --version ^1.0.0
-📦 Dependency hinzufügen...
-  → Repository gefunden: github.com/user/repo
-  → Version ^1.0.0 ausgewählt
-  → Abhängigkeiten analysiert... ✓
-  → velin.toml aktualisiert... ✓
-
-✓ Dependency erfolgreich hinzugefügt
-```
-
-</details>
-
-<details>
-<summary><b>⬇️ Dependencies installieren</b></summary>
-
-```bash
-$ velin-pkg install
-📦 Dependencies installieren...
-  → 5 Dependencies gefunden
-  → Downloading... [████████████] 100%
-  → Kompilierung... ✓
-  → Installation... ✓
-
-✓ Alle Dependencies erfolgreich installiert
-```
-
-</details>
-
-### Security Scanner (velin-security)
-
-<details>
-<summary><b>🔒 Code auf Security-Vulnerabilities scannen</b></summary>
-
-```bash
-$ velin-security scan --format text
-🔍 Security-Scan gestartet...
-  → Code analysiert... ✓
-  → Vulnerabilities geprüft... ✓
-  → Dependencies gescannt... ✓
-
-✓ Scan abgeschlossen: 0 Vulnerabilities gefunden
-```
-
-</details>
-
-<details>
-<summary><b>🛡️ Dependencies auf Vulnerabilities prüfen</b></summary>
-
-```bash
-$ velin-security audit --config velin.toml
-🔍 Dependency Audit gestartet...
-  → CVE Database abgefragt... ✓
-  → GitHub Security Advisories geprüft... ✓
-  → OSV API abgefragt... ✓
-
-✓ Audit abgeschlossen: Alle Dependencies sicher
-```
-
-</details>
-
-**Features:**
-- Code-Scanning auf Security-Vulnerabilities
-- Dependency Vulnerability Scanner
-- CVE Database Integration (NVD API)
-- GitHub Security Advisories
-- OSV (Open Source Vulnerabilities) API
-
-### Debugger (velin-debugger)
-
-<details>
-<summary><b>🐛 DAP Server starten</b></summary>
-
-```bash
-$ velin-debugger start --port 4711
-🐛 Debugger Server gestartet...
-  → DAP Server läuft auf Port 4711
-  → Breakpoints aktiviert
-  → Variable Inspection bereit
-  → VS Code Integration aktiv
-
-✓ Debugger bereit für Verbindungen
-```
-
-</details>
-
-**Features:**
-- DAP (Debug Adapter Protocol) Server
-- Breakpoints Management
-- Variable Inspection
-- Call Stack Navigation
-- VS Code Integration
-
-### Linter (velin-lint)
-
-<details>
-<summary><b>🔍 Code auf Linter-Probleme prüfen</b></summary>
-
-```bash
-$ velin-lint check --fix
-🔍 Linter-Analyse gestartet...
-  → Unused Variables gefunden: 2
-  → Complexity Analysis... ✓
-  → Naming Conventions geprüft... ✓
-  → Auto-Fix aktiviert...
-    ✓ 2 Probleme automatisch behoben
-
-✓ Linter-Analyse abgeschlossen
-```
-
-</details>
-
-### API Documentation Generator (velin-api-doc)
-
-<details>
-<summary><b>📄 OpenAPI Dokumentation generieren</b></summary>
-
-```bash
-$ velin-api-doc generate -i main.velin -o openapi.json --format json --interactive
-📄 API-Dokumentation generiert...
-  → Endpoints analysiert... ✓
-  → Schemas extrahiert... ✓
-  → Security Schemes erkannt... ✓
-  → OpenAPI 3.0 generiert... ✓
-  → Swagger UI vorbereitet... ✓
-
-✓ Dokumentation erstellt: openapi.json
-✓ Interactive Docs verfügbar
-```
-
-</details>
-
-### Hot Reload (velin-hot-reload)
-
-<details>
-<summary><b>🔄 Dateien überwachen</b></summary>
-
-```bash
-$ velin-hot-reload --watch --directory .
-🔄 Hot Reload aktiviert...
-  → Watching: ./
-  → File System Monitor gestartet
-  → Kompilierung bei Änderungen aktiviert
-
-✓ Hot Reload läuft (Drücke Ctrl+C zum Beenden)
-```
-
-</details>
-
-<details>
-<summary><b>🚀 Development Server starten</b></summary>
-
-```bash
-$ velin-hot-reload --server --port 3000
-🚀 Development Server gestartet...
-  → Server läuft auf http://localhost:3000
-  → Hot Reload aktiviert
-  → File Watching aktiv
-  → Graceful Shutdown bereit
-
-✓ Server bereit (Drücke Ctrl+C zum Beenden)
-```
-
-</details>
-
-### AutoFix Engine
-
-<details>
-<summary><b>🔧 Automatische Fehlerkorrektur</b></summary>
-
-```bash
-$ velin-compiler.exe check -i main.velin --autofix
-🔍 Code-Prüfung mit AutoFix...
-  → Parsing... ⚠️ Fehler gefunden
-  → AutoFix aktiviert...
-    ✓ Unausgeglichene Klammer behoben: Zeile 23
-    ✓ Fehlende Funktionssignatur korrigiert: Zeile 45
-    ✓ Generic-Typ repariert: List<T → List<T>
-  → Type Checking... ✓
-
-✓ Code erfolgreich korrigiert (3 Fixes angewendet)
-```
-
-</details>
-
-**Features:**
-- Behebt unausgeglichene Klammern (`{`, `[`, `(`)
-- Korrigiert fehlende Funktionssignaturen
-- Repariert unvollständige Generic-Typen (`List<T` → `List<T>`)
-- Iterative Korrekturen (bis zu 5 Durchläufe)
-
-### Code Generation
-
-<details>
-<summary><b>📝 API Boilerplate generieren</b></summary>
-
-```bash
-$ velin-compiler.exe generate api --name User --path /api/users
-📝 API-Boilerplate generiert...
-  ✓ Endpoint: GET /api/users
-  ✓ Endpoint: POST /api/users
-  ✓ Endpoint: GET /api/users/:id
-  ✓ Endpoint: PUT /api/users/:id
-  ✓ Endpoint: DELETE /api/users/:id
-  ✓ Struct User erstellt
-  ✓ Validierung hinzugefügt
-
-✓ API-Code erfolgreich generiert
-```
-
-</details>
-
-<details>
-<summary><b>🔄 CRUD Code generieren</b></summary>
-
-```bash
-$ velin-compiler.exe generate crud --name Product --fields "id:string,name:string,price:number"
-📝 CRUD-Operationen generiert...
-  ✓ Create Operation
-  ✓ Read Operation
-  ✓ Update Operation
-  ✓ Delete Operation
-  ✓ Struct Product erstellt
-
-✓ CRUD-Code erfolgreich generiert
-```
-
-</details>
-
-### VelinInsight (Code-Analyse)
-
-<details>
-<summary><b>🔍 Code-Analyse ausführen</b></summary>
-
-```bash
-$ velin-compiler.exe insight -i main.velin
-🔍 VelinInsight Analyse gestartet...
-  → Unused Structs gescannt... ✓
-  → Complex Functions analysiert... ⚠️ 2 komplexe Funktionen gefunden
-  → Redundant Queries geprüft... ✓
-  → Code-Qualität bewertet... ✓
-
-📊 Analyse-Ergebnisse:
-  - Unused Structs: 0
-  - Complex Functions: 2 (Statement Count > 20)
-  - Redundant Queries: 0
-  - Code-Qualität: Gut
-
-✓ Analyse abgeschlossen
-```
-
-</details>
-
-**Features:**
-- Unused Structs Detection
-- Complex Functions Detection (Statement Count > 20)
-- Redundant Queries Detection
-- Integration mit `@VelinInsight` Decorator
 
 ---
 
 ## 📚 Dokumentation
 
+### Getting Started
+
 - **[Getting Started Guide](docs/guides/getting-started.md)** - Schritt-für-Schritt Anleitung
 - **[Language Specification](docs/language/specification.md)** - Vollständige Sprachspezifikation
-- **[API Dokumentation](docs/api/)** - API-Referenz
-- **[Architektur-Dokumentation](docs/architecture/)** - Compiler-Architektur und Internals:
-  - [Compiler Architektur](docs/architecture/compiler-architecture.md) - Pass-System und Core
-  - [Modul-Auflösung](docs/architecture/module-resolution.md) - Wie Module aufgelöst werden
-  - [Framework-Integration](docs/architecture/framework-integration.md) - Axum/Actix-Web Support
-  - [Code-Generierung](docs/architecture/code-generation.md) - Codegen-System
-- **[Tools Dokumentation](docs/tools/)** - Entwickler-Tools:
-  - [VS Code Extension](docs/tools/vscode-extension.md) - IDE-Integration
-  - [Bibliotheks-Generator](docs/tools/library-generator.md) - Automatische Bibliotheks-Generierung (Neu in 2.7) ✅
-- **[Plugin Development](docs/guides/plugin-development.md)** - 🔌 Plugin-Entwicklung für VelinScript
-- **[Tutorials](docs/guides/)** - Umfassende Tutorials:
-  - [Pattern Matching](docs/guides/tutorial-pattern-matching.md) - Erweiterte Pattern Matching
-  - [Closures](docs/guides/tutorial-closures.md) - Lambda Functions
-  - [Collections](docs/guides/tutorial-collections.md) - Collections Library
-  - [HTTP Client](docs/guides/tutorial-http-client.md) - HTTP Client Library
-  - [ML & LLM](docs/guides/tutorial-7-ml.md) - Machine Learning & LLM Integration
-  - [ML Training](docs/guides/tutorial-ml-training.md) - ML Model Training
-  - [String Interpolation](docs/guides/tutorial-string-interpolation.md) - Format-Strings
-  - [Debugger](docs/guides/tutorial-debugger.md) - Debugging in VS Code
-  - [Intelligence Features](docs/guides/tutorial-8-intelligence.md) - VelinAutoDoc, VelinPipeline, @Flow, VelinInsight
+- **[Dokumentations-Index](docs/DOKUMENTATIONS-INDEX.md)** ✅ - Vollständiger Index aller Dokumentationen
+
+### Architektur
+
+- **[Compiler Architektur](docs/architecture/compiler-architecture.md)** - Pass-System und Core
+- **[Pass-Verlauf](docs/architecture/pass-verlauf.md)** - Alle 13 Compiler-Passes
+- **[Type Inference](docs/architecture/type-inference.md)** - Type-Inference System
+- **[Code Ordering](docs/architecture/code-ordering-pass.md)** - Automatische Code-Sortierung
+- **[IR Representation](docs/architecture/ir-representation.md)** - SSA-Format
+- **[Borrow Checker](docs/architecture/borrow-checker.md)** - Ownership & Borrowing
+- **[Code-Generierung](docs/architecture/code-generation.md)** - Multi-Target Codegen
+
+### Guides & Tutorials
+
+- **[Pattern Matching](docs/guides/tutorial-pattern-matching.md)** - Erweiterte Pattern Matching
+- **[Closures](docs/guides/tutorial-closures.md)** - Lambda Functions
+- **[Collections](docs/guides/tutorial-collections.md)** - Collections Library
+- **[ML & LLM](docs/guides/tutorial-7-ml.md)** - Machine Learning & LLM Integration
+- **[Vektor-Datenbanken](docs/guides/vektor-datenbanken.md)** ✅ - Semantische Suche & RAG
+- **[Type Inference](docs/guides/tutorial-type-inference.md)** - Type-Inference Tutorial
+- **[CLI-Referenz](docs/guides/cli-reference.md)** ✅ - Vollständige CLI-Referenz
+
+### Tools
+
+- **[VS Code Extension](docs/tools/vscode-extension.md)** - IDE-Integration
+- **[Auto-Repair](docs/tools/auto-repair.md)** - AutoFix Engine
+- **[Security Scanner](docs/tools/security-scanner.md)** - Security-Tools
+
+**Vollständige Dokumentation:** [docs/README.md](docs/README.md)
 
 ---
 
 ## 🌟 Showcase-Beispiele
 
-### 🎯 [Ultimate Showcase](examples/05-ultimate-showcase/) - Alle Features von VelinScript 2.7
+### 🎯 [Ultimate Showcase](examples/05-ultimate-showcase/) - Alle Features
 
-**Neu in Version 2.5-2.7** ✅ - Das ultimative Beispiel, das alle neuen Features demonstriert:
+Das ultimative Beispiel, das alle Features von VelinScript 3.1.0 demonstriert:
 
-Ein vollständiges E-Commerce-Backend, das die volle Leistungsfähigkeit von VelinScript 2.7 zeigt:
-
-#### ✨ Features
-
-- **📚 VelinAutoDoc**: Automatische Dokumentationsgenerierung aus `///` Doc-Comments
-- **⚡ VelinPipeline**: Automatische Parallelisierung von unabhängigen async Operationen
-- **🔄 @Flow**: Transaktionales Flow-Management mit automatischem Rollback/Commit
-- **🏗️ Modulare Architektur**: Saubere Trennung in Models, Services, Security und Intelligence
-- **🔒 Production-Ready Security**: Auth, Role-based Access Control, Input Validation
+- **📚 VelinAutoDoc**: Automatische Dokumentationsgenerierung
+- **⚡ VelinPipeline**: Automatische Parallelisierung
+- **🔄 @Flow**: Transaktionales Flow-Management
+- **🏗️ Modulare Architektur**: Saubere Trennung
+- **🔒 Production-Ready Security**: Auth, RBAC, Validation
 - **🤖 KI-Integration**: ML-Modelle nahtlos integriert
-- **📊 Robuste Typisierung**: Starke Typisierung für Compile-Time-Fehlererkennung
-
-#### 🚀 Schnellstart
-
-```bash
-# Beispiel-Projekt öffnen
-cd examples/05-ultimate-showcase
-
-# Projekt prüfen (Parsing & Type Checking)
-velin-compiler check -i main.velin
-```
-
-#### 📖 Dokumentation
-
-- **[README](examples/05-ultimate-showcase/README.md)** - Vollständige Projekt-Dokumentation
-
----
 
 ### 🎯 [Custom Recommender](examples/custom-recommender/) - Hybrid Recommendation System
 
-Ein **production-ready Beispiel** für ein hybrides Recommendation System, das die volle Power von VelinScript 2.7 demonstriert:
+Production-ready Beispiel für ein intelligentes Recommendation System:
 
-Ein vollständiges, production-ready Beispiel für ein intelligentes Recommendation System mit **echten VectorDB-Integrationen** (Pinecone, Weaviate, Qdrant) und **echten LLM-API-Calls** (OpenAI, Anthropic, Google Gemini):
+- **🤖 Hybrid Algorithmus**: Embedding-basierte + Collaborative Filtering
+- **🔍 Vector Database Integration**: Pinecone, Weaviate, Qdrant
+- **🧠 LLM-Integration**: OpenAI, Anthropic, Google Gemini
+- **🔒 Production-Ready Security**: API Key Auth, Rate Limiting, CORS
+- **📊 Umfassende API**: 5 Endpoints für Recommendations
 
-#### ✨ Features
+**Weitere Beispiele:** [examples/](examples/)
 
-- **🤖 Hybrid Algorithmus**: Kombiniert Embedding-basierte Empfehlungen (60%) mit Collaborative Filtering (40%)
-- **🔍 Vector Database Integration**: ✅ Echte Integration mit Pinecone, Weaviate oder Qdrant für semantische Ähnlichkeitssuche
-- **🧠 LLM-Integration**: ✅ Echte API-Calls zu OpenAI, Anthropic oder Google Gemini für Embedding-Generierung
-- **🔒 Production-Ready Security**: 
-  - API Key Authentication
-  - Rate Limiting (100 requests/minute)
-  - CORS Support
-  - Input Validation
-- **📊 Umfassende API**: 5 Endpoints für Recommendations, Preferences, User History, Feedback und Similar Items
-- **🏗️ Modulare Architektur**: 15+ Module für Models, Security, Caching, Logging, Async Operations, WebAssembly Support
-- **✅ Vollständige Tests**: Unit- und Integration-Tests inklusive
-- **📚 Umfassende Dokumentation**: 
-  - API-Dokumentation
-  - Security-Guide
-  - WebAssembly-Dokumentation
-  - Optimierungs-Guide
+---
 
-#### 🚀 Schnellstart
+## ⚠️ Reifegrad & Status
 
-```bash
-# Beispiel-Projekt öffnen
-cd examples/custom-recommender
+**Aktueller Status: Beta (Production-Ready Features verfügbar)**
 
-# Konfiguration anpassen
-cp velin.config.example.json velin.config.json
+VelinScript 3.1.0 ist in aktiver Entwicklung. Der Compiler-Kern ist funktionsfähig. Die Standard Library ist größtenteils nutzbar und getestet (50+ Module mit 200+ Funktionen).
 
-# Projekt kompilieren
-velin-compiler compile -i main.velin
+### ✅ Was funktioniert zuverlässig
 
-# Tests ausführen
-velin-compiler test
-```
+- ✅ Parser für grundlegende Syntax (Funktionen, Structs, Enums, Decorators)
+- ✅ Type Checker mit Type Inference für einfache Typen und Standard Library Funktionen
+- ✅ Multi-Target Code Generation (Rust, PHP, Python, TypeScript, JavaScript, Go, Java, C#)
+- ✅ CLI-Befehle (`compile`, `check`, `format`, `init`, `serve`, `generate`, etc.)
+- ✅ String-Interpolation
+- ✅ Collections-Methoden (`List.length()`, `List.join()`, etc.)
+- ✅ Pattern Matching (grundlegend)
+- ✅ 50+ Standard Library Module mit 200+ Funktionen
+- ✅ AutoFix Engine
+- ✅ Developer Tools (Linter, Formatter, Debugger, Security Scanner, etc.)
+- ✅ VS Code Extension
+- ✅ LSP Server
 
-#### 📖 Dokumentation
-
-- **[README](examples/custom-recommender/README.md)** - Vollständige Projekt-Dokumentation
-- **[API Endpoints](examples/custom-recommender/API_ENDPOINTS.md)** - API-Referenz
-- **[Security Guide](examples/custom-recommender/SECURITY.md)** - Security-Best-Practices
-- **[Optimization Guide](examples/custom-recommender/OPTIMIZATION.md)** - Performance-Optimierungen
-- **[WebAssembly](examples/custom-recommender/WASM.md)** - WASM-Integration
-
-#### 💡 Weitere Beispiele
-
-- **[Ultimate Showcase](examples/05-ultimate-showcase/)** - Alle Features 2.5-2.7 (VelinAutoDoc, VelinPipeline, @Flow, Bibliotheks-Generator) ✅
-- **[Hello API](examples/01-hello-api/)** - Einfaches Einstiegsbeispiel
-- **[LLM Chat](examples/02-llm-chat/)** - Chat-API mit LLM-Integration
-- **[Automation Pipeline](examples/03-automation-pipeline/)** - Automatisierungsbeispiel
-- **[String Interpolation](examples/string-interpolation-example.velin)** - Format-Strings mit Expression-Interpolation
-- **[ML Training](examples/ml-training-example.velin)** - ML Model Training mit ONNX und TensorFlow
-- **[Debugger Example](examples/debugger-example.velin)** - Debugging mit Breakpoints und Variable Inspection
-- **[LLM Chat API](examples/llm-chat-api.velin)** - Chat-API mit LLM-Integration
-- **[ML Sentiment Analysis](examples/ml-sentiment-analysis.velin)** - Sentiment-Analyse mit ML
-- **[Vector Search API](examples/vector-search-api.velin)** - Vector Database Integration
-- **[Complete API with Auth](examples/complete-api-with-auth.velin)** - Vollständige API mit Authentication
-- **[OAuth2 API](examples/oauth2-api.velin)** - OAuth2-Integration
+**Für Production-Use wird Beta-Status empfohlen.**
 
 ---
 
@@ -1451,7 +923,7 @@ Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe [LICENSE](LICENSE) f�
 
 <div align="center">
 
-**VelinScript 2.7 wird von der Community entwickelt und verbessert. Vielen Dank an alle Contributors!**
+**VelinScript 3.1.0 wird von der Community entwickelt und verbessert. Vielen Dank an alle Contributors!**
 
 [![Contributors](https://img.shields.io/github/contributors/SkyliteDesign/velinscript?style=for-the-badge&logo=github)](https://github.com/SkyliteDesign/velinscript/graphs/contributors)
 

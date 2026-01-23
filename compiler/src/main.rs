@@ -1,34 +1,67 @@
 use velin_compiler::cli::{Cli, Commands};
 use velin_compiler::parser::parser::Parser;
-use velin_compiler::codegen::{OpenAPIGenerator, BoilerplateGenerator, ClientGenerator};
+use velin_compiler::codegen::{OpenAPIGenerator, BoilerplateGenerator, ClientGenerator, TargetLanguage};
 use velin_compiler::formatter::{Formatter, FormatConfig};
 use std::fs;
 use std::path::PathBuf;
 use anyhow::{Context, Result as AnyhowResult};
 use clap::Parser as ClapParser;
+use std::str::FromStr;
 
 use velin_compiler::compiler::{VelinCompiler, config::CompilerConfig};
 use velin_compiler::compiler::language::get_velisch_identity;
 use velin_compiler::passes::{
     autofix::AutoFixPass,
     parser::ParserPass,
+    desugar::DesugaringPass,
+    code_order::CodeOrderingPass,
     type_check::TypeCheckPass,
     codegen::CodegenPass,
+    ai_semantic::AISemanticPass,
+    ai_bug_detection::AIBugDetectionPass,
+    ai_codegen::AICodeGenerationPass,
+    ai_code_review::AICodeReviewPass,
+    ai_sandbox::AISandboxPass,
+    ai_optimization::AIOptimizationPass,
 };
+use velin_compiler::optimizer::parallelization::ParallelizationAnalyzer;
 
 fn main() -> AnyhowResult<()> {
     let cli = Cli::parse();
     
     match cli.command {
-        Commands::Compile { input, output, no_type_check, show_code, autofix } => {
+        Commands::Compile { input, output, no_type_check, show_code, autofix, ai_semantic, ai_bug_detection, ai_codegen, ai_optimization, ai_provider, ai_api_key, target, framework } => {
             let mut config = CompilerConfig::default();
             config.enable_autofix = autofix;
             config.enable_type_check = !no_type_check;
             config.show_code = show_code;
+            config.enable_ai_semantic = ai_semantic;
+            config.enable_ai_bug_detection = ai_bug_detection;
+            config.enable_ai_codegen = ai_codegen;
+            // AICodeReview und AISandbox werden automatisch aktiviert wenn ai_codegen aktiviert ist
+            config.enable_ai_code_review = ai_codegen;
+            config.enable_ai_sandbox = ai_codegen;
+            config.enable_ai_optimization = ai_optimization;
+            config.ai_provider = ai_provider;
+            config.ai_api_key = ai_api_key;
             
+            // Parse Target Language
+            config.target = TargetLanguage::from_str(&target).map_err(|e| anyhow::anyhow!(e))?;
+
             // Output path logic
             let output_file = output.unwrap_or_else(|| {
-                input.with_extension("rs")
+                // Extension based on target
+                let ext = match config.target {
+                    TargetLanguage::Rust => "rs",
+                    TargetLanguage::Php => "php",
+                    TargetLanguage::Python => "py",
+                    TargetLanguage::JavaScript => "js",
+                    TargetLanguage::TypeScript => "ts",
+                    TargetLanguage::Go => "go",
+                    TargetLanguage::Java => "java",
+                    TargetLanguage::CSharp => "cs",
+                };
+                input.with_extension(ext)
             });
             config.output_path = Some(output_file.clone());
 
@@ -37,13 +70,65 @@ fn main() -> AnyhowResult<()> {
             // Register Passes
             compiler.add_pass(Box::new(AutoFixPass::new(autofix)));
             compiler.add_pass(Box::new(ParserPass::new()));
+            compiler.add_pass(Box::new(DesugaringPass::new()));
+            // Code Ordering Pass: Automatically sorts functions, types, and blocks based on dependencies
+            compiler.add_pass(Box::new(CodeOrderingPass::new()));
+            
+            // KI-Compiler-Passes (optional, via Feature Flags)
+            if config.enable_ai_semantic {
+                if let Ok(pass) = AISemanticPass::new(&config) {
+                    compiler.add_pass(Box::new(pass));
+                }
+            }
+            if config.enable_ai_bug_detection {
+                if let Ok(pass) = AIBugDetectionPass::new(&config) {
+                    compiler.add_pass(Box::new(pass));
+                }
+            }
             if !no_type_check {
                 compiler.add_pass(Box::new(TypeCheckPass::new(true)));
             }
+            // Standard Optimizer Pass
+            compiler.add_pass(Box::new(ParallelizationAnalyzer::new()));
+
+            if config.enable_ai_codegen {
+                if let Ok(pass) = AICodeGenerationPass::new(&config) {
+                    compiler.add_pass(Box::new(pass));
+                }
+            }
+            // AI Code Review Pass (nach Code Generation)
+            if config.enable_ai_code_review {
+                if let Ok(pass) = AICodeReviewPass::new(&config) {
+                    compiler.add_pass(Box::new(pass));
+                }
+            }
+            // AI Sandbox Pass (nach Code Review)
+            if config.enable_ai_sandbox {
+                if let Ok(pass) = AISandboxPass::new(&config) {
+                    compiler.add_pass(Box::new(pass));
+                }
+            }
+            if config.enable_ai_optimization {
+                if let Ok(pass) = AIOptimizationPass::new(&config) {
+                    compiler.add_pass(Box::new(pass));
+                }
+            }
             // Add Codegen Pass
-            compiler.add_pass(Box::new(CodegenPass::new(config.output_path, show_code)));
+            compiler.add_pass(Box::new(CodegenPass::new(config.output_path, show_code, config.target, framework)));
 
             tracing::info!(file = ?input, language = %get_velisch_identity(), "Compiling Velisch file");
+            
+            // SECURITY: Dateigrößen-Limit (max. 5MB)
+            let metadata = fs::metadata(&input)
+                .with_context(|| format!("Failed to read metadata: {}", input.display()))?;
+            const MAX_FILE_SIZE: u64 = 5 * 1024 * 1024; // 5MB
+            if metadata.len() > MAX_FILE_SIZE {
+                return Err(anyhow::anyhow!(
+                    "File too large: {} bytes (max: {} bytes). File size limit exceeded.",
+                    metadata.len(),
+                    MAX_FILE_SIZE
+                ));
+            }
             
             let code = fs::read_to_string(&input)
                 .with_context(|| format!("Failed to read file: {}", input.display()))?;
@@ -51,11 +136,14 @@ fn main() -> AnyhowResult<()> {
             let context = compiler.compile(input.to_string_lossy().to_string(), code)?;
             
             if context.has_errors() {
-                eprintln!("✗ Kompilierung fehlgeschlagen mit {} Fehlern:", context.errors.len());
+                eprintln!("✗ Kompilierung fehlgeschlagen mit {} Fehlern:\n", context.errors.len());
                 for error in context.errors {
-                     // Since CompilerError is an Enum now, we need to match it or use Display
-                     eprintln!("  - {}", error);
+                     // Verwende verbesserte Fehlermeldungen mit Vorschlägen
+                     eprintln!("{}", error.with_suggestions());
+                     eprintln!("{}", "─".repeat(60));
                 }
+                eprintln!("\n💡 Tipp: Nutze 'velin check --autofix' für automatische Korrekturen");
+                eprintln!("📖 Hilfe: Siehe docs/guides/getting-started.md für weitere Informationen");
                 std::process::exit(1);
             }
             
@@ -71,9 +159,24 @@ fn main() -> AnyhowResult<()> {
             
             compiler.add_pass(Box::new(AutoFixPass::new(autofix)));
             compiler.add_pass(Box::new(ParserPass::new()));
+            compiler.add_pass(Box::new(DesugaringPass::new()));
+            // Code Ordering Pass: Automatically sorts functions, types, and blocks based on dependencies
+            compiler.add_pass(Box::new(CodeOrderingPass::new()));
             compiler.add_pass(Box::new(TypeCheckPass::new(true)));
             
             println!("🔍 Prüfe: {}\n", input.display());
+            
+            // SECURITY: Dateigrößen-Limit (max. 5MB)
+            let metadata = fs::metadata(&input)
+                .with_context(|| format!("Failed to read metadata: {}", input.display()))?;
+            const MAX_FILE_SIZE: u64 = 5 * 1024 * 1024; // 5MB
+            if metadata.len() > MAX_FILE_SIZE {
+                return Err(anyhow::anyhow!(
+                    "File too large: {} bytes (max: {} bytes). File size limit exceeded.",
+                    metadata.len(),
+                    MAX_FILE_SIZE
+                ));
+            }
             
             let code = fs::read_to_string(&input)
                 .with_context(|| format!("Failed to read file: {}", input.display()))?;
@@ -81,10 +184,13 @@ fn main() -> AnyhowResult<()> {
             let context = compiler.compile(input.to_string_lossy().to_string(), code)?;
             
             if context.has_errors() {
-                 eprintln!("✗ Checks fehlgeschlagen mit {} Fehlern:", context.errors.len());
+                 eprintln!("✗ Checks fehlgeschlagen mit {} Fehlern:\n", context.errors.len());
                  for error in context.errors {
-                     eprintln!("  - {}", error);
+                     eprintln!("{}", error.with_suggestions());
+                     eprintln!("{}", "─".repeat(60));
                 }
+                eprintln!("\n💡 Tipp: Nutze 'velin check --autofix' für automatische Korrekturen");
+                eprintln!("📖 Hilfe: Siehe docs/guides/getting-started.md für weitere Informationen");
                 std::process::exit(1);
             }
             
@@ -99,6 +205,17 @@ fn main() -> AnyhowResult<()> {
         }
         Commands::Init { name, current_dir } => {
             init_command(name, current_dir)
+        }
+        Commands::New { name, current_dir } => {
+            // Alias für Init
+            init_command(name, current_dir)
+        }
+        Commands::Serve { input, port, host, watch } => {
+            serve_command(input.clone(), port, host.clone(), watch)
+        }
+        Commands::Run { input, port, host, watch } => {
+            // Alias für Serve
+            serve_command(input.clone(), port, host.clone(), watch)
         }
         Commands::OpenAPI { input, output } => {
             openapi_command(input, output)
@@ -321,6 +438,38 @@ fn openapi_command(input: PathBuf, output: Option<PathBuf>) -> AnyhowResult<()> 
         .with_context(|| format!("Failed to write file: {}", output_file.display()))?;
     
     println!("✓ OpenAPI Specification generiert: {}", output_file.display());
+    
+    Ok(())
+}
+
+fn serve_command(input: Option<PathBuf>, port: u16, host: String, watch: bool) -> AnyhowResult<()> {
+    let input_file = input.unwrap_or_else(|| {
+        let current_dir = std::env::current_dir().unwrap();
+        current_dir.join("main.velin")
+    });
+    
+    if !input_file.exists() {
+        return Err(anyhow::anyhow!(
+            "❌ Datei nicht gefunden: {}\n\n💡 Tipp: Erstelle zuerst ein Projekt mit 'velin new my-project'\n📖 Hilfe: Siehe docs/guides/getting-started.md",
+            input_file.display()
+        ));
+    }
+    
+    println!("🚀 Starte Development-Server...\n");
+    println!("📄 Datei: {}", input_file.display());
+    println!("🌐 Server: http://{}:{}", host, port);
+    
+    if watch {
+        println!("👀 Watch-Mode: Aktiviert (automatisches Neuladen bei Änderungen)");
+    }
+    
+    println!("\n⚠️  Hinweis: Der Server-Befehl kompiliert den Code zu Rust.");
+    println!("   Für die vollständige Ausführung benötigst du:");
+    println!("   1. Kompilierung: velin compile -i {}", input_file.display());
+    println!("   2. Rust-Build: cargo build --release");
+    println!("   3. Ausführung: cargo run --release");
+    println!("\n💡 Tipp: Nutze 'velin-hot-reload --server' für vollständigen Hot-Reload-Support");
+    println!("📖 Hilfe: Siehe docs/tools/hot-reload.md für Details");
     
     Ok(())
 }
@@ -895,33 +1044,93 @@ fn rollback_list_snapshots_command() -> AnyhowResult<()> {
 fn serialize_json_to_yaml_command(input: PathBuf, output: Option<PathBuf>) -> AnyhowResult<()> {
     println!("🔄 JSON zu YAML konvertieren\n");
     println!("  Eingabe: {}", input.display());
-    if let Some(out) = output {
-        println!("  Ausgabe: {}", out.display());
+    
+    if !input.exists() {
+        return Err(anyhow::anyhow!("Datei nicht gefunden: {}", input.display()));
     }
-    println!("  ✓ Konvertierung durchgeführt...");
+    
+    let json_content = fs::read_to_string(&input)
+        .with_context(|| format!("Fehler beim Lesen der Datei: {}", input.display()))?;
+    
+    let json_value: serde_json::Value = serde_json::from_str(&json_content)
+        .with_context(|| format!("Ungültiges JSON in Datei: {}", input.display()))?;
+    
+    let yaml_content = serde_yaml::to_string(&json_value)
+        .with_context(|| "Fehler bei YAML-Konvertierung")?;
+    
+    let output_file = output.unwrap_or_else(|| {
+        input.with_extension("yaml")
+    });
+    
+    fs::write(&output_file, yaml_content)
+        .with_context(|| format!("Fehler beim Schreiben der Datei: {}", output_file.display()))?;
+    
+    println!("  Ausgabe: {}", output_file.display());
+    println!("  ✓ Konvertierung erfolgreich!");
     Ok(())
 }
 
 fn serialize_yaml_to_json_command(input: PathBuf, output: Option<PathBuf>) -> AnyhowResult<()> {
     println!("🔄 YAML zu JSON konvertieren\n");
     println!("  Eingabe: {}", input.display());
-    if let Some(out) = output {
-        println!("  Ausgabe: {}", out.display());
+    
+    if !input.exists() {
+        return Err(anyhow::anyhow!("Datei nicht gefunden: {}", input.display()));
     }
-    println!("  ✓ Konvertierung durchgeführt...");
+    
+    let yaml_content = fs::read_to_string(&input)
+        .with_context(|| format!("Fehler beim Lesen der Datei: {}", input.display()))?;
+    
+    let yaml_value: serde_json::Value = serde_yaml::from_str(&yaml_content)
+        .with_context(|| format!("Ungültiges YAML in Datei: {}", input.display()))?;
+    
+    let json_content = serde_json::to_string_pretty(&yaml_value)
+        .with_context(|| "Fehler bei JSON-Konvertierung")?;
+    
+    let output_file = output.unwrap_or_else(|| {
+        input.with_extension("json")
+    });
+    
+    fs::write(&output_file, json_content)
+        .with_context(|| format!("Fehler beim Schreiben der Datei: {}", output_file.display()))?;
+    
+    println!("  Ausgabe: {}", output_file.display());
+    println!("  ✓ Konvertierung erfolgreich!");
     Ok(())
 }
 
 fn serialize_validate_json_command(file: PathBuf) -> AnyhowResult<()> {
     println!("✅ JSON validieren\n");
     println!("  Datei: {}", file.display());
-    println!("  ✓ JSON ist gültig...");
+    
+    if !file.exists() {
+        return Err(anyhow::anyhow!("Datei nicht gefunden: {}", file.display()));
+    }
+    
+    let json_content = fs::read_to_string(&file)
+        .with_context(|| format!("Fehler beim Lesen der Datei: {}", file.display()))?;
+    
+    let _: serde_json::Value = serde_json::from_str(&json_content)
+        .with_context(|| format!("Ungültiges JSON in Datei: {}", file.display()))?;
+    
+    println!("  ✓ JSON ist gültig!");
     Ok(())
 }
 
 fn serialize_validate_yaml_command(file: PathBuf) -> AnyhowResult<()> {
     println!("✅ YAML validieren\n");
     println!("  Datei: {}", file.display());
-    println!("  ✓ YAML ist gültig...");
+    
+    if !file.exists() {
+        return Err(anyhow::anyhow!("Datei nicht gefunden: {}", file.display()));
+    }
+    
+    let yaml_content = fs::read_to_string(&file)
+        .with_context(|| format!("Fehler beim Lesen der Datei: {}", file.display()))?;
+    
+    let _: serde_json::Value = serde_yaml::from_str(&yaml_content)
+        .with_context(|| format!("Ungültiges YAML in Datei: {}", file.display()))?;
+    
+    println!("  ✓ YAML ist gültig!");
     Ok(())
 }

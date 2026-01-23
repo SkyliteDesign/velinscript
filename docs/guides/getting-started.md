@@ -42,7 +42,11 @@ curl -sSL https://velisch.dev/install | bash
 ### 1. Projekt initialisieren
 
 ```bash
-velin-compiler init my-first-api
+# Beide Befehle funktionieren:
+velin init my-first-api
+# oder
+velin new my-first-api
+
 cd my-first-api
 ```
 
@@ -64,15 +68,27 @@ fn hello(): string {
 ### 3. Kompilieren
 
 ```bash
-velin-compiler compile -i main.velin -o main.rs
+velin compile -i main.velin -o main.rs
 ```
 
 Dies erstellt `main.rs` mit dem kompilierten Rust-Code.
 
+**Optional: Andere Ziel-Sprachen**
+
+Du kannst auch PHP oder Python Code generieren:
+
+```bash
+# Für PHP
+velin compile -i main.velin -o main.php --target php
+
+# Für Python
+velin compile -i main.velin -o main.py --target python
+```
+
 ### 4. Type Checking
 
 ```bash
-velin-compiler check -i main.velin
+velin check -i main.velin
 ```
 
 Prüft den Code auf Type-Fehler.
@@ -172,9 +188,12 @@ Siehe [examples/](../../examples/) für vollständige Beispiel-Projekte.
 
 ## Hilfe
 
-- **Language Specification:** [../language/specification.md](../language/specification.md)
-- **API Documentation:** [../api/](../api/)
-- **GitHub Issues:** Für Fragen und Bug Reports
+- **[Quick Start Guide](../../QUICK_START.md)** - 5 Minuten bis zur ersten API
+- **[API-Keys Setup](api-keys-setup.md)** - 🔑 API-Keys konfigurieren
+- **[Language Specification](../language/specification.md)** - Vollständige Sprachspezifikation
+- **[API Documentation](../api/)** - API-Referenz
+- **[Dokumentations-Übersicht](../README.md)** - Alle Dokumente
+- **[GitHub Issues](https://github.com/SkyliteDesign/velinscript/issues)** - Fragen und Bug Reports
 
 ## Häufige Probleme
 
@@ -188,12 +207,14 @@ cargo build --release
 export PATH=$PATH:$(pwd)/target/release
 ```
 
+**Hinweis:** Der Binary heißt `velin-compiler` (oder `velin-compiler.exe` auf Windows), aber der Befehl ist `velin`. Stelle sicher, dass der Binary im PATH ist oder erstelle einen Alias/Symlink.
+
 ### Type Errors
 
-Nutze `velin-compiler check` um Type-Fehler zu finden:
+Nutze `velin check` um Type-Fehler zu finden:
 
 ```bash
-velin-compiler check -i main.velin
+velin check -i main.velin
 ```
 
 ### Parsing Errors

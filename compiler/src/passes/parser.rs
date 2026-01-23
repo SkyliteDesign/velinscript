@@ -4,6 +4,7 @@ use crate::parser::parser::Parser;
 use crate::parser::ast::{Program, Item};
 use anyhow::Result;
 use std::path::Path;
+use std::collections::HashSet;
 use std::fs;
 
 pub struct ParserPass;
@@ -13,17 +14,47 @@ impl ParserPass {
         Self
     }
 
-    fn resolve_imports(&self, program: &mut Program, base_path: &Path, context: &mut CompilationContext) -> Result<()> {
-        let mut new_items = Vec::new();
+    fn resolve_imports(
+        &self, 
+        program: &Program, 
+        base_path: &Path, 
+        context: &mut CompilationContext, 
+        visited_modules: &mut HashSet<String>,
+        global_modules: &mut Vec<Item>
+    ) -> Result<()> {
         let mut modules_to_load = Vec::new();
 
         // 1. Collect all `use` statements that refer to local modules
         for item in &program.items {
             if let Item::Use(use_stmt) = item {
                 if let Some(first_segment) = use_stmt.path.first() {
+                    // SECURITY: Path-Traversal-Prüfung
+                    if first_segment.contains("..") || first_segment.contains("\\") || first_segment.starts_with("/") {
+                        context.errors.push(crate::error::CompilerError::parse_error(
+                            format!("Invalid module path: '{}'. Path traversal (../) and absolute paths are not allowed.", first_segment),
+                            crate::error::ErrorLocation::new(0, 0),
+                        ));
+                        continue;
+                    }
+                    
+                    // SECURITY: Validierung von Modulnamen (nur alphanumerisch, underscore, hyphen)
+                    if !first_segment.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
+                        context.errors.push(crate::error::CompilerError::parse_error(
+                            format!("Invalid module name: '{}'. Only alphanumeric characters, underscore, and hyphen are allowed.", first_segment),
+                            crate::error::ErrorLocation::new(0, 0),
+                        ));
+                        continue;
+                    }
+                    
                     let module_path = base_path.join(format!("{}.velin", first_segment));
                     if module_path.exists() {
                         modules_to_load.push((first_segment.clone(), module_path));
+                    } else {
+                        // SECURITY: Fehler statt Warnung bei fehlenden Modulen
+                        context.errors.push(crate::error::CompilerError::parse_error(
+                            format!("Module '{}' not found. Expected file: {}", first_segment, module_path.display()),
+                            crate::error::ErrorLocation::new(0, 0),
+                        ));
                     }
                 }
             }
@@ -31,30 +62,39 @@ impl ParserPass {
 
         // 2. Load and parse these modules
         for (mod_name, mod_path) in modules_to_load {
-            if context.source_map.contains_key(&mod_path.to_string_lossy().to_string()) {
-                continue;
-            }
+            let mod_path_str = mod_path.to_string_lossy().to_string();
 
-            let source = match fs::read_to_string(&mod_path) {
-                Ok(s) => s,
-                Err(e) => {
-                     eprintln!("Failed to read module {}: {}", mod_path.display(), e);
-                     continue;
-                }
+            // Check if already visited to prevent infinite recursion and diamonds
+            if visited_modules.contains(&mod_path_str) {
+                 continue;
+            }
+            visited_modules.insert(mod_path_str.clone());
+
+            // Get source: from context or read file
+            let source = if let Some(src) = context.source_map.get(&mod_path_str) {
+                 src.clone()
+            } else {
+                 match fs::read_to_string(&mod_path) {
+                    Ok(s) => {
+                        context.add_source(mod_path_str.clone(), s.clone());
+                        s
+                    },
+                    Err(e) => {
+                         eprintln!("Failed to read module {}: {}", mod_path.display(), e);
+                         continue;
+                    }
+                 }
             };
 
-            context.add_source(mod_path.to_string_lossy().to_string(), source.clone());
-            
             match Parser::parse(&source) {
-                Ok(mut mod_program) => {
+                Ok(mod_program) => {
                     let mod_dir = mod_path.parent().unwrap();
-                    self.resolve_imports(&mut mod_program, mod_dir, context)?;
-
-                    // Flatten imports: add all items from the module to the current program
-                    // This mimics #include behavior which seems to be what the examples expect
-                    new_items.extend(mod_program.items);
                     
-                    /*
+                    // Recurse to find more modules
+                    self.resolve_imports(&mod_program, mod_dir, context, visited_modules, global_modules)?;
+
+                    // Wrap imported items in a Module item
+                    // This enables namespacing (e.g., models.Item)
                     let mod_item = Item::Module(crate::parser::ast::Module {
                         name: mod_name.clone(),
                         items: mod_program.items,
@@ -62,10 +102,15 @@ impl ParserPass {
                         documentation: None,
                     });
                     
-                    new_items.push(mod_item);
-                    */
+                    // Add to global modules list (Flattening)
+                    global_modules.push(mod_item);
                 }
                 Err(e) => {
+                     // SECURITY: Fehler statt nur Logging
+                     context.errors.push(crate::error::CompilerError::parse_error(
+                         format!("Failed to parse module {}: {} (at line {}, column {})", mod_name, e.message, e.line, e.column),
+                         crate::error::ErrorLocation::new(e.line, e.column),
+                     ));
                      eprintln!("Failed to parse module {}: {}", mod_name, e.message);
                      eprintln!("  at line {}, column {}", e.line, e.column);
                      eprintln!("  found: {}", e.found);
@@ -76,8 +121,6 @@ impl ParserPass {
             }
         }
         
-        program.items.extend(new_items);
-
         Ok(())
     }
 }
@@ -94,7 +137,21 @@ impl Pass for ParserPass {
         match Parser::parse(&root_source) {
             Ok(mut program) => {
                 // Resolve imports
-                self.resolve_imports(&mut program, &root_path_buf, context)?;
+                let mut visited_modules = HashSet::new();
+                visited_modules.insert(context.root_file.clone()); // Mark root as visited
+                
+                let mut global_modules = Vec::new();
+                
+                self.resolve_imports(
+                    &program, 
+                    &root_path_buf, 
+                    context, 
+                    &mut visited_modules, 
+                    &mut global_modules
+                )?;
+                
+                // Add all resolved modules to the root program
+                program.items.extend(global_modules);
                 
                 context.program = Some(program);
                 Ok(())

@@ -48,7 +48,7 @@ impl EventBusStdlib {
         )
     }
 
-    pub fn generate_unsubscribe_code(subscription: &str) -> String {
+    pub fn generate_unsubscribe_code(_subscription: &str) -> String {
         format!(
             "{{
                 // In a real implementation, this would close the subscription
@@ -57,7 +57,7 @@ impl EventBusStdlib {
         )
     }
 
-    pub fn generate_get_history_code(bus: &str, topic: &str, limit: &str) -> String {
+    pub fn generate_get_history_code(_bus: &str, topic: &str, limit: &str) -> String {
         format!(
             "{{
                 let topic_str = {};

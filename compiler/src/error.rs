@@ -77,9 +77,19 @@ pub enum CompilerError {
     Internal {
         message: String,
     },
+    
+    #[error("Warning: {0}")]
+    Warning(String),
+
+    #[error("Info: {0}")]
+    Info(String),
 }
 
 pub type CompilerResult<T> = Result<T, CompilerError>;
+
+// Error Suggestions Modul
+pub mod suggestions;
+pub use suggestions::ErrorSuggestionEngine;
 
 impl CompilerError {
     pub fn parse_error(message: String, location: ErrorLocation) -> Self {
@@ -156,6 +166,16 @@ impl CompilerError {
             message,
             field,
         }
+    }
+
+    pub fn warning(message: String) -> Self {
+        CompilerError::Warning(message)
+    }
+    
+    /// Gibt eine verbesserte Fehlermeldung mit Vorschlägen zurück
+    pub fn with_suggestions(&self) -> String {
+        let engine = ErrorSuggestionEngine::new();
+        engine.enhance_error(self)
     }
 }
 

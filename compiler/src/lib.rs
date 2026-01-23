@@ -10,3 +10,6 @@ pub mod compiler;
 pub mod passes;
 pub mod cli;
 pub mod stdlib;
+pub mod ir;
+pub mod borrow;
+pub mod prompt;

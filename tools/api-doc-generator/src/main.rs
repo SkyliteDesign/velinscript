@@ -59,16 +59,15 @@ fn main() -> Result<()> {
             let content = fs::read_to_string(&input)?;
             
             // Parse JSDoc-Kommentare (für zukünftige Integration)
-            let _jsdoc_docs = jsdoc::JSDocParser::parse(&content);
+            let jsdoc_docs = jsdoc::JSDocParser::parse(&content);
             
             let program = VelinParser::parse(&content)
                 .map_err(|e| anyhow::anyhow!("Parse error: {:?}", e))?;
 
-            let spec = openapi::generate_openapi(&program, &title, &version);
+            let spec = openapi::generate_openapi(&program, &title, &version, &jsdoc_docs);
             
             // Integriere JSDoc-Kommentare in OpenAPI Spec
-            // (Dies würde die spec mit JSDoc-Informationen erweitern)
-            // TODO: _jsdoc_docs verwenden, um OpenAPI Spec zu erweitern
+            // (Dies wird nun direkt in generate_openapi erledigt)
 
             match format.as_str() {
                 "json" => {

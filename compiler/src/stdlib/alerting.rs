@@ -85,9 +85,7 @@ impl AlertingStdlib {
 
     pub fn generate_history_code(filters: &str) -> String {
         format!(
-            "{{
-                use std::fs::File;
-                use std::io::{BufRead, BufReader};
+            "{{\n                use std::fs::File;\n                use std::io::{{BufRead, BufReader}};
                 let filters: serde_json::Value = {};
                 let alert_file = std::env::var(\"ALERT_LOG_FILE\").unwrap_or_else(|_| \"alerts.log\".to_string());
                 let file = File::open(&alert_file).map_err(|e| e.to_string())?;

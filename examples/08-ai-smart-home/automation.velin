@@ -1,0 +1,51 @@
+use devices;
+
+// This function is a candidate for AI optimization to reduce energy consumption
+// while maintaining comfort. The compiler's AI pass analyzes data flow and
+// inserts optimized bytecode for the target metric.
+@Optimize(target="energy_efficiency")
+fn calculate_hvac_load(current_temp: number, target_temp: number, occupancy: boolean): number {
+    if (!occupancy) {
+        // Eco mode when empty: tolerate wider temperature range
+        let threshold: number = 3.0;
+        let diff: number = abs(current_temp - target_temp);
+        
+        if (diff < threshold) {
+            return 0.0;
+        }
+    }
+    
+    let diff: number = target_temp - current_temp;
+    // Simple proportional control (mock)
+    // The AI might optimize this curve based on historical data
+    return diff * 10.0;
+}
+
+// Helper for absolute value
+fn abs(val: number): number {
+    if (val < 0.0) { return val * -1.0; }
+    return val;
+}
+
+// Automation Flow: "Good Night" routine
+// @Flow ensures this executes transactionally - if any step fails,
+// previous steps (like locking doors) should ideally be compensated/rolled back.
+@Flow(name="good_night_routine", transactional=true)
+fn run_good_night_sequence(home_id: string): boolean {
+    // In a real implementation, this would call device APIs
+    // 1. Lock doors
+    // 2. Turn off lights
+    // 3. Set thermostat to night mode
+    // 4. Arm security system
+    
+    return true;
+}
+
+@Optimize(target="latency")
+fn process_sensor_stream(readings: List<number>): number {
+    // Mock processing of high-frequency sensor data
+    let sum: number = 0.0;
+    // The compiler loop unrolling optimization would kick in here
+    // for i in readings { sum = sum + i; }
+    return sum;
+}

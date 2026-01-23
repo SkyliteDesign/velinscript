@@ -36,6 +36,8 @@ Code Generation ist NICHT gedacht für:
 4.  [Client-Generierung](#4-client-generierung)
 5.  [Projekt-Initialisierung](#5-projekt-initialisierung)
 6.  [Templates anpassen](#6-templates-anpassen)
+7.  [System-Generierung (Neu in 3.1)](#7-system-generierung-neu-in-31)
+8.  [Multi-Target Generierung (Neu in 3.1)](#8-multi-target-generierung-neu-in-31)
 
 ---
 

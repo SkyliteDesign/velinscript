@@ -117,9 +117,11 @@ pub struct Server {
 
 pub struct OpenAPIGenerator;
 
+use crate::jsdoc::JSDocComment;
+
 impl OpenAPIGenerator {
     /// Generiert OpenAPI Spec aus VelinScript Program
-    pub fn generate(program: &Program, title: &str, version: &str) -> OpenAPISpec {
+    pub fn generate(program: &Program, title: &str, version: &str, jsdoc_docs: &HashMap<String, JSDocComment>) -> OpenAPISpec {
         let mut paths = HashMap::new();
         let mut components = Components {
             schemas: HashMap::new(),
@@ -130,7 +132,7 @@ impl OpenAPIGenerator {
         for item in &program.items {
             if let Item::Function(f) = item {
                 if let Some(endpoint) = Self::extract_endpoint(f) {
-                    let path_item = Self::create_path_item(f, &endpoint, &mut components);
+                    let path_item = Self::create_path_item(f, &endpoint, &mut components, jsdoc_docs);
                     paths.insert(endpoint.path, path_item);
                 }
             }
@@ -185,11 +187,14 @@ impl OpenAPIGenerator {
         function: &Function,
         endpoint: &EndpointInfo,
         components: &mut Components,
+        jsdoc_docs: &HashMap<String, JSDocComment>,
     ) -> PathItem {
+        let jsdoc = jsdoc_docs.get(&function.name);
+
         let mut operation = Operation {
             operation_id: Self::to_snake_case(&function.name),
             summary: Some(function.name.clone()),
-            description: None,
+            description: jsdoc.map(|d| d.description.clone()),
             parameters: Vec::new(),
             request_body: None,
             responses: HashMap::new(),
@@ -205,12 +210,14 @@ impl OpenAPIGenerator {
                 "query".to_string()
             };
 
+            let param_desc = jsdoc.and_then(|d| d.params.get(&param.name).cloned());
+
             operation.parameters.push(Parameter {
                 name: param.name.clone(),
                 location,
                 required: param.default.is_none(),
                 schema: Self::type_to_schema(&param.param_type, components),
-                description: None,
+                description: param_desc,
             });
         }
 

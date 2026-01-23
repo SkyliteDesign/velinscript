@@ -14,6 +14,7 @@ pub enum Item {
     Use(Use),
     Trait(Trait),
     Impl(Impl),
+    TopLevelCode(ExpressionStatement), // Top-level expression statements like init();
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,6 +75,7 @@ pub enum Statement {
     Match(MatchStatement),
     Throw(ThrowStatement),
     Break(BreakStatement),
+    Try(TryStatement),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -83,6 +85,20 @@ pub struct ThrowStatement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BreakStatement;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TryStatement {
+    pub try_block: Block,
+    pub catch_blocks: Vec<CatchBlock>,
+    pub finally_block: Option<Block>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CatchBlock {
+    pub error_var: Option<String>,
+    pub error_type: Option<Type>,
+    pub body: Block,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetStatement {
@@ -203,6 +219,11 @@ pub enum Expression {
     },
     FormatString {
         parts: Vec<FormatStringPart>,
+    },
+    /// LLM-Call: @llm.analyze(text)
+    LLMCall {
+        method: String, // "analyze", "summarize", "extract", etc.
+        args: Vec<Expression>,
     },
 }
 

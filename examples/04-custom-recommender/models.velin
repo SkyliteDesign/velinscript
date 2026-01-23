@@ -48,33 +48,296 @@ struct Feedback {
     itemId: string,
     feedbackType: string,      // "positive", "negative", "not_interested"
     timestamp: string,
-    comment: string,            // Optionaler Kommentar
 }
 
-// RecommendationRequest - Request-Struktur für Empfehlungen
-struct RecommendationRequest {
-    userId: string,
-    limit: number,              // Anzahl der gewünschten Empfehlungen
-    filters: Map<string, string>, // Optionale Filter (z.B. category, tags)
+// HTTP Types
+struct HttpRequest {
+    method: string,
+    path: string,
+    headers: Map<string, string>,
+    queryParams: Map<string, string>,
+    pathParams: Map<string, string>,
+    body: any,
+    remoteAddress: string,
 }
 
-// RecommendationResponse - Response-Struktur für Empfehlungen
-struct RecommendationResponse {
-    userId: string,
-    recommendations: List<Recommendation>,
-    totalCount: number,
-    generatedAt: string,
+struct HttpResponse {
+    statusCode: number,
+    body: string,
+    headers: Map<string, string>,
 }
 
-// SimilarItemsRequest - Request für ähnliche Items
-struct SimilarItemsRequest {
-    itemId: string,
-    limit: number,
+// API Response Structures
+struct ApiError {
+    code: string,
+    message: string,
+    details: Map<string, string>,
+    timestamp: string,
 }
 
-// SimilarItemsResponse - Response für ähnliche Items
-struct SimilarItemsResponse {
-    itemId: string,
-    similarItems: List<Item>,
-    totalCount: number,
+struct ResponseMetadata {
+    requestId: string,
+    timestamp: string,
+    processingTime: number,
+    version: string,
+    cacheHit: boolean,
+}
+
+struct ApiResponse<T> {
+    success: boolean,
+    data: T,
+    error: ApiError,
+    metadata: ResponseMetadata,
+}
+
+// Health Response
+struct ServiceStatus {
+    status: string,
+    responseTime: number,
+    lastCheck: string,
+}
+
+struct ServiceHealth {
+    database: ServiceStatus,
+    vectorDB: ServiceStatus,
+    llm: ServiceStatus,
+    cache: ServiceStatus,
+}
+
+
+fn createHttpRequest(
+    method: string,
+    urlPath: string,
+    headers: Map<string, string>,
+    queryParams: Map<string, string>,
+    pathParams: Map<string, string>,
+    body: any,
+    remoteAddress: string
+): any {
+    return HttpRequest {
+        method: method,
+        path: urlPath,
+        headers: headers,
+        queryParams: queryParams,
+        pathParams: pathParams,
+        body: body,
+        remoteAddress: remoteAddress,
+    };
+}
+
+fn createHttpResponse(
+    statusCode: number,
+    body: string,
+    headers: Map<string, string>
+): any {
+    return HttpResponse {
+        statusCode: statusCode,
+        body: body,
+        headers: headers,
+    };
+}
+
+fn createVectorDB(provider: any, connectionString: string): any {
+    return VectorDB {
+        provider: provider,
+        connectionString: connectionString,
+    };
+}
+
+fn createLLMClient(provider: any, apiKey: string, model: string): any {
+    return LLMClient {
+        provider: provider,
+        apiKey: apiKey,
+        model: model,
+    };
+}
+
+// Factory functions to workaround parser limitations with qualified struct literals
+
+fn createRecommendation(itemId: string, score: number, reason: string, method: string, item: any): any {
+    return Recommendation {
+        itemId: itemId,
+        score: score,
+        reason: reason,
+        method: method,
+        item: item,
+    };
+}
+
+fn createApiError(code: string, message: string, details: Map<string, string>, timestamp: string): any {
+    return ApiError {
+        code: code,
+        message: message,
+        details: details,
+        timestamp: timestamp,
+    };
+}
+
+fn createResponseMetadata(requestId: string, timestamp: string, processingTime: number, version: string, cacheHit: boolean): any {
+    return ResponseMetadata {
+        requestId: requestId,
+        timestamp: timestamp,
+        processingTime: processingTime,
+        version: version,
+        cacheHit: cacheHit,
+    };
+}
+
+fn createApiResponse(success: boolean, data: any, error: any, metadata: any): any {
+    return ApiResponse<any> {
+        success: success,
+        data: data,
+        error: error,
+        metadata: metadata,
+    };
+}
+
+// Helper for boolean checks on any types
+fn isNotNull(val: any): boolean {
+    // Basic null check
+    // In strict mode, direct comparison might be tricky, but this is the standard way
+    let isNull = false;
+    if (val == null) {
+        isNull = true;
+    }
+    return !isNull; 
+}
+
+fn isTrue(val: any): boolean {
+    let isTrueVal = false;
+    if (val == true) {
+        isTrueVal = true;
+    }
+    return isTrueVal;
+}
+
+// Helper to safely cast any to string to avoid void errors
+fn anyToString(val: any): string {
+    // If val is void/null, return empty string
+    if (isNotNull(val)) {
+        // Direct cast might fail if val is not string, but here we assume it is
+        let s: string = val;
+        return s;
+    }
+    return "";
+}
+
+struct HealthResponse {
+    status: string,
+    version: string,
+    uptime: number,
+    services: ServiceHealth,
+    timestamp: string,
+}
+
+// Metrics Response
+struct RequestMetrics {
+    total: number,
+    successful: number,
+    failed: number,
+    averageResponseTime: number,
+    requestsPerMinute: number,
+}
+
+struct ErrorEntry {
+    code: string,
+    message: string,
+    timestamp: string,
+    endpoint: string,
+}
+
+struct ErrorMetrics {
+    total: number,
+    byCode: Map<string, number>,
+    recentErrors: List<ErrorEntry>,
+}
+
+struct PerformanceMetrics {
+    averageProcessingTime: number,
+    p95ProcessingTime: number,
+    p99ProcessingTime: number,
+    memoryUsage: number,
+    cpuUsage: number,
+}
+
+struct CacheMetrics {
+    hits: number,
+    misses: number,
+    hitRate: number,
+    totalEntries: number,
+    memoryUsage: number,
+}
+
+struct MetricsResponse {
+    requests: RequestMetrics,
+    errors: ErrorMetrics,
+    performance: PerformanceMetrics,
+    cache: CacheMetrics,
+    timestamp: string,
+}
+
+// Ready Response
+struct ReadyResponse {
+    ready: boolean,
+    services: List<ServiceStatus>,
+    timestamp: string,
+}
+
+// Vector DB Types
+enum VectorDBProvider {
+    Local,
+    Pinecone,
+    Milvus,
+    Qdrant,
+}
+
+enum LLMProvider {
+    OpenAI,
+    Anthropic,
+    Gemini,
+    Local,
+}
+
+struct VectorDB {
+    provider: string,
+    connectionString: string,
+}
+
+struct LLMClient {
+    provider: string,
+    apiKey: string,
+    model: string,
+}
+
+// DbResult - Einfaches Result-Objekt für Datenbank-Operationen
+struct DbResult {
+    success: boolean,
+    data: any,
+    error: string,
+}
+
+// Helper functions for Map creation
+fn createEmptyMapStringString(): Map<string, string> {
+    return Map<string, string>();
+}
+
+fn createEmptyMapStringAny(): Map<string, any> {
+    return Map<string, any>();
+}
+
+fn createEmptyMapStringNumber(): Map<string, number> {
+    return Map<string, number>();
+}
+
+fn createDbResult(success: boolean, data: any, error: string): any {
+    return DbResult {
+        success: success,
+        data: data,
+        error: error,
+    };
+}
+
+// Helper um Zahlen in Strings zu konvertieren (Workaround)
+fn numberToString(n: number): string {
+    return "{{n}}";
 }

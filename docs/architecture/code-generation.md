@@ -1,13 +1,30 @@
 # Code-Generierung in VelinScript
 
-**Version:** 2.5.0  
+**Version:** 3.1.0  
 **Status:** ✅ Vollständig implementiert
 
 ---
 
 ## Übersicht
 
-VelinScript bietet umfangreiche Code-Generierung, die Entwicklern hilft, Boilerplate-Code zu vermeiden und schnell produktive APIs zu erstellen.
+VelinScript bietet umfangreiche Code-Generierung für **8 Zielsprachen** (Rust, PHP, Python, TypeScript, JavaScript, Go, Java, C#), die Entwicklern hilft, Boilerplate-Code zu vermeiden und schnell produktive APIs zu erstellen.
+
+## Multi-Target Generierung
+
+Der Compiler kann Code für verschiedene Zielplattformen und Frameworks generieren:
+
+| Sprache | Frameworks | Besonderheiten | Status |
+|---------|------------|----------------|--------|
+| **Rust** | Axum, Actix | Async-first, High Performance | ✅ |
+| **PHP** | Laravel, Symfony | Controller-Klassen, PSR-Standards | ✅ |
+| **Python** | FastAPI, Flask | Pydantic Models, Type Hints | ✅ |
+| **TypeScript** | Express, NestJS | Interfaces, Generics, Type Safety | ✅ |
+| **JavaScript** | Express, Node.js | ES Modules, Async/Await | ✅ |
+| **Go** | Gin, Echo | Goroutines, Error Handling | ✅ |
+| **Java** | Spring Boot | POJOs, Lombok Support | ✅ |
+| **C#** | ASP.NET Core | File-Scoped Namespaces, PascalCase | ✅ |
+
+**Siehe:** [Multi-Target Compilation Dokumentation](./multi-target-compilation.md) für Details zu allen Targets.
 
 ## Boilerplate Generator
 
@@ -152,5 +169,11 @@ velin open-api -i main.velin -o api.json
 
 ---
 
+## Beispiele
+
+**Siehe:** [Multi-Target Compilation Beispiele](../examples/multi-target-examples.md) für detaillierte Beispiele aller Targets.
+
+---
+
 **Letzte Aktualisierung:** 2026-01-30  
-**Version:** 2.5.0
+**Version:** 3.1.0

@@ -146,6 +146,10 @@
         },
         {
           "name": "entity.name.tag.decorator.velin",
+          "match": "@(Express|NestJS|Spring|AspNet|Laravel|Symfony|Flask|FastAPI|Optimize)"
+        },
+        {
+          "name": "entity.name.tag.decorator.velin",
           "match": "@(Auth|Secure|Role|RateLimit|Validate|Cache|Test|Flow|VelinAutoDoc|VelinPipeline|VelinAutoTest|VelinInsight)"
         },
         {

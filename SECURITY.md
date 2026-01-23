@@ -5,8 +5,10 @@ VelinScript (Velisch) befindet sich in aktiver Entwicklung. Sicherheitsrelevante
 
 | Version | Status |
 |--------|--------|
-| 2.7    | Aktiv unterstützt |
-| < 2.7  | Keine Sicherheitsupdates |
+| 3.1.0  | ✅ Aktiv unterstützt (Aktuell) |
+| 3.0.x  | ✅ Aktiv unterstützt |
+| 2.7    | ⚠️ Legacy (Sicherheitsupdates) |
+| < 2.7  | ❌ Keine Sicherheitsupdates |
 ---
 
 ## Reporting a Vulnerability

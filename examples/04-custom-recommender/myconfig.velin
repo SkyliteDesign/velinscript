@@ -1,0 +1,7 @@
+struct Config {
+    port: number,
+}
+
+fn getConfig(): Config {
+    return Config { port: 8080 };
+}

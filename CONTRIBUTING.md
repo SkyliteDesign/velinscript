@@ -2,9 +2,9 @@
 
 Vielen Dank für dein Interesse an VelinScript! Wir freuen uns über Contributions.
 
-**Aktuelle Version**: 2.5.0
+**Aktuelle Version**: 3.1.0
 
-**Neu in Version 2.5**: 
+**Neu in Version 3.1.0**: 
 - 13 neue Standard Library Module (string, math, date, fs, llm, embedding, agent, process, sandbox, websocket, utils, log, config, flow)
 - VelinAutoDoc für automatische Dokumentationsgenerierung
 - VelinPipeline für automatische Performance-Optimierung

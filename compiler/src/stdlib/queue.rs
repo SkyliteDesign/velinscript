@@ -33,11 +33,11 @@ impl QueueStdlib {
         format!("{}.is_empty()", queue)
     }
 
-    pub fn generate_is_full_code(queue: &str) -> String {
+    pub fn generate_is_full_code(_queue: &str) -> String {
         format!("false") // VecDeque has no capacity limit by default
     }
 
-    pub fn generate_priority_create_code(compare: &str) -> String {
+    pub fn generate_priority_create_code(_compare: &str) -> String {
         format!(
             "{{
                 use std::cmp::Reverse;

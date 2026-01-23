@@ -15,185 +15,103 @@ pub fn find_references(
     let program = document.program.as_ref()?;
     
     // Find symbol at position
-    let symbol_name = find_symbol_at_position(&program, position)?;
+    let symbol_name = get_word_at_position(&document.text, position)?;
     
     // Find all references to this symbol
     let mut references = Vec::new();
     let uri_url = tower_lsp::lsp_types::Url::parse(&uri).ok()?;
-    // Use symbol_name and uri - both are used in find_references_in_program
-    find_references_in_program(&program, &symbol_name, &uri_url, &mut references);
+    
+    find_references_in_program(&program, &symbol_name, &uri_url, &mut references, &document.text);
     
     Some(references)
 }
 
-/// Findet Symbol an gegebener Position
-/// 
-/// **Status**: Benötigt Position-Tracking im AST
-/// 
-/// In zukünftigen Versionen wird dies:
-/// - Position-Informationen im AST speichern
-/// - Symbol an exakter Position identifizieren
-/// - Scope-Auflösung für korrekte Symbol-Identifikation
-fn find_symbol_at_position(_program: &Program, _position: Position) -> Option<String> {
-    // TODO: Implementiere Position-Tracking im AST
-    // - Erweitere AST-Nodes um Position-Informationen
-    // - Identifiziere Symbol an gegebener Position
-    // - Berücksichtige Scope für korrekte Auflösung
-    None
+
+// Helper to find word at position from text
+fn get_word_at_position(text: &str, position: Position) -> Option<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    if position.line as usize >= lines.len() {
+        return None;
+    }
+    
+    let line = lines[position.line as usize];
+    let col = position.character as usize;
+    if col >= line.len() {
+        return None;
+    }
+    
+    // Find start of word
+    let mut start = col;
+    let chars: Vec<char> = line.chars().collect();
+    while start > 0 && is_word_char(chars[start - 1]) {
+        start -= 1;
+    }
+    
+    // Find end of word
+    let mut end = col;
+    while end < chars.len() && is_word_char(chars[end]) {
+        end += 1;
+    }
+    
+    if start < end {
+        Some(line[start..end].to_string())
+    } else {
+        None
+    }
+}
+
+fn is_word_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
 }
 
 fn find_references_in_program(
-    program: &Program,
+    _program: &Program,
     symbol: &str,
     uri: &Url,
     references: &mut Vec<Location>,
+    document_text: &str,
 ) {
-    // Find all references to the symbol
-    for item in &program.items {
-        find_references_in_item(item, symbol, uri, references);
-    }
-}
-
-fn find_references_in_item(
-    item: &Item,
-    symbol: &str,
-    uri: &Url,
-    references: &mut Vec<Location>,
-) {
-    match item {
-        Item::Function(f) => {
-            if f.name == symbol {
-                // This is a definition, not a reference
-            }
-            find_references_in_block(&f.body, symbol, uri, references);
-        }
-        Item::Struct(s) => {
-            if s.name == symbol {
-                // This is a definition
-            }
-            for field in &s.fields {
-                if field.name == symbol {
-                    // Field definition
-                }
-            }
-        }
-        Item::Enum(e) => {
-            if e.name == symbol {
-                // This is a definition
-            }
-        }
-        Item::Trait(t) => {
-            if t.name == symbol {
-                // This is a definition
-            }
-        }
-        Item::Impl(i) => {
-            if i.trait_name == symbol {
-                // Trait reference
-            }
-        }
-        _ => {}
-    }
-}
-
-fn find_references_in_block(
-    block: &Block,
-    symbol: &str,
-    uri: &Url,
-    references: &mut Vec<Location>,
-) {
-    for statement in &block.statements {
-        find_references_in_statement(statement, symbol, uri, references);
-    }
-}
-
-fn find_references_in_statement(
-    statement: &Statement,
-    symbol: &str,
-    uri: &Url,
-    references: &mut Vec<Location>,
-) {
-    match statement {
-        Statement::Let(let_stmt) => {
-            if let Expression::Identifier(name) = &let_stmt.value {
-                if name == symbol {
-                }
-            }
-        }
-        Statement::Return(ret_stmt) => {
-            if let Some(ref value) = ret_stmt.value {
-                find_references_in_expression(value, symbol, uri, references);
-            }
-        }
-        Statement::Expression(expr_stmt) => {
-            find_references_in_expression(&expr_stmt.expression, symbol, uri, references);
-        }
-        Statement::If(if_stmt) => {
-            find_references_in_expression(&if_stmt.condition, symbol, uri, references);
-            find_references_in_block(&if_stmt.then_block, symbol, uri, references);
-            if let Some(ref else_block) = if_stmt.else_block {
-                find_references_in_block(else_block, symbol, uri, references);
-            }
-        }
-        Statement::For(for_stmt) => {
-            find_references_in_expression(&for_stmt.iterable, symbol, uri, references);
-            find_references_in_block(&for_stmt.body, symbol, uri, references);
-        }
-        Statement::While(while_stmt) => {
-            find_references_in_expression(&while_stmt.condition, symbol, uri, references);
-            find_references_in_block(&while_stmt.body, symbol, uri, references);
-        }
-        Statement::Match(match_stmt) => {
-            find_references_in_expression(&match_stmt.expression, symbol, uri, references);
-            for arm in &match_stmt.arms {
-                find_references_in_block(&arm.body, symbol, uri, references);
-            }
-        }
-        Statement::Throw(throw_stmt) => {
-            find_references_in_expression(&throw_stmt.expression, symbol, uri, references);
-        }
-        Statement::Break(_) => {
-        }
-    }
-}
-
-fn find_references_in_expression(
-    expr: &Expression,
-    symbol: &str,
-    uri: &Url,
-    references: &mut Vec<Location>,
-) {
-    match expr {
-        Expression::Identifier(name) => {
-            if name == symbol {
-                // TODO: Position-Tracking für exakte Referenz-Position
-                // Aktuell wird Position (0,0) verwendet als Placeholder
-                // In zukünftigen Versionen wird die exakte Position aus dem AST verwendet
+    // Naive approach: Search for the symbol in the text directly
+    // This is a temporary "real logic" replacement for the AST-based tracking
+    // until the AST supports span information.
+    
+    for (line_idx, line) in document_text.lines().enumerate() {
+        let mut start_idx = 0;
+        while let Some(idx) = line[start_idx..].find(symbol) {
+            let actual_idx = start_idx + idx;
+            
+            // Check if it's a whole word
+            let char_before = if actual_idx > 0 {
+                line.chars().nth(actual_idx - 1)
+            } else {
+                None
+            };
+            
+            let char_after = line.chars().nth(actual_idx + symbol.len());
+            
+            let is_start_word = char_before.map_or(true, |c| !is_word_char(c));
+            let is_end_word = char_after.map_or(true, |c| !is_word_char(c));
+            
+            if is_start_word && is_end_word {
                 references.push(Location {
                     uri: uri.clone(),
                     range: Range {
-                        start: Position { line: 0, character: 0 },
-                        end: Position { line: 0, character: 0 },
+                        start: Position {
+                            line: line_idx as u32,
+                            character: actual_idx as u32,
+                        },
+                        end: Position {
+                            line: line_idx as u32,
+                            character: (actual_idx + symbol.len()) as u32,
+                        },
                     },
                 });
             }
+            
+            start_idx = actual_idx + symbol.len();
         }
-        Expression::Call { callee, args } => {
-            find_references_in_expression(callee, symbol, uri, references);
-            for arg in args {
-                find_references_in_expression(arg, symbol, uri, references);
-            }
-        }
-        Expression::Member { object, .. } => {
-            find_references_in_expression(object, symbol, uri, references);
-        }
-        Expression::BinaryOp { left, right, .. } => {
-            find_references_in_expression(left, symbol, uri, references);
-            find_references_in_expression(right, symbol, uri, references);
-        }
-        Expression::UnaryOp { expr, .. } => {
-            find_references_in_expression(expr, symbol, uri, references);
-        }
-        _ => {}
     }
 }
+
+
+

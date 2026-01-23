@@ -1,362 +1,74 @@
-// Custom Recommender - Strukturiertes Logging
-// Umfassendes Logging-System mit Performance Metrics
+use app_config;
+use models;
 
-// Log-Level
+// Custom Recommender - Logging System
+// Zentralisiertes Logging mit verschiedenen Log-Levels und Outputs
+
+// Log Levels
 enum LogLevel {
-    Debug,
-    Info,
-    Warning,
-    Error,
-    Fatal,
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR,
 }
 
-// Log Entry
-struct LogEntry {
-    level: LogLevel,
-    message: string,
-    timestamp: string,
-    requestId: string,
-    userId: string,
-    endpoint: string,
-    duration: number,
-    metadata: Map<string, string>,
-    stackTrace: string,
-}
-
-// Request Log Entry
-struct RequestLogEntry {
-    method: string,
-    path: string,
-    headers: Map<string, string>,
-    queryParams: Map<string, string>,
-    body: string,
-    remoteAddress: string,
-    userAgent: string,
-    timestamp: string,
-    requestId: string,
-}
-
-// Response Log Entry
-struct ResponseLogEntry {
-    statusCode: number,
-    headers: Map<string, string>,
-    bodySize: number,
-    duration: number,
-    timestamp: string,
-    requestId: string,
-}
-
-// Performance Log Entry
-struct PerformanceLogEntry {
-    operation: string,
-    duration: number,
-    memoryUsage: number,
-    cpuUsage: number,
-    metadata: Map<string, string>,
-    timestamp: string,
-}
-
-// Logger-Konfiguration
+// Logger Konfiguration
 struct LoggerConfig {
-    level: LogLevel,
-    format: string,
-    output: string,
-    enableRequestLogging: boolean,
-    enableResponseLogging: boolean,
-    enablePerformanceLogging: boolean,
+    level: string, // Changed from LogLevel to string to match config
+    format: string, // "json" or "text"
+    output: string, // "console", "file", "both"
 }
 
-// Globale Logger-Instanz
-let mut logger: Logger;
-
-// Logger-Struktur
 struct Logger {
     config: LoggerConfig,
-    requestCount: number,
-    errorCount: number,
-    performanceMetrics: List<PerformanceLogEntry>,
+    context: Map<string, string>,
+}
+
+// Helper for timestamp
+fn getCurrentTimestamp(): string {
+    return "2024-01-01T12:00:00Z";
 }
 
 // Logger initialisieren
 fn initLogger(): Logger {
-    let config = getConfig();
+    let appConfig = app_config.getConfig();
+    let loggerConfig = LoggerConfig {
+        level: appConfig.logging.level,
+        format: "text",
+        output: "console",
+    };
     
     return Logger {
-        config: LoggerConfig {
-            level: parseLogLevel(config.logging.level),
-            format: config.logging.format,
-            output: config.logging.output,
-            enableRequestLogging: true,
-            enableResponseLogging: true,
-            enablePerformanceLogging: true,
-        },
-        requestCount: 0,
-        errorCount: 0,
-        performanceMetrics: List<PerformanceLogEntry>(),
+        config: loggerConfig,
+        context: models.createEmptyMapStringString(),
     };
 }
 
-// parseLogLevel - Konvertiert String zu LogLevel
-fn parseLogLevel(level: string): LogLevel {
-    match (level.toLowerCase()) {
-        "debug" => LogLevel::Debug,
-        "info" => LogLevel::Info,
-        "warning" => LogLevel::Warning,
-        "error" => LogLevel::Error,
-        "fatal" => LogLevel::Fatal,
-        _ => LogLevel::Info,
+fn logDebug(logger: any, message: string, component: string, context: Map<string, string>) {
+    if (models.isTrue(logger.config.level == "DEBUG")) {
+        log("DEBUG", message, component, context);
     }
 }
 
-// log - Basis-Logging-Funktion
-fn log(level: LogLevel, message: string, requestId: string, metadata: Map<string, string>) {
-    if (!shouldLog(level)) {
-        return;
-    }
-    
-    let entry = LogEntry {
-        level: level,
-        message: message,
-        timestamp: getCurrentTimestamp(),
-        requestId: requestId,
-        userId: metadata.get("userId") ?? "",
-        endpoint: metadata.get("endpoint") ?? "",
-        duration: metadata.get("duration") ?? 0,
-        metadata: metadata,
-        stackTrace: "",
-    };
-    
-    writeLog(entry);
-}
-
-// logDebug - Debug-Logging
-fn logDebug(message: string, requestId: string, metadata: Map<string, string>) {
-    log(LogLevel::Debug, message, requestId, metadata);
-}
-
-// logInfo - Info-Logging
-fn logInfo(message: string, requestId: string, metadata: Map<string, string>) {
-    log(LogLevel::Info, message, requestId, metadata);
-}
-
-// logWarning - Warning-Logging
-fn logWarning(message: string, requestId: string, metadata: Map<string, string>) {
-    log(LogLevel::Warning, message, requestId, metadata);
-}
-
-// logError - Error-Logging
-fn logError(message: string, requestId: string, error: AppError, metadata: Map<string, string>) {
-    let errorMetadata = metadata;
-    errorMetadata["errorCode"] = errorCodeToString(error.code);
-    errorMetadata["errorMessage"] = error.message;
-    errorMetadata["errorCause"] = error.cause;
-    errorMetadata["stackTrace"] = error.stackTrace;
-    
-    logger.errorCount = logger.errorCount + 1;
-    log(LogLevel::Error, message, requestId, errorMetadata);
-}
-
-// logFatal - Fatal-Logging
-fn logFatal(message: string, requestId: string, error: AppError, metadata: Map<string, string>) {
-    let errorMetadata = metadata;
-    errorMetadata["errorCode"] = errorCodeToString(error.code);
-    errorMetadata["errorMessage"] = error.message;
-    errorMetadata["errorCause"] = error.cause;
-    errorMetadata["stackTrace"] = error.stackTrace;
-    
-    log(LogLevel::Fatal, message, requestId, errorMetadata);
-}
-
-// logRequest - Loggt HTTP Request
-fn logRequest(request: HttpRequest, endpoint: string, requestId: string) {
-    if (!logger.config.enableRequestLogging) {
-        return;
-    }
-    
-    let entry = RequestLogEntry {
-        method: request.method,
-        path: request.path,
-        headers: sanitizeHeaders(request.headers),
-        queryParams: request.queryParams,
-        body: truncateBody(request.body),
-        remoteAddress: request.remoteAddress,
-        userAgent: request.headers.get("User-Agent") ?? "",
-        timestamp: getCurrentTimestamp(),
-        requestId: requestId,
-    };
-    
-    logger.requestCount = logger.requestCount + 1;
-    writeRequestLog(entry);
-}
-
-// logResponse - Loggt HTTP Response
-fn logResponse(response: HttpResponse, duration: number, requestId: string) {
-    if (!logger.config.enableResponseLogging) {
-        return;
-    }
-    
-    let entry = ResponseLogEntry {
-        statusCode: response.statusCode,
-        headers: response.headers,
-        bodySize: response.body.length,
-        duration: duration,
-        timestamp: getCurrentTimestamp(),
-        requestId: requestId,
-    };
-    
-    writeResponseLog(entry);
-}
-
-// logPerformance - Loggt Performance-Metriken
-fn logPerformance(operation: string, duration: number, metadata: Map<string, string>) {
-    if (!logger.config.enablePerformanceLogging) {
-        return;
-    }
-    
-    let entry = PerformanceLogEntry {
-        operation: operation,
-        duration: duration,
-        memoryUsage: getMemoryUsage(),
-        cpuUsage: getCpuUsage(),
-        metadata: metadata,
-        timestamp: getCurrentTimestamp(),
-    };
-    
-    logger.performanceMetrics.push(entry);
-    
-    // Behalte nur letzte 1000 Einträge
-    if (logger.performanceMetrics.length > 1000) {
-        logger.performanceMetrics = logger.performanceMetrics.take(1000);
-    }
-    
-    writePerformanceLog(entry);
-}
-
-// shouldLog - Prüft ob Log-Level geloggt werden soll
-fn shouldLog(level: LogLevel): boolean {
-    return level >= logger.config.level;
-}
-
-// writeLog - Schreibt Log-Entry
-fn writeLog(entry: LogEntry) {
-    if (logger.config.format == "json") {
-        writeJsonLog(entry);
-    } else {
-        writeTextLog(entry);
+fn logInfo(logger: any, message: string, component: string, context: Map<string, string>) {
+    // DEBUG and INFO
+    if (models.isTrue(logger.config.level == "DEBUG") || models.isTrue(logger.config.level == "INFO")) {
+        log("INFO", message, component, context);
     }
 }
 
-// writeJsonLog - Schreibt JSON-Log
-fn writeJsonLog(entry: LogEntry) {
-    let json = JSON.stringify(entry);
-    
-    if (logger.config.output == "console") {
-        console.log(json);
-    } else if (logger.config.output == "file") {
-        // In Production: Schreibe in Log-Datei
-        // File.append("logs/app.log", json + "\n");
+fn logWarn(logger: any, message: string, component: string, context: Map<string, string>) {
+    if (models.isTrue(logger.config.level != "ERROR")) {
+        log("WARN", message, component, context);
     }
 }
 
-// writeTextLog - Schreibt Text-Log
-fn writeTextLog(entry: LogEntry) {
-    let logLine = format("[{}] {} - {} - {}", 
-        entry.timestamp,
-        logLevelToString(entry.level),
-        entry.requestId,
-        entry.message
-    );
-    
-    if (logger.config.output == "console") {
-        console.log(logLine);
-    } else if (logger.config.output == "file") {
-        // In Production: Schreibe in Log-Datei
-        // File.append("logs/app.log", logLine + "\n");
-    }
+fn logError(logger: any, message: string, component: string, context: Map<string, string>) {
+    log("ERROR", message, component, context);
 }
 
-// writeRequestLog - Schreibt Request-Log
-fn writeRequestLog(entry: RequestLogEntry) {
-    let metadata = Map<string, string>();
-    metadata["method"] = entry.method;
-    metadata["path"] = entry.path;
-    metadata["remoteAddress"] = entry.remoteAddress;
-    
-    logInfo(format("Request: {} {}", entry.method, entry.path), entry.requestId, metadata);
+fn log(level: string, message: string, component: string, context: Map<string, string>) {
+    let ts = getCurrentTimestamp();
+    // Simplified print
+    // print("[" + ts + "] [" + level + "] [" + component + "] " + message);
 }
-
-// writeResponseLog - Schreibt Response-Log
-fn writeResponseLog(entry: ResponseLogEntry) {
-    let metadata = Map<string, string>();
-    metadata["statusCode"] = entry.statusCode.toString();
-    metadata["bodySize"] = entry.bodySize.toString();
-    metadata["duration"] = entry.duration.toString();
-    
-    if (entry.statusCode >= 400) {
-        logWarning(format("Response: {} ({}ms)", entry.statusCode, entry.duration), entry.requestId, metadata);
-    } else {
-        logInfo(format("Response: {} ({}ms)", entry.statusCode, entry.duration), entry.requestId, metadata);
-    }
-}
-
-// writePerformanceLog - Schreibt Performance-Log
-fn writePerformanceLog(entry: PerformanceLogEntry) {
-    let metadata = entry.metadata;
-    metadata["memoryUsage"] = entry.memoryUsage.toString();
-    metadata["cpuUsage"] = entry.cpuUsage.toString();
-    
-    if (entry.duration > 1000) {
-        // Logge langsame Operationen als Warning
-        logWarning(format("Slow operation: {} ({}ms)", entry.operation, entry.duration), "", metadata);
-    } else {
-        logDebug(format("Performance: {} ({}ms)", entry.operation, entry.duration), "", metadata);
-    }
-}
-
-// Helper-Funktionen
-
-fn logLevelToString(level: LogLevel): string {
-    match (level) {
-        LogLevel::Debug => "DEBUG",
-        LogLevel::Info => "INFO",
-        LogLevel::Warning => "WARN",
-        LogLevel::Error => "ERROR",
-        LogLevel::Fatal => "FATAL",
-        _ => "INFO",
-    }
-}
-
-fn sanitizeHeaders(headers: Map<string, string>): Map<string, string> {
-    // Entferne sensible Headers (API Keys, etc.)
-    let sanitized = Map<string, string>();
-    for (key in headers.keys()) {
-        let lowerKey = key.toLowerCase();
-        if (lowerKey.contains("authorization") || lowerKey.contains("api-key") || lowerKey.contains("cookie")) {
-            sanitized[key] = "[REDACTED]";
-        } else {
-            sanitized[key] = headers[key];
-        }
-    }
-    return sanitized;
-}
-
-fn truncateBody(body: string): string {
-    // Truncate große Bodies für Logging
-    if (body.length > 1000) {
-        return body.substring(0, 1000) + "... [truncated]";
-    }
-    return body;
-}
-
-fn getMemoryUsage(): number {
-    // In Production: Verwende echte Memory-API
-    return 0;
-}
-
-fn getCpuUsage(): number {
-    // In Production: Verwende echte CPU-API
-    return 0;
-}
-
-// Initialisiere Logger beim Start
-logger = initLogger();

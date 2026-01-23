@@ -123,23 +123,54 @@ impl FlowManager {
     }
 }
 
-// Helper struct to inject into generated code
+// Global instance for generated code usage
+use once_cell::sync::Lazy;
+
+pub static GLOBAL_FLOW_MANAGER: Lazy<FlowManager> = Lazy::new(|| {
+    FlowManager::new("GlobalFlow")
+});
+
 pub struct FlowStdlib;
 
 impl FlowStdlib {
+    pub fn generate_start_code(name: Option<&str>) -> String {
+        if let Some(_n) = name {
+            format!(
+                "{{ 
+                    // Note: resetting name on global flow manager not fully supported in this simple binding
+                    crate::stdlib::flow::GLOBAL_FLOW_MANAGER.start(); 
+                }}"
+            )
+        } else {
+            "crate::stdlib::flow::GLOBAL_FLOW_MANAGER.start()".to_string()
+        }
+    }
+    
+    pub fn generate_checkpoint_code(step_name: &str) -> String {
+        format!(
+            "crate::stdlib::flow::GLOBAL_FLOW_MANAGER.step_success({}, 0)",
+            step_name
+        )
+    }
+    
+    pub fn generate_fail_code(step_name: &str, error: &str) -> String {
+        format!(
+            "crate::stdlib::flow::GLOBAL_FLOW_MANAGER.step_failed({}, {})",
+            step_name, error
+        )
+    }
+    
+    pub fn generate_commit_code() -> String {
+        "crate::stdlib::flow::GLOBAL_FLOW_MANAGER.commit()".to_string()
+    }
+    
     pub fn generate_flow_runtime_code() -> String {
-        // Returns the code for the FlowManager and related structs
-        // In a real compiler, this might be a separate crate, but here we inject it.
-        // Since we are compiling this file as part of the compiler, we don't return self-code.
-        // Instead, the CodeGenerator will use the `FlowManager` struct definition if we expose it via a crate,
-        // or we generate the source code directly.
-        // For this MVP, we will assume the runtime struct is available or generated.
-        
         r#"
         // --- VelinFlow Runtime ---
         use std::sync::{Arc, Mutex};
         use std::time::SystemTime;
         use std::collections::HashMap;
+        use once_cell::sync::Lazy;
 
         #[derive(Debug, Clone)]
         pub struct FlowState {
@@ -184,24 +215,51 @@ impl FlowStdlib {
             pub fn start(&self) {
                 let mut state = self.state.lock().unwrap();
                 state.status = FlowStatus::Running;
-                tracing::info!(flow_id = %state.id, flow_name = %state.name, "Flow started");
+                println!("Flow started: {} ({})", state.name, state.id);
+            }
+
+            pub fn step_success(&self, name: &str, duration_ms: u64) {
+                let mut state = self.state.lock().unwrap();
+                state.steps.push(FlowStep {
+                    name: name.to_string(),
+                    status: StepStatus::Success,
+                });
+                println!("Step succeeded: {}", name);
+            }
+
+            pub fn step_failed(&self, name: &str, error: &str) {
+                let mut state = self.state.lock().unwrap();
+                state.steps.push(FlowStep {
+                    name: name.to_string(),
+                    status: StepStatus::Failed,
+                });
+                state.status = FlowStatus::Failed;
+                println!("Step failed: {} - {}", name, error);
+                self.rollback(error);
             }
 
             pub fn commit(&self) {
                 let mut state = self.state.lock().unwrap();
                 state.status = FlowStatus::Completed;
                 let duration = state.start_time.elapsed().unwrap_or_default().as_millis();
-                tracing::info!(flow_id = %state.id, duration_ms = %duration, "Flow completed successfully");
+                println!("Flow completed successfully: {} ({}ms)", state.name, duration);
             }
 
             pub fn rollback(&self, error: &str) {
                 let mut state = self.state.lock().unwrap();
+                // Avoid double rollback
+                if state.status == FlowStatus::Compensated {
+                    return;
+                }
                 state.status = FlowStatus::Failed;
-                tracing::error!(flow_id = %state.id, error = %error, "Flow failed, initiating rollback");
-                // Compensation logic would go here
+                println!("Flow failed, initiating rollback: {} - {}", state.name, error);
                 state.status = FlowStatus::Compensated;
             }
         }
+
+        pub static GLOBAL_FLOW_MANAGER: Lazy<FlowManager> = Lazy::new(|| {
+            FlowManager::new("GlobalFlow")
+        });
         "#.to_string()
     }
 }

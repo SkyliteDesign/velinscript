@@ -7,7 +7,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "velin")]
 #[command(about = "Velisch Compiler - Eine moderne Programmiersprache für KI-APIs")]
-#[command(version = "2.7.0")]
+#[command(version = "3.1.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -36,6 +36,38 @@ pub enum Commands {
         /// Automatische Fehlerkorrektur aktivieren
         #[arg(long)]
         autofix: bool,
+        
+        /// KI-Semantik-Analyse aktivieren
+        #[arg(long)]
+        ai_semantic: bool,
+        
+        /// KI-Bug-Erkennung aktivieren
+        #[arg(long)]
+        ai_bug_detection: bool,
+        
+        /// KI-Code-Generierung aktivieren
+        #[arg(long)]
+        ai_codegen: bool,
+        
+        /// KI-Optimierung aktivieren
+        #[arg(long)]
+        ai_optimization: bool,
+        
+        /// AI Provider (openai, anthropic, gemini, local)
+        #[arg(long)]
+        ai_provider: Option<String>,
+        
+        /// AI API Key
+        #[arg(long)]
+        ai_api_key: Option<String>,
+
+        /// Ziel-Sprache (rust, php, python, etc.)
+        #[arg(long, default_value = "rust")]
+        target: String,
+
+        /// Web Framework (laravel, symfony, fastapi, flask, axum, actix)
+        #[arg(long)]
+        framework: Option<String>,
     },
     
     /// Prüft eine Velisch Datei (nur Parsing & Type Checking)
@@ -77,6 +109,54 @@ pub enum Commands {
         current_dir: bool,
     },
     
+    /// Alias für `init` - Erstellt ein neues Velisch Projekt
+    New {
+        /// Projekt-Name
+        name: Option<String>,
+        
+        /// Erstelle im aktuellen Verzeichnis
+        #[arg(long)]
+        current_dir: bool,
+    },
+    
+    /// Startet einen Development-Server (kompiliert und startet die API)
+    Serve {
+        /// Eingabe-Datei (.velin)
+        #[arg(short, long)]
+        input: Option<PathBuf>,
+        
+        /// Port (Standard: 8080)
+        #[arg(short, long, default_value = "8080")]
+        port: u16,
+        
+        /// Host (Standard: localhost)
+        #[arg(long, default_value = "localhost")]
+        host: String,
+        
+        /// Watch-Mode (automatisches Neuladen bei Änderungen)
+        #[arg(short, long)]
+        watch: bool,
+    },
+    
+    /// Alias für `serve` - Startet einen Development-Server
+    Run {
+        /// Eingabe-Datei (.velin)
+        #[arg(short, long)]
+        input: Option<PathBuf>,
+        
+        /// Port (Standard: 8080)
+        #[arg(short, long, default_value = "8080")]
+        port: u16,
+        
+        /// Host (Standard: localhost)
+        #[arg(long, default_value = "localhost")]
+        host: String,
+        
+        /// Watch-Mode (automatisches Neuladen bei Änderungen)
+        #[arg(short, long)]
+        watch: bool,
+    },
+    
     /// Generiert OpenAPI Specification
     OpenAPI {
         /// Eingabe-Datei (.velin)
@@ -107,7 +187,7 @@ pub enum Commands {
         path: Option<String>,
         
         /// OpenAPI Datei (für Client)
-        #[arg(short, long)]
+        #[arg(long)]
         openapi: Option<PathBuf>,
         
         /// Ausgabe-Sprache (für Client)

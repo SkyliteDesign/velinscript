@@ -14,6 +14,3 @@ velin-compiler = { path = "../../compiler" }
 name = "velin-lsp"
 path = "src/main.rs"
 
-[[test]]
-name = "lsp_test"
-path = "tests/lsp_test.rs"

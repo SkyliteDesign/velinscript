@@ -1,0 +1,31 @@
+// VelinScript - Structs Beispiel
+// Zeigt grundlegende Struct-Verwendung
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+    age: number,
+}
+
+@GET("/user")
+fn getUser(): User {
+    let user = User {
+        id: "123",
+        name: "John Doe",
+        email: "john@example.com",
+        age: 30,
+    };
+    
+    return user;
+}
+
+@GET("/user/:id")
+fn getUserById(id: string): User {
+    return User {
+        id: id,
+        name: "User " + id,
+        email: "user" + id + "@example.com",
+        age: 25,
+    };
+}

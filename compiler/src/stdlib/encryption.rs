@@ -78,10 +78,17 @@ impl EncryptionStdlib {
         )
     }
 
+    #[cfg(feature = "fernet")]
     pub fn generate_fernet_generate_key_code() -> String {
         format!("fernet::Fernet::generate_key().to_string()")
     }
 
+    #[cfg(not(feature = "fernet"))]
+    pub fn generate_fernet_generate_key_code() -> String {
+        format!("compile_error!(\"Fernet encryption requires the 'fernet' feature\")")
+    }
+
+    #[cfg(feature = "fernet")]
     pub fn generate_fernet_encrypt_code(data: &str, key: &str) -> String {
         format!(
             "{{
@@ -92,6 +99,12 @@ impl EncryptionStdlib {
         )
     }
 
+    #[cfg(not(feature = "fernet"))]
+    pub fn generate_fernet_encrypt_code(_data: &str, _key: &str) -> String {
+        format!("compile_error!(\"Fernet encryption requires the 'fernet' feature\")")
+    }
+
+    #[cfg(feature = "fernet")]
     pub fn generate_fernet_decrypt_code(encrypted: &str, key: &str) -> String {
         format!(
             "{{
@@ -100,6 +113,11 @@ impl EncryptionStdlib {
             }}",
             key, encrypted
         )
+    }
+
+    #[cfg(not(feature = "fernet"))]
+    pub fn generate_fernet_decrypt_code(_encrypted: &str, _key: &str) -> String {
+        format!("compile_error!(\"Fernet encryption requires the 'fernet' feature\")")
     }
 
     pub fn generate_generate_key_code(algorithm: &str) -> String {

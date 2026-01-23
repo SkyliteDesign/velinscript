@@ -25,6 +25,8 @@ Dieses Handbuch führt Sie durch alle Aspekte der Backend-Entwicklung: von der E
     *   [Caching Strategien](#caching-strategien)
     *   [Metriken sammeln](#metriken-sammeln)
 5.  [Fehlerbehandlung im API-Kontext](#5-fehlerbehandlung-im-api-kontext)
+6.  [Multi-Target Backend (Neu in 3.1)](#6-multi-target-backend)
+7.  [Automatische System-Generierung (Neu in 3.1)](#7-automatische-system-generierung)
 
 ---
 
@@ -300,6 +302,8 @@ VelinScript hilft Ihnen, Flaschenhälse zu identifizieren und zu beheben.
 
 Messen Sie granular, wie lange bestimmte Abschnitte Ihres Codes dauern.
 
+> **Neu in 3.0**: Der `ParallelizationAnalyzer` erkennt automatisch unabhängige Operationen in Ihrem Code und parallelisiert diese für maximale Performance (via Threads, Async oder GPU). Sie müssen dafür oft nichts tun, aber Sie können mit `@Optimize` Hinweise geben.
+
 ```velin
 use metrics
 
@@ -386,6 +390,68 @@ app.onError(|error, req, res| {
     });
 });
 ```
+
+---
+
+## 6. Multi-Target Backend
+
+**Neu in VelinScript 3.1**: Sie sind nicht mehr nur auf Rust als Zielplattform beschränkt. Der Compiler kann Ihren Backend-Code nun für verschiedene Ökosysteme generieren.
+
+### Unterstützte Targets
+
+Nutzen Sie das `--target` Flag beim Kompilieren:
+
+*   **Rust (Default)**: Maximale Performance, Zero-Overhead.
+*   **Node.js / TypeScript**: Generiert Express oder NestJS Code. Ideal für bestehende JS-Teams.
+*   **Python**: Generiert FastAPI oder Flask Code. Perfekt für KI/ML-Integration.
+*   **PHP**: Generiert Laravel oder Symfony Code.
+*   **Java**: Generiert Spring Boot Code.
+*   **C#**: Generiert ASP.NET Core Code.
+
+### Framework-Integration
+
+VelinScript nutzt intelligente Decorators, um Framework-spezifischen Code zu erzeugen:
+
+```velin
+@Controller("/users")
+@Spring // Erzwingt Spring Boot Annotationen
+@NestJS // Erzwingt NestJS Annotationen
+struct UserController { ... }
+```
+
+Wenn kein Framework spezifiziert ist, wählt VelinScript den besten Standard für das gewählte Target (z.B. FastAPI für Python).
+
+---
+
+## 7. Automatische System-Generierung
+
+**Neu in VelinScript 3.1**: Schreiben Sie keinen Boilerplate-Code mehr. Der **SystemGenerator** analysiert Ihre High-Level-Anforderungen und baut das komplette Backend für Sie.
+
+### Wie es funktioniert
+
+1.  Definieren Sie nur die Datentypen und grobe API-Struktur.
+2.  Nutzen Sie `@Generate(api=true)` an Ihren Haupt-Structs.
+3.  Der Compiler generiert:
+    *   **Routing**: Alle Endpunkte für CRUD-Operationen.
+    *   **Handler**: Implementierung der Logik mit Datenbankzugriff.
+    *   **Auth**: Login/Register Endpunkte mit JWT.
+    *   **Deployment**: Dockerfile und Kubernetes Manifests.
+
+### Beispiel
+
+```velin
+@Generate(api=true)
+@Entity(table: "smarthome_devices")
+struct Device {
+    @Id id: string,
+    name: string,
+    type: DeviceType
+}
+```
+
+Das Ergebnis ist ein voll funktionsfähiger REST-Server mit Datenbankanbindung, Authentifizierung und Dokumentation.
+
+**Siehe auch:** [System-Generierung Dokumentation](../architecture/system-generation.md)
 
 ---
 

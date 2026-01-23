@@ -1,0 +1,5 @@
+@Express
+@GET("/api/${1:resource}")
+fn get${1:Resource}(): List<${2:Type}> {
+    return [];
+}

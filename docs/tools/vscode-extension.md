@@ -1,6 +1,6 @@
 # VS Code Extension für VelinScript
 
-**Version:** 2.5.0  
+**Version:** 3.1.0  
 **Status:** ✅ Vollständig implementiert
 
 ---
@@ -13,6 +13,7 @@ Die VS Code Extension bietet vollständige IDE-Unterstützung für VelinScript m
 
 Die VS Code Extension ist ideal für:
 - ✅ **Vollständige IDE-Erfahrung** - All-in-One-Lösung für VelinScript-Entwicklung
+- ✅ **Multi-Target Support** - Entwicklung für Rust, TypeScript, Python, PHP, Java, C#
 - ✅ **Syntax-Highlighting** - Farbige Syntax-Hervorhebung für bessere Lesbarkeit
 - ✅ **IntelliSense** - Auto-Completion, Hover-Info, Go-to-Definition
 - ✅ **Debugging** - Integrierter Debugger mit Breakpoints
@@ -29,13 +30,22 @@ Die VS Code Extension ist NICHT gedacht für:
 
 ## Features
 
+### Multi-Target Support (Neu in 3.1)
+
+**Status:** ✅ Vollständig implementiert
+
+Die Extension unterstützt nun die Entwicklung für verschiedene Zielsprachen:
+- **Framework Detection**: Automatische Erkennung des verwendeten Frameworks (z.B. Laravel, FastAPI, Spring)
+- **Target Configuration**: Einstellung des Targets via `velin.config.json` oder VS Code Settings
+- **Syntax Highlighting**: Erweiterte Unterstützung für Framework-spezifische Decorators (`@NestJS`, `@Spring`, `@AspNet`)
+
 ### Syntax-Highlighting
 
 **Status:** ✅ Vollständig implementiert
 
 Unterstützt alle VelinScript-Features:
 - Keywords (fn, let, return, etc.)
-- Decorators (@GET, @POST, @Auth, @Flow, @VelinAutoDoc, etc.)
+- Decorators (@GET, @POST, @Auth, @Flow, @VelinAutoDoc, @Express, @Spring, etc.)
 - Types (string, number, boolean, List, Result, etc.)
 - String Interpolation
 - Doc-Comments (`///`)
@@ -53,6 +63,9 @@ Unterstützt alle VelinScript-Features:
 3. **velin-autotest** - Template für `@VelinAutoTest`
 4. **velin-pipeline** - Template für `@VelinPipeline` Module
 5. **velin-insight** - Template für `@VelinInsight` Module
+6. **ts-express** - TypeScript Express Endpoint
+7. **java-spring** - Java Spring Controller
+8. **csharp-aspnet** - C# ASP.NET Controller
 
 **Datei:** `tools/vscode-extension/snippets/velin.json`
 

@@ -46,7 +46,7 @@ impl HttpRequest {
         self.headers.insert("Content-Type".to_string(), content_type.to_string());
     }
     
-    pub fn set_status(&mut self, status: u16) {
+    pub fn set_status(&mut self, _status: u16) {
         // This method seems to be misplaced on HttpRequest, usually status is for Response
         // But keeping it as it was in the original file snippet I saw (implied)
         // Wait, looking at previous read, set_status was there.

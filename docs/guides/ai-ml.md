@@ -49,6 +49,33 @@ Konfiguration (in `velin.config.json`):
 
 ## 2. LLM Integration (`llm` Modul)
 
+### Kompakte Syntax (Neu in 3.0.1)
+
+VelinScript 3.0.1 führt eine kompakte Syntax für LLM-Calls ein, die 90%+ Token-Ersparnis bietet:
+
+```velin
+// Kompakte LLM-Syntax (5–10 Tokens)
+let result     = await @llm.analyze(text);
+let summary    = await @llm.summarize(long_text);
+let sentiment  = await @llm.sentiment(comment);
+let translated = await @llm.translate(text, "en");
+let extracted  = await @llm.extract(text, "email addresses");
+let evaluation = await @llm.evaluate(review_text);
+
+```
+
+**Vorteile:**
+- 90-95% Token-Ersparnis
+- Automatische Prompt-Optimierung
+- System-Prompt-Caching
+- Einfache, lesbare Syntax
+
+**Siehe:** [Prompt Optimizer Dokumentation](../architecture/prompt-optimizer.md)
+
+---
+
+### Klassische Syntax (Legacy)
+
 ### Textgenerierung und Prompting
 
 Die einfachste Form der Interaktion ist die Generierung von Text basierend auf einem Prompt.

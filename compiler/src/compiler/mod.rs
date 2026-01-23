@@ -3,6 +3,7 @@ pub mod context;
 pub mod error;
 pub mod pass;
 pub mod language;
+pub mod orchestrator;
 
 use crate::compiler::config::CompilerConfig;
 use crate::compiler::context::CompilationContext;
@@ -11,6 +12,7 @@ use crate::compiler::language::validate_velisch_identity;
 use anyhow::Result;
 
 pub struct VelinCompiler {
+    #[allow(dead_code)]
     config: CompilerConfig,
     passes: Vec<Box<dyn Pass>>,
 }

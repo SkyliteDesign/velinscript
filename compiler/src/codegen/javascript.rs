@@ -1,10 +1,10 @@
 use super::{CodeGenerator, CodegenConfig, TargetLanguage};
-use crate::parser::ast::*;
 use crate::codegen::framework::{Framework, FrameworkSelector};
+use crate::parser::ast::*;
 use anyhow::Result;
 
 /// JavaScript Code Generator
-/// 
+///
 /// Generiert modernen JavaScript Code (ES2020+) ohne TypeScript-Typen
 /// Unterstützt Express und NestJS Frameworks
 pub struct JavaScriptCodeGenerator {
@@ -49,15 +49,31 @@ impl JavaScriptCodeGenerator {
             Type::Boolean => "boolean".to_string(),
             Type::Void => "void".to_string(),
             Type::List(inner) => format!("Array<{}>", self.generate_type(inner)),
-            Type::Map { key, value } => format!("Map<{}, {}>", self.generate_type(key), self.generate_type(value)),
-            Type::Result { ok, err } => format!("Promise<{} | {}>", self.generate_type(ok), self.generate_type(err)),
+            Type::Map { key, value } => format!(
+                "Map<{}, {}>",
+                self.generate_type(key),
+                self.generate_type(value)
+            ),
+            Type::Result { ok, err } => format!(
+                "Promise<{} | {}>",
+                self.generate_type(ok),
+                self.generate_type(err)
+            ),
             Type::Optional(inner) => format!("{} | null", self.generate_type(inner)),
             Type::Named(name) => name.clone(),
             Type::Generic { name, params } => {
                 if params.is_empty() {
                     name.clone()
                 } else {
-                    format!("{}<{}>", name, params.iter().map(|p| self.generate_type(p)).collect::<Vec<_>>().join(", "))
+                    format!(
+                        "{}<{}>",
+                        name,
+                        params
+                            .iter()
+                            .map(|p| self.generate_type(p))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
                 }
             }
             _ => "any".to_string(),
@@ -74,13 +90,15 @@ impl JavaScriptCodeGenerator {
                 Literal::Number(n) => self.write(&n.to_string()),
                 Literal::Boolean(b) => self.write(if *b { "true" } else { "false" }),
                 Literal::Null => self.write("null"),
-            }
+            },
             Expression::Identifier(name) => self.write(name),
             Expression::Call { callee, args } => {
                 self.generate_expression(callee);
                 self.write("(");
                 for (i, arg) in args.iter().enumerate() {
-                    if i > 0 { self.write(", "); }
+                    if i > 0 {
+                        self.write(", ");
+                    }
                     self.generate_expression(arg);
                 }
                 self.write(")");
@@ -106,6 +124,7 @@ impl JavaScriptCodeGenerator {
                     BinaryOperator::GtEq => ">=",
                     BinaryOperator::And => "&&",
                     BinaryOperator::Or => "||",
+                    BinaryOperator::In => "in",
                 };
                 self.write(&format!(" {} ", op_str));
                 self.generate_expression(right);
@@ -126,7 +145,9 @@ impl JavaScriptCodeGenerator {
             Expression::ListLiteral(elements) => {
                 self.write("[");
                 for (i, e) in elements.iter().enumerate() {
-                    if i > 0 { self.write(", "); }
+                    if i > 0 {
+                        self.write(", ");
+                    }
                     self.generate_expression(e);
                 }
                 self.write("]");
@@ -134,7 +155,9 @@ impl JavaScriptCodeGenerator {
             Expression::MapLiteral(fields) => {
                 self.write("{ ");
                 for (i, (k, v)) in fields.iter().enumerate() {
-                    if i > 0 { self.write(", "); }
+                    if i > 0 {
+                        self.write(", ");
+                    }
                     self.write(&format!("{}: ", k));
                     self.generate_expression(v);
                 }
@@ -144,15 +167,12 @@ impl JavaScriptCodeGenerator {
         }
     }
 
-
     fn generate_struct(&mut self, s: &Struct) {
         self.writeln(&format!("class {} {{", s.name));
         self.indent();
-        
+
         // Constructor
-        let params: Vec<String> = s.fields.iter().map(|f| {
-            format!("{}", f.name)
-        }).collect();
+        let params: Vec<String> = s.fields.iter().map(|f| format!("{}", f.name)).collect();
         self.writeln(&format!("constructor({}) {{", params.join(", ")));
         self.indent();
         for field in &s.fields {
@@ -160,7 +180,7 @@ impl JavaScriptCodeGenerator {
         }
         self.dedent();
         self.writeln("}");
-        
+
         self.dedent();
         self.writeln("}");
     }
@@ -168,7 +188,8 @@ impl JavaScriptCodeGenerator {
     fn add_route(&mut self, method: &str, decorator: &Decorator, function_name: &str) {
         if let Some(arg) = decorator.args.first() {
             if let DecoratorArg::String(path) = arg {
-                self.routes.push((method.to_string(), path.clone(), function_name.to_string()));
+                self.routes
+                    .push((method.to_string(), path.clone(), function_name.to_string()));
             }
         }
     }
@@ -176,7 +197,10 @@ impl JavaScriptCodeGenerator {
     fn generate_function(&mut self, f: &Function) {
         // Check for route decorators
         let is_handler = f.decorators.iter().any(|d| {
-            matches!(d.name.as_str(), "Get" | "Post" | "Put" | "Delete" | "@Get" | "@Post" | "@Put" | "@Delete")
+            matches!(
+                d.name.as_str(),
+                "Get" | "Post" | "Put" | "Delete" | "@Get" | "@Post" | "@Put" | "@Delete"
+            )
         });
 
         // Collect routes
@@ -197,9 +221,7 @@ impl JavaScriptCodeGenerator {
 
         // Generate function signature
         let async_keyword = if f.is_async { "async " } else { "" };
-        let params: Vec<String> = f.params.iter().map(|p| {
-            format!("{}", p.name)
-        }).collect();
+        let params: Vec<String> = f.params.iter().map(|p| format!("{}", p.name)).collect();
 
         // For Express handlers, add req, res if not present
         let mut handler_params = params;
@@ -212,7 +234,12 @@ impl JavaScriptCodeGenerator {
             }
         }
 
-        self.writeln(&format!("{}function {}({}) {{", async_keyword, f.name, handler_params.join(", ")));
+        self.writeln(&format!(
+            "{}function {}({}) {{",
+            async_keyword,
+            f.name,
+            handler_params.join(", ")
+        ));
         self.indent();
 
         // Generate body
@@ -384,7 +411,12 @@ impl CodeGenerator for JavaScriptCodeGenerator {
             self.writeln("// Routes");
             let routes_clone = self.routes.clone();
             for (method, path, handler) in &routes_clone {
-                self.writeln(&format!("app.{}({}, {});", method.to_lowercase(), path, handler));
+                self.writeln(&format!(
+                    "app.{}({}, {});",
+                    method.to_lowercase(),
+                    path,
+                    handler
+                ));
             }
             self.writeln("");
             self.writeln("const PORT = process.env.PORT || 3000;");

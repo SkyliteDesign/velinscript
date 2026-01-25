@@ -1,4 +1,3 @@
-
 pub struct EncryptionStdlib;
 
 impl EncryptionStdlib {

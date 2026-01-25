@@ -1,12 +1,12 @@
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use crate::optimizer::pipeline::PipelineOptimizer;
 use crate::parser::ast::*;
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
 use anyhow::Result;
 use std::collections::HashSet;
 
 /// Parallelization Analyzer für automatische Parallelisierung
-/// 
+///
 /// Analysiert Datenabhängigkeiten und parallelisiert Code automatisch:
 /// - Analysiert Datenabhängigkeiten
 /// - Findet unabhängige Operationen
@@ -26,16 +26,16 @@ impl Pass for ParallelizationAnalyzer {
         if let Some(program) = &mut ctx.program {
             // Analysiere und transformiere das gesamte Programm
             let plan = self.analyze(program)?;
-            
+
             // Nur wenn es Optimierungspotenzial gibt (speedup > 1.0)
             if plan.estimated_speedup > 1.05 {
-                // Wir müssen hier einen Hack anwenden, da analyze(&self) immutable ist, 
+                // Wir müssen hier einen Hack anwenden, da analyze(&self) immutable ist,
                 // aber wir das Programm mutieren müssen.
                 // Da transform(&self) auch immutable self nimmt und mut Program, ist das ok.
                 self.transform(program, &plan)?;
             }
         }
-        
+
         Ok(())
     }
 }
@@ -47,12 +47,12 @@ mod tests {
     #[test]
     fn test_threading_transformation() {
         let analyzer = ParallelizationAnalyzer::new();
-        
+
         // Mock AST Block:
         // let a = heavy_calc(1);
         // let b = heavy_calc(2);
         // (independent)
-        
+
         let mut block = Block {
             statements: vec![
                 Statement::Let(LetStatement {
@@ -93,13 +93,16 @@ mod tests {
         // let b_handle = std::thread::spawn(...);
         // let a = a_handle.join();
         // let b = b_handle.join();
-        
+
         // Total statements: 2 spawns + 2 joins = 4
         assert_eq!(block.statements.len(), 4);
-        
+
         // Check first statement is a spawn
         if let Statement::Let(let_stmt) = &block.statements[0] {
-            assert!(let_stmt.name.ends_with("_handle"), "Variable name should end with _handle");
+            assert!(
+                let_stmt.name.ends_with("_handle"),
+                "Variable name should end with _handle"
+            );
             if let Expression::Call { callee, .. } = &let_stmt.value {
                 if let Expression::Member { member, .. } = &**callee {
                     assert_eq!(member, "spawn", "Expected spawn call");
@@ -117,11 +120,11 @@ mod tests {
     #[test]
     fn test_async_transformation() {
         let analyzer = ParallelizationAnalyzer::new();
-        
+
         // Mock AST Block:
         // let a = await fetch(1);
         // let b = await fetch(2);
-        
+
         let mut block = Block {
             statements: vec![
                 Statement::Let(LetStatement {
@@ -165,24 +168,27 @@ mod tests {
         // let a = __join_result_0.0;
         // let b = __join_result_0.1;
         assert_eq!(block.statements.len(), 3);
-        
+
         if let Statement::Let(let_stmt) = &block.statements[0] {
-             // Verify destructuring or tuple assignment
-             // Simplified check for now as AST might vary
-             if let Expression::Await { expr } = &let_stmt.value {
-                 if let Expression::Call { callee, .. } = &**expr {
-                     if let Expression::Member { member, .. } = &**callee {
-                         assert!(member == "join" || member == "try_join", "Expected join call");
-                     } else {
-                         assert!(false, "Expected join call (Member)");
-                     }
-                 } else {
+            // Verify destructuring or tuple assignment
+            // Simplified check for now as AST might vary
+            if let Expression::Await { expr } = &let_stmt.value {
+                if let Expression::Call { callee, .. } = &**expr {
+                    if let Expression::Member { member, .. } = &**callee {
+                        assert!(
+                            member == "join" || member == "try_join",
+                            "Expected join call"
+                        );
+                    } else {
+                        assert!(false, "Expected join call (Member)");
+                    }
+                } else {
                     assert!(false, "Expected Call expression inside Await");
-                 }
-             } else {
-                 // Might be macro invocation represented differently
-                 // Checking if logic replaced the 2 statements with 1
-             }
+                }
+            } else {
+                // Might be macro invocation represented differently
+                // Checking if logic replaced the 2 statements with 1
+            }
         } else {
             assert!(false, "Expected Let statement");
         }
@@ -219,7 +225,7 @@ struct DependencyEdge {
 
 #[derive(Debug, Clone)]
 enum DependencyType {
-    DataDependency,  // Variable wird gelesen nachdem sie geschrieben wurde
+    DataDependency,    // Variable wird gelesen nachdem sie geschrieben wurde
     ControlDependency, // Kontrollfluss-Abhängigkeit
 }
 
@@ -276,7 +282,8 @@ impl ParallelizationAnalyzer {
         let strategy = self.choose_strategy(&independent_ops)?;
 
         // 4. Code-Transformation planen
-        let transformation = self.plan_transformation(&independent_ops, &strategy, &dependencies)?;
+        let transformation =
+            self.plan_transformation(&independent_ops, &strategy, &dependencies)?;
 
         Ok(ParallelizationPlan {
             strategy,
@@ -362,27 +369,34 @@ impl ParallelizationAnalyzer {
                 }
 
                 // Check function boundary
-                let other_func = other_node.operation.location.split(':').next().unwrap_or("");
+                let other_func = other_node
+                    .operation
+                    .location
+                    .split(':')
+                    .next()
+                    .unwrap_or("");
                 if func_name != other_func {
                     continue;
                 }
 
                 // Prüfe ob es eine Edge zwischen node und other_node gibt
                 let has_dependency = deps.edges.iter().any(|edge| {
-                    (edge.from == node.id && edge.to == other_node.id) ||
-                    (edge.from == other_node.id && edge.to == node.id)
+                    (edge.from == node.id && edge.to == other_node.id)
+                        || (edge.from == other_node.id && edge.to == node.id)
                 });
 
                 if !has_dependency {
                     // Prüfe ob other_node von Nodes in der Gruppe abhängt
-                    let depends_on_group = deps.edges.iter().any(|edge| {
-                        group.contains(&edge.from) && edge.to == other_node.id
-                    });
+                    let depends_on_group = deps
+                        .edges
+                        .iter()
+                        .any(|edge| group.contains(&edge.from) && edge.to == other_node.id);
 
                     // Prüfe ob Gruppe von other_node abhängt (missing check in original code)
-                    let group_depends_on = deps.edges.iter().any(|edge| {
-                        edge.from == other_node.id && group.contains(&edge.to)
-                    });
+                    let group_depends_on = deps
+                        .edges
+                        .iter()
+                        .any(|edge| edge.from == other_node.id && group.contains(&edge.to));
 
                     if !depends_on_group && !group_depends_on {
                         group.push(other_node.id);
@@ -419,7 +433,12 @@ impl ParallelizationAnalyzer {
     }
 
     /// Plant Code-Transformation
-    fn plan_transformation(&self, independent_ops: &[Vec<usize>], strategy: &ParallelizationStrategy, deps: &DependencyGraph) -> Result<TransformationPlan> {
+    fn plan_transformation(
+        &self,
+        independent_ops: &[Vec<usize>],
+        strategy: &ParallelizationStrategy,
+        deps: &DependencyGraph,
+    ) -> Result<TransformationPlan> {
         let mut transformations = Vec::new();
 
         for group in independent_ops {
@@ -428,15 +447,9 @@ impl ParallelizationAnalyzer {
                     ParallelizationStrategy::Multithreading => {
                         self.plan_threading_transformation(group, deps)
                     }
-                    ParallelizationStrategy::GPU => {
-                        self.plan_gpu_transformation(group, deps)
-                    }
-                    ParallelizationStrategy::Async => {
-                        self.plan_async_transformation(group, deps)
-                    }
-                    ParallelizationStrategy::SIMD => {
-                        self.plan_simd_transformation(group, deps)
-                    }
+                    ParallelizationStrategy::GPU => self.plan_gpu_transformation(group, deps),
+                    ParallelizationStrategy::Async => self.plan_async_transformation(group, deps),
+                    ParallelizationStrategy::SIMD => self.plan_simd_transformation(group, deps),
                 };
                 transformations.push(transformation);
             }
@@ -446,11 +459,21 @@ impl ParallelizationAnalyzer {
     }
 
     /// Plant Threading-Transformation
-    fn plan_threading_transformation(&self, group: &[usize], deps: &DependencyGraph) -> CodeTransformation {
+    fn plan_threading_transformation(
+        &self,
+        group: &[usize],
+        deps: &DependencyGraph,
+    ) -> CodeTransformation {
         let func_name = if let Some(first_id) = group.first() {
-             deps.nodes[*first_id].operation.location.split(':').next().unwrap_or("").to_string()
+            deps.nodes[*first_id]
+                .operation
+                .location
+                .split(':')
+                .next()
+                .unwrap_or("")
+                .to_string()
         } else {
-             "".to_string()
+            "".to_string()
         };
 
         CodeTransformation {
@@ -459,7 +482,8 @@ impl ParallelizationAnalyzer {
             original_code: "Sequential operations".to_string(),
             transformed_code: format!(
                 "let results = tokio::join!(\n{}\n);",
-                group.iter()
+                group
+                    .iter()
                     .map(|id| format!("    tokio::spawn(async {{ operation_{}() }})", id))
                     .collect::<Vec<_>>()
                     .join(",\n")
@@ -469,20 +493,30 @@ impl ParallelizationAnalyzer {
     }
 
     /// Plant GPU-Transformation
-    fn plan_gpu_transformation(&self, group: &[usize], deps: &DependencyGraph) -> CodeTransformation {
+    fn plan_gpu_transformation(
+        &self,
+        group: &[usize],
+        deps: &DependencyGraph,
+    ) -> CodeTransformation {
         let func_name = if let Some(first_id) = group.first() {
-             deps.nodes[*first_id].operation.location.split(':').next().unwrap_or("").to_string()
+            deps.nodes[*first_id]
+                .operation
+                .location
+                .split(':')
+                .next()
+                .unwrap_or("")
+                .to_string()
         } else {
-             "".to_string()
+            "".to_string()
         };
 
         // Generiere echten GPU-Kernel-Code basierend auf den Operationen
         // Wir nehmen an, dass alle Operationen in der Gruppe ähnlich sind (SIMD-artig)
         // oder wir generieren Code für jeden Index.
-        
+
         let mut kernel_body = String::new();
         kernel_body.push_str("    let idx = global_id.x;\n");
-        
+
         for (i, &node_id) in group.iter().enumerate() {
             if let Some(node) = deps.nodes.iter().find(|n| n.id == node_id) {
                 // Versuche die Operation zu transpilen
@@ -495,17 +529,23 @@ impl ParallelizationAnalyzer {
                         BinaryOperator::Divide => "/",
                         _ => "+",
                     };
-                    
+
                     // Wir nehmen an, dass der rechte Operand ein Literal ist für dieses Beispiel
                     // In einem echten Compiler müssten wir rekursiv transpilen
                     let val = match &**right {
                         Expression::Literal(Literal::Number(n)) => n.to_string(),
                         _ => "1.0".to_string(),
                     };
-                    
-                    kernel_body.push_str(&format!("    output_{}[idx] = input_{}[idx] {} {};\n", i, i, op_str, val));
+
+                    kernel_body.push_str(&format!(
+                        "    output_{}[idx] = input_{}[idx] {} {};\n",
+                        i, i, op_str, val
+                    ));
                 } else {
-                     kernel_body.push_str(&format!("    output_{}[idx] = input_{}[idx]; // Complex op\n", i, i));
+                    kernel_body.push_str(&format!(
+                        "    output_{}[idx] = input_{}[idx]; // Complex op\n",
+                        i, i
+                    ));
                 }
             }
         }
@@ -520,11 +560,25 @@ impl ParallelizationAnalyzer {
             ) {{\n\
             {}\n\
             }}",
-            group.iter().enumerate().map(|(i, _)| format!("    #[binding(0, {})] input_{}: array<f32>,", i, i)).collect::<Vec<_>>().join("\n"),
-            group.iter().enumerate().map(|(i, _)| format!("    #[binding(0, {})] var<storage, read_write> output_{}: array<f32>,", i + group.len(), i)).collect::<Vec<_>>().join("\n"),
+            group
+                .iter()
+                .enumerate()
+                .map(|(i, _)| format!("    #[binding(0, {})] input_{}: array<f32>,", i, i))
+                .collect::<Vec<_>>()
+                .join("\n"),
+            group
+                .iter()
+                .enumerate()
+                .map(|(i, _)| format!(
+                    "    #[binding(0, {})] var<storage, read_write> output_{}: array<f32>,",
+                    i + group.len(),
+                    i
+                ))
+                .collect::<Vec<_>>()
+                .join("\n"),
             kernel_body
         );
-        
+
         CodeTransformation {
             location: format!("group_{:?}", group),
             function_name: func_name,
@@ -535,11 +589,21 @@ impl ParallelizationAnalyzer {
     }
 
     /// Plant Async-Transformation
-    fn plan_async_transformation(&self, group: &[usize], deps: &DependencyGraph) -> CodeTransformation {
+    fn plan_async_transformation(
+        &self,
+        group: &[usize],
+        deps: &DependencyGraph,
+    ) -> CodeTransformation {
         let func_name = if let Some(first_id) = group.first() {
-             deps.nodes[*first_id].operation.location.split(':').next().unwrap_or("").to_string()
+            deps.nodes[*first_id]
+                .operation
+                .location
+                .split(':')
+                .next()
+                .unwrap_or("")
+                .to_string()
         } else {
-             "".to_string()
+            "".to_string()
         };
 
         CodeTransformation {
@@ -548,7 +612,8 @@ impl ParallelizationAnalyzer {
             original_code: "Sequential async operations".to_string(),
             transformed_code: format!(
                 "let (result1, result2) = tokio::join!(\n{}\n);",
-                group.iter()
+                group
+                    .iter()
                     .enumerate()
                     .map(|(i, _)| format!("    async_operation_{}()", i))
                     .collect::<Vec<_>>()
@@ -559,11 +624,21 @@ impl ParallelizationAnalyzer {
     }
 
     /// Plant SIMD-Transformation
-    fn plan_simd_transformation(&self, group: &[usize], deps: &DependencyGraph) -> CodeTransformation {
+    fn plan_simd_transformation(
+        &self,
+        group: &[usize],
+        deps: &DependencyGraph,
+    ) -> CodeTransformation {
         let func_name = if let Some(first_id) = group.first() {
-             deps.nodes[*first_id].operation.location.split(':').next().unwrap_or("").to_string()
+            deps.nodes[*first_id]
+                .operation
+                .location
+                .split(':')
+                .next()
+                .unwrap_or("")
+                .to_string()
         } else {
-             "".to_string()
+            "".to_string()
         };
 
         // Generiere SIMD-vektorisierten Code
@@ -574,13 +649,14 @@ impl ParallelizationAnalyzer {
             {}];\n\n\
             let results: [f32x8; {}] = simd_data.map(|v| v * 2.0);",
             group.len(),
-            group.iter()
+            group
+                .iter()
                 .map(|_| "    f32x8::splat(0.0),")
                 .collect::<Vec<_>>()
                 .join("\n"),
             group.len()
         );
-        
+
         CodeTransformation {
             location: format!("group_{:?}", group),
             function_name: func_name,
@@ -597,7 +673,8 @@ impl ParallelizationAnalyzer {
         }
 
         let total_ops: usize = independent_ops.iter().map(|group| group.len()).sum();
-        let parallelizable_ops: usize = independent_ops.iter()
+        let parallelizable_ops: usize = independent_ops
+            .iter()
             .filter(|group| group.len() > 1)
             .map(|group| group.len())
             .sum();
@@ -649,7 +726,11 @@ impl ParallelizationAnalyzer {
             Expression::UnaryOp { expr, .. } => {
                 self.collect_read_variables(expr, vars);
             }
-            Expression::If { condition, then_expr, else_expr } => {
+            Expression::If {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
                 self.collect_read_variables(condition, vars);
                 self.collect_read_variables(then_expr, vars);
                 self.collect_read_variables(else_expr, vars);
@@ -721,7 +802,11 @@ impl ParallelizationAnalyzer {
     }
 
     /// Transformiert zu Threading
-    fn transform_to_threading(&self, program: &mut Program, plan: &ParallelizationPlan) -> Result<()> {
+    fn transform_to_threading(
+        &self,
+        program: &mut Program,
+        plan: &ParallelizationPlan,
+    ) -> Result<()> {
         // Wende Threading-Transformationen an
         for transformation in &plan.transformation.transformations {
             if transformation.strategy == ParallelizationStrategy::Multithreading {
@@ -741,7 +826,11 @@ impl ParallelizationAnalyzer {
     }
 
     /// Wendet Threading auf Block an
-    fn apply_threading_to_block(&self, block: &mut crate::parser::ast::Block, transformation: &CodeTransformation) -> Result<()> {
+    fn apply_threading_to_block(
+        &self,
+        block: &mut crate::parser::ast::Block,
+        transformation: &CodeTransformation,
+    ) -> Result<()> {
         // Parse group indices from location string "group_[1, 2, 3]"
         let group_str = transformation.location.trim_start_matches("group_");
         // Remove brackets and parse comma-separated indices
@@ -749,11 +838,12 @@ impl ParallelizationAnalyzer {
         let group_indices: Vec<usize> = if indices_str.is_empty() {
             Vec::new()
         } else {
-            indices_str.split(',')
+            indices_str
+                .split(',')
                 .map(|s| s.trim().parse().unwrap_or(0))
                 .collect()
         };
-        
+
         if group_indices.is_empty() {
             return Ok(());
         }
@@ -761,71 +851,69 @@ impl ParallelizationAnalyzer {
         // Similar logic to async, but wrapping in thread::spawn handles
         let mut new_statements = Vec::new();
         let original_statements = block.statements.clone();
-        
+
         let mut i = 0;
         while i < original_statements.len() {
-             if group_indices.contains(&i) {
-                 // Found start of threading group
-                 // Wrap statements in thread handles
-                 let mut handles = Vec::new();
-                 
-                 for &stmt_idx in &group_indices {
-                     let stmt = &original_statements[stmt_idx];
-                     if let Statement::Let(let_stmt) = stmt {
-                         // Transform: let x = calc(); -> let x_handle = thread::spawn(|| calc());
-                         let handle_name = format!("{}_handle", let_stmt.name);
-                         
-                         let spawn_call = Expression::Call {
-                             callee: Box::new(Expression::Member {
-                                 object: Box::new(Expression::Identifier("std::thread".to_string())),
-                                 member: "spawn".to_string(),
-                             }),
-                             args: vec![
-                                 Expression::Lambda {
-                                     params: vec![],
-                                     return_type: None,
-                                     body: Box::new(let_stmt.value.clone()),
-                                 }
-                             ],
-                         };
+            if group_indices.contains(&i) {
+                // Found start of threading group
+                // Wrap statements in thread handles
+                let mut handles = Vec::new();
 
-                         new_statements.push(Statement::Let(LetStatement {
-                             name: handle_name.clone(),
-                             var_type: None, // Infer
-                             value: spawn_call,
-                             mutable: false,
-                         }));
-                         
-                         handles.push((let_stmt.name.clone(), handle_name));
-                     }
-                 }
-                 
-                 // Join threads
-                 for (var_name, handle_name) in handles {
-                     // let x = x_handle.join().unwrap();
-                     let join_call = Expression::Call {
-                         callee: Box::new(Expression::Member {
-                             object: Box::new(Expression::Identifier(handle_name)),
-                             member: "join".to_string(),
-                         }),
-                         args: vec![],
-                     };
-                     
-                     new_statements.push(Statement::Let(LetStatement {
-                         name: var_name,
-                         var_type: None,
-                         value: join_call, // In Rust join returns Result, so we might need unwrap. Assumed implied or handled by codegen.
-                         mutable: false,
-                     }));
-                 }
-                 
-                 i += group_indices.len();
-             } else {
-                 new_statements.push(original_statements[i].clone());
-                 i += 1;
-             }
+                for &stmt_idx in &group_indices {
+                    let stmt = &original_statements[stmt_idx];
+                    if let Statement::Let(let_stmt) = stmt {
+                        // Transform: let x = calc(); -> let x_handle = thread::spawn(|| calc());
+                        let handle_name = format!("{}_handle", let_stmt.name);
+
+                        let spawn_call = Expression::Call {
+                            callee: Box::new(Expression::Member {
+                                object: Box::new(Expression::Identifier("std::thread".to_string())),
+                                member: "spawn".to_string(),
+                            }),
+                            args: vec![Expression::Lambda {
+                                params: vec![],
+                                return_type: None,
+                                body: Box::new(let_stmt.value.clone()),
+                            }],
+                        };
+
+                        new_statements.push(Statement::Let(LetStatement {
+                            name: handle_name.clone(),
+                            var_type: None, // Infer
+                            value: spawn_call,
+                            mutable: false,
+                        }));
+
+                        handles.push((let_stmt.name.clone(), handle_name));
+                    }
+                }
+
+                // Join threads
+                for (var_name, handle_name) in handles {
+                    // let x = x_handle.join().unwrap();
+                    let join_call = Expression::Call {
+                        callee: Box::new(Expression::Member {
+                            object: Box::new(Expression::Identifier(handle_name)),
+                            member: "join".to_string(),
+                        }),
+                        args: vec![],
+                    };
+
+                    new_statements.push(Statement::Let(LetStatement {
+                        name: var_name,
+                        var_type: None,
+                        value: join_call, // In Rust join returns Result, so we might need unwrap. Assumed implied or handled by codegen.
+                        mutable: false,
+                    }));
+                }
+
+                i += group_indices.len();
+            } else {
+                new_statements.push(original_statements[i].clone());
+                i += 1;
+            }
         }
-        
+
         block.statements = new_statements;
         Ok(())
     }
@@ -848,95 +936,114 @@ impl ParallelizationAnalyzer {
     }
 
     /// Wendet GPU-Transformation auf Block an
-    fn apply_gpu_to_block(&self, block: &mut crate::parser::ast::Block, transformation: &CodeTransformation) -> Result<()> {
+    fn apply_gpu_to_block(
+        &self,
+        block: &mut crate::parser::ast::Block,
+        transformation: &CodeTransformation,
+    ) -> Result<()> {
         let group_str = transformation.location.trim_start_matches("group_");
         // Remove brackets and parse comma-separated indices
         let indices_str = group_str.trim_matches(|c| c == '[' || c == ']');
         let group_indices: Vec<usize> = if indices_str.is_empty() {
             Vec::new()
         } else {
-            indices_str.split(',')
+            indices_str
+                .split(',')
                 .map(|s| s.trim().parse().unwrap_or(0))
                 .collect()
         };
-        
+
         if group_indices.is_empty() {
             return Ok(());
         }
 
         let mut new_statements = Vec::new();
         let original_statements = block.statements.clone();
-        
+
         // Collect inputs for the GPU kernel
         let mut input_vars = Vec::new();
         for &stmt_idx in &group_indices {
-             if let Statement::Let(let_stmt) = &original_statements[stmt_idx] {
-                 // Extract variables read in this statement
-                 let vars = self.extract_read_variables(&let_stmt.value);
-                 for var in vars {
-                     if !input_vars.contains(&var) {
-                         input_vars.push(var);
-                     }
-                 }
-             }
+            if let Statement::Let(let_stmt) = &original_statements[stmt_idx] {
+                // Extract variables read in this statement
+                let vars = self.extract_read_variables(&let_stmt.value);
+                for var in vars {
+                    if !input_vars.contains(&var) {
+                        input_vars.push(var);
+                    }
+                }
+            }
         }
 
         let mut i = 0;
         while i < original_statements.len() {
-             if group_indices.contains(&i) {
-                 // Generate GPU kernel call
-                 // let gpu_result = velin_runtime::gpu::execute_compute_shader(shader_code, entry_point, inputs);
-                 
-                 let gpu_call = Statement::Let(LetStatement {
-                     name: "gpu_result".to_string(),
-                     var_type: None,
-                     value: Expression::Call {
+            if group_indices.contains(&i) {
+                // Generate GPU kernel call
+                // let gpu_result = velin_runtime::gpu::execute_compute_shader(shader_code, entry_point, inputs);
+
+                let gpu_call = Statement::Let(LetStatement {
+                    name: "gpu_result".to_string(),
+                    var_type: None,
+                    value: Expression::Call {
                         callee: Box::new(Expression::Member {
                             object: Box::new(Expression::Member {
-                                object: Box::new(Expression::Identifier("velin_runtime".to_string())),
+                                object: Box::new(Expression::Identifier(
+                                    "velin_runtime".to_string(),
+                                )),
                                 member: "gpu".to_string(),
                             }),
                             member: "execute_compute_shader".to_string(),
                         }),
                         args: vec![
-                            Expression::Literal(Literal::String(transformation.transformed_code.clone())), // Shader code
+                            Expression::Literal(Literal::String(
+                                transformation.transformed_code.clone(),
+                            )), // Shader code
                             Expression::Literal(Literal::String("main".to_string())), // Entry point
-                            Expression::ListLiteral(input_vars.iter().map(|v| Expression::Identifier(v.clone())).collect()), // Inputs
+                            Expression::ListLiteral(
+                                input_vars
+                                    .iter()
+                                    .map(|v| Expression::Identifier(v.clone()))
+                                    .collect(),
+                            ), // Inputs
                         ],
-                     },
-                     mutable: false,
-                 });
-                 
-                 new_statements.push(gpu_call);
-                 
-                 i += group_indices.len();
-             } else {
-                 new_statements.push(original_statements[i].clone());
-                 i += 1;
-             }
+                    },
+                    mutable: false,
+                });
+
+                new_statements.push(gpu_call);
+
+                i += group_indices.len();
+            } else {
+                new_statements.push(original_statements[i].clone());
+                i += 1;
+            }
         }
-        
+
         block.statements = new_statements;
         Ok(())
     }
 
     /// Wendet Async-Transformation auf Block an (Test-Helper)
-    pub fn apply_async_to_block(&self, block: &mut crate::parser::ast::Block, transformation: &CodeTransformation) -> Result<()> {
+    pub fn apply_async_to_block(
+        &self,
+        block: &mut crate::parser::ast::Block,
+        transformation: &CodeTransformation,
+    ) -> Result<()> {
         let group_str = transformation.location.trim_start_matches("group_");
         // Remove brackets and parse comma-separated indices
         let indices_str = group_str.trim_matches(|c| c == '[' || c == ']');
         let group_indices: Vec<usize> = if indices_str.is_empty() {
             Vec::new()
         } else {
-            indices_str.split(',')
+            indices_str
+                .split(',')
                 .map(|s| s.trim().parse().unwrap_or(0))
                 .collect()
         };
-        
+
         if group_indices.is_empty() {
             return Ok(());
         }
-        
+
         // Use the same logic as apply_async_parallelization but with indices from transformation
         self.apply_async_parallelization(block, &[group_indices])
     }
@@ -949,7 +1056,7 @@ impl ParallelizationAnalyzer {
                 if f.is_async {
                     // Identifiziere parallele Gruppen
                     let parallel_groups = self.pipeline_optimizer.identify_parallel_groups(&f.body);
-                    
+
                     if !parallel_groups.is_empty() {
                         // Transformiere für parallele Ausführung
                         self.apply_async_parallelization(&mut f.body, &parallel_groups)?;
@@ -965,7 +1072,7 @@ impl ParallelizationAnalyzer {
         // Wende SIMD-Transformationen an
         for transformation in &plan.transformation.transformations {
             if transformation.strategy == ParallelizationStrategy::SIMD {
-                 for item in &mut program.items {
+                for item in &mut program.items {
                     if let crate::parser::ast::Item::Function(f) = item {
                         if transformation.function_name == f.name {
                             self.apply_simd_to_block(&mut f.body, transformation)?;
@@ -977,7 +1084,11 @@ impl ParallelizationAnalyzer {
         Ok(())
     }
 
-    fn apply_async_parallelization(&self, block: &mut crate::parser::ast::Block, groups: &[Vec<usize>]) -> Result<()> {
+    fn apply_async_parallelization(
+        &self,
+        block: &mut crate::parser::ast::Block,
+        groups: &[Vec<usize>],
+    ) -> Result<()> {
         // Wir müssen den Block neu aufbauen
         let mut new_statements = Vec::new();
         let mut group_idx = 0;
@@ -1009,9 +1120,9 @@ impl ParallelizationAnalyzer {
                 for stmt_idx in group {
                     if let Statement::Let(let_stmt) = &original_statements[*stmt_idx] {
                         if let Expression::Await { expr } = &let_stmt.value {
-                             // Extrahiere den async Call
-                             join_args.push(*expr.clone());
-                             result_vars.push(let_stmt.name.clone());
+                            // Extrahiere den async Call
+                            join_args.push(*expr.clone());
+                            result_vars.push(let_stmt.name.clone());
                         }
                     }
                 }
@@ -1032,7 +1143,9 @@ impl ParallelizationAnalyzer {
                     new_statements.push(Statement::Let(LetStatement {
                         name: join_var_name.clone(),
                         var_type: None,
-                        value: Expression::Await { expr: Box::new(join_call) }, 
+                        value: Expression::Await {
+                            expr: Box::new(join_call),
+                        },
                         mutable: false,
                     }));
 
@@ -1049,13 +1162,13 @@ impl ParallelizationAnalyzer {
                         }));
                     }
                 }
-            } 
-            
+            }
+
             if !handled_indices.contains(&i) {
                 // Normal statement (not part of any group)
                 new_statements.push(original_statements[i].clone());
             }
-            
+
             i += 1;
         }
 
@@ -1063,89 +1176,101 @@ impl ParallelizationAnalyzer {
         Ok(())
     }
 
-    fn apply_simd_to_block(&self, block: &mut Block, transformation: &CodeTransformation) -> Result<()> {
+    fn apply_simd_to_block(
+        &self,
+        block: &mut Block,
+        transformation: &CodeTransformation,
+    ) -> Result<()> {
         let group_str = transformation.location.trim_start_matches("group_");
         // Remove brackets and parse comma-separated indices
         let indices_str = group_str.trim_matches(|c| c == '[' || c == ']');
         let group_indices: Vec<usize> = if indices_str.is_empty() {
             Vec::new()
         } else {
-            indices_str.split(',')
+            indices_str
+                .split(',')
                 .map(|s| s.trim().parse().unwrap_or(0))
                 .collect()
         };
-        
-        if group_indices.is_empty() { return Ok(()); }
+
+        if group_indices.is_empty() {
+            return Ok(());
+        }
 
         let mut new_statements = Vec::new();
         let original_statements = block.statements.clone();
-        
+
         let mut i = 0;
         while i < original_statements.len() {
-             if group_indices.contains(&i) {
-                 // 1. Collect values and determine operation
-                 let mut simd_values = Vec::new();
-                 let mut op = BinaryOperator::Add; // Default
-                 let mut operand = Expression::Literal(Literal::Number(0.0));
-                 
-                 // Analyze first statement to determine operation
-                 if let Statement::Let(first_stmt) = &original_statements[group_indices[0]] {
-                     if let Expression::BinaryOp { left: _, op: first_op, right } = &first_stmt.value {
-                         op = first_op.clone();
-                         operand = *right.clone();
-                     }
-                 }
+            if group_indices.contains(&i) {
+                // 1. Collect values and determine operation
+                let mut simd_values = Vec::new();
+                let mut op = BinaryOperator::Add; // Default
+                let mut operand = Expression::Literal(Literal::Number(0.0));
 
-                 for &stmt_idx in &group_indices {
-                     if let Statement::Let(let_stmt) = &original_statements[stmt_idx] {
-                         // Assume binary op: let x = val * 2.0;
-                         // We extract 'val' from the left side
-                         if let Expression::BinaryOp { left, .. } = &let_stmt.value {
-                             simd_values.push(*left.clone());
-                         } else {
-                             // Fallback if not binary op
-                             simd_values.push(let_stmt.value.clone());
-                         }
-                     }
-                 }
+                // Analyze first statement to determine operation
+                if let Statement::Let(first_stmt) = &original_statements[group_indices[0]] {
+                    if let Expression::BinaryOp {
+                        left: _,
+                        op: first_op,
+                        right,
+                    } = &first_stmt.value
+                    {
+                        op = first_op.clone();
+                        operand = *right.clone();
+                    }
+                }
 
-                 // 2. Create SIMD Vector
-                 let simd_ctor = Expression::Call {
-                     callee: Box::new(Expression::Member {
-                         object: Box::new(Expression::Identifier("std::simd::f32x4".to_string())),
-                         member: "from_array".to_string(),
-                     }),
-                     args: vec![Expression::ListLiteral(simd_values)],
-                 };
+                for &stmt_idx in &group_indices {
+                    if let Statement::Let(let_stmt) = &original_statements[stmt_idx] {
+                        // Assume binary op: let x = val * 2.0;
+                        // We extract 'val' from the left side
+                        if let Expression::BinaryOp { left, .. } = &let_stmt.value {
+                            simd_values.push(*left.clone());
+                        } else {
+                            // Fallback if not binary op
+                            simd_values.push(let_stmt.value.clone());
+                        }
+                    }
+                }
 
-                 new_statements.push(Statement::Let(LetStatement {
-                     name: "simd_batch".to_string(),
-                     var_type: None,
-                     value: simd_ctor,
-                     mutable: false,
-                 }));
+                // 2. Create SIMD Vector
+                let simd_ctor = Expression::Call {
+                    callee: Box::new(Expression::Member {
+                        object: Box::new(Expression::Identifier("std::simd::f32x4".to_string())),
+                        member: "from_array".to_string(),
+                    }),
+                    args: vec![Expression::ListLiteral(simd_values)],
+                };
 
-                 // 3. Execute Operation
-                 let op_call = Expression::BinaryOp {
-                     left: Box::new(Expression::Identifier("simd_batch".to_string())),
-                     op: op,
-                     right: Box::new(operand),
-                 };
+                new_statements.push(Statement::Let(LetStatement {
+                    name: "simd_batch".to_string(),
+                    var_type: None,
+                    value: simd_ctor,
+                    mutable: false,
+                }));
 
-                 new_statements.push(Statement::Let(LetStatement {
-                     name: "result_batch".to_string(),
-                     var_type: None,
-                     value: op_call,
-                     mutable: false,
-                 }));
-                 
-                 i += group_indices.len();
-             } else {
-                 new_statements.push(original_statements[i].clone());
-                 i += 1;
-             }
+                // 3. Execute Operation
+                let op_call = Expression::BinaryOp {
+                    left: Box::new(Expression::Identifier("simd_batch".to_string())),
+                    op: op,
+                    right: Box::new(operand),
+                };
+
+                new_statements.push(Statement::Let(LetStatement {
+                    name: "result_batch".to_string(),
+                    var_type: None,
+                    value: op_call,
+                    mutable: false,
+                }));
+
+                i += group_indices.len();
+            } else {
+                new_statements.push(original_statements[i].clone());
+                i += 1;
+            }
         }
-        
+
         block.statements = new_statements;
         Ok(())
     }

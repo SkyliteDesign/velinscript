@@ -1,12 +1,12 @@
 // Standard Library für Logging-Funktionalität
 // Logging-Funktionen für verschiedene Log-Level
 
-use std::io::{self, Write};
-use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
-use std::path::Path;
 use chrono::Utc;
 use serde_json;
+use std::collections::HashMap;
+use std::fs::{File, OpenOptions};
+use std::io::{self, Write};
+use std::path::Path;
 
 /// Log-Level für verschiedene Detaillierungsgrade
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -57,7 +57,7 @@ impl Logger {
             output: Box::new(io::stdout()),
         }
     }
-    
+
     /// Erstellt einen Logger mit spezifischem Level
     pub fn with_level(level: LogLevel) -> Self {
         Logger {
@@ -65,37 +65,37 @@ impl Logger {
             output: Box::new(io::stdout()),
         }
     }
-    
+
     /// Setzt das Log-Level
     pub fn set_level(&mut self, level: LogLevel) {
         self.level = level;
     }
-    
+
     /// Loggt eine Nachricht auf Trace-Level
     pub fn trace(&mut self, message: &str) {
         self.log(LogLevel::Trace, message);
     }
-    
+
     /// Loggt eine Nachricht auf Debug-Level
     pub fn debug(&mut self, message: &str) {
         self.log(LogLevel::Debug, message);
     }
-    
+
     /// Loggt eine Nachricht auf Info-Level
     pub fn info(&mut self, message: &str) {
         self.log(LogLevel::Info, message);
     }
-    
+
     /// Loggt eine Nachricht auf Warn-Level
     pub fn warn(&mut self, message: &str) {
         self.log(LogLevel::Warn, message);
     }
-    
+
     /// Loggt eine Nachricht auf Error-Level
     pub fn error(&mut self, message: &str) {
         self.log(LogLevel::Error, message);
     }
-    
+
     /// Interne Log-Funktion
     fn log(&mut self, level: LogLevel, message: &str) {
         if level >= self.level {
@@ -127,7 +127,7 @@ impl VelinLogger {
             current_file_size: 0,
         }
     }
-    
+
     /// Erstellt einen Velin Logger mit File-Logging
     pub fn with_file<P: AsRef<Path>>(path: P) -> Result<Self, String> {
         let file = OpenOptions::new()
@@ -135,7 +135,7 @@ impl VelinLogger {
             .append(true)
             .open(&path)
             .map_err(|e| format!("Failed to open log file: {}", e))?;
-        
+
         Ok(VelinLogger {
             level: LogLevel::Info,
             output: Box::new(io::stdout()),
@@ -147,57 +147,71 @@ impl VelinLogger {
             current_file_size: 0,
         })
     }
-    
+
     /// Setzt das Log-Level
     pub fn set_level(&mut self, level: LogLevel) {
         self.level = level;
     }
-    
+
     /// Fügt Context-Informationen hinzu
     pub fn add_context(&mut self, key: String, value: String) {
         self.context.insert(key, value);
     }
-    
+
     /// Entfernt Context-Informationen
     pub fn remove_context(&mut self, key: &str) {
         self.context.remove(key);
     }
-    
+
     /// Aktiviert JSON-Format
     pub fn enable_json_format(&mut self) {
         self.json_format = true;
     }
-    
+
     /// Aktiviert Log-Rotation
     pub fn enable_rotation(&mut self, max_size: u64) {
         self.rotation_enabled = true;
         self.max_file_size = max_size;
     }
-    
+
     /// Loggt eine Nachricht mit Context
-    pub fn log_with_context(&mut self, level: LogLevel, message: &str, additional_context: Option<HashMap<String, String>>) {
+    pub fn log_with_context(
+        &mut self,
+        level: LogLevel,
+        message: &str,
+        additional_context: Option<HashMap<String, String>>,
+    ) {
         if level >= self.level {
             let timestamp = Utc::now().to_rfc3339();
-            
+
             if self.json_format {
                 // JSON-Format
                 let mut log_entry = serde_json::Map::new();
-                log_entry.insert("timestamp".to_string(), serde_json::Value::String(timestamp));
-                log_entry.insert("level".to_string(), serde_json::Value::String(level.as_str().to_string()));
-                log_entry.insert("message".to_string(), serde_json::Value::String(message.to_string()));
-                
+                log_entry.insert(
+                    "timestamp".to_string(),
+                    serde_json::Value::String(timestamp),
+                );
+                log_entry.insert(
+                    "level".to_string(),
+                    serde_json::Value::String(level.as_str().to_string()),
+                );
+                log_entry.insert(
+                    "message".to_string(),
+                    serde_json::Value::String(message.to_string()),
+                );
+
                 // Add context
                 for (key, value) in &self.context {
                     log_entry.insert(key.clone(), serde_json::Value::String(value.clone()));
                 }
-                
+
                 // Add additional context
                 if let Some(extra) = additional_context {
                     for (key, value) in extra {
                         log_entry.insert(key, serde_json::Value::String(value));
                     }
                 }
-                
+
                 let json_str = serde_json::to_string(&log_entry).unwrap_or_default();
                 let log_line = format!("{}\n", json_str);
                 self.write_log(&log_line);
@@ -205,60 +219,67 @@ impl VelinLogger {
                 // Text-Format mit Context
                 let mut context_str = String::new();
                 if !self.context.is_empty() {
-                    let context_parts: Vec<String> = self.context.iter()
+                    let context_parts: Vec<String> = self
+                        .context
+                        .iter()
                         .map(|(k, v)| format!("{}={}", k, v))
                         .collect();
                     context_str = format!(" [{}]", context_parts.join(", "));
                 }
-                
+
                 if let Some(extra) = additional_context {
-                    let extra_parts: Vec<String> = extra.iter()
-                        .map(|(k, v)| format!("{}={}", k, v))
-                        .collect();
+                    let extra_parts: Vec<String> =
+                        extra.iter().map(|(k, v)| format!("{}={}", k, v)).collect();
                     if !context_str.is_empty() {
                         context_str.push_str(&format!(", {}", extra_parts.join(", ")));
                     } else {
                         context_str = format!(" [{}]", extra_parts.join(", "));
                     }
                 }
-                
-                let log_line = format!("[{}] [{}]{}{}\n", timestamp, level.as_str(), context_str, message);
+
+                let log_line = format!(
+                    "[{}] [{}]{}{}\n",
+                    timestamp,
+                    level.as_str(),
+                    context_str,
+                    message
+                );
                 self.write_log(&log_line);
             }
         }
     }
-    
+
     /// Standard-Log-Methoden
     pub fn trace(&mut self, message: &str) {
         self.log_with_context(LogLevel::Trace, message, None);
     }
-    
+
     pub fn debug(&mut self, message: &str) {
         self.log_with_context(LogLevel::Debug, message, None);
     }
-    
+
     pub fn info(&mut self, message: &str) {
         self.log_with_context(LogLevel::Info, message, None);
     }
-    
+
     pub fn warn(&mut self, message: &str) {
         self.log_with_context(LogLevel::Warn, message, None);
     }
-    
+
     pub fn error(&mut self, message: &str) {
         self.log_with_context(LogLevel::Error, message, None);
     }
-    
+
     /// Interne Write-Funktion
     fn write_log(&mut self, log_line: &str) {
         let _ = self.output.write_all(log_line.as_bytes());
         let _ = self.output.flush();
-        
+
         if let Some(ref mut file) = self.file_output {
             let _ = file.write_all(log_line.as_bytes());
             let _ = file.flush();
             self.current_file_size += log_line.len() as u64;
-            
+
             // Check rotation
             if self.rotation_enabled && self.current_file_size >= self.max_file_size {
                 // Rotation would be implemented here
@@ -283,27 +304,27 @@ impl LoggingStdlib {
     pub fn generate_trace_code(message: &str) -> String {
         format!("logger.trace(\"{}\")", message)
     }
-    
+
     /// Generiert Rust-Code für log.debug()
     pub fn generate_debug_code(message: &str) -> String {
         format!("logger.debug(\"{}\")", message)
     }
-    
+
     /// Generiert Rust-Code für log.info()
     pub fn generate_info_code(message: &str) -> String {
         format!("logger.info(\"{}\")", message)
     }
-    
+
     /// Generiert Rust-Code für log.warn()
     pub fn generate_warn_code(message: &str) -> String {
         format!("logger.warn(\"{}\")", message)
     }
-    
+
     /// Generiert Rust-Code für log.error()
     pub fn generate_error_code(message: &str) -> String {
         format!("logger.error(\"{}\")", message)
     }
-    
+
     /// Liste der verfügbaren Logging-Funktionen
     pub fn get_functions() -> Vec<FunctionInfo> {
         vec![

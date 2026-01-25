@@ -1,4 +1,3 @@
-
 pub struct MocksStdlib;
 
 impl MocksStdlib {

@@ -14,8 +14,6 @@ pub struct ProcessingResult {
     pub errors: Option<Vec<Value>>,
 }
 
-
-
 pub struct TestModuleStdlib;
 
 impl TestModuleStdlib {
@@ -30,6 +28,4 @@ impl TestModuleStdlib {
     pub fn generate_transform_format_code(data: &str, _target_format: &str) -> String {
         data.to_string()
     }
-
-
 }

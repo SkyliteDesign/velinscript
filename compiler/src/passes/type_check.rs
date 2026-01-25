@@ -1,8 +1,8 @@
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
-use crate::type_checker::TypeChecker;
 use crate::borrow::checker::BorrowChecker;
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use crate::ir::builder::IRBuilder;
+use crate::type_checker::TypeChecker;
 use anyhow::Result;
 
 pub struct TypeCheckPass {
@@ -29,7 +29,7 @@ impl Pass for TypeCheckPass {
             let mut checker = TypeChecker::new();
             // Note: TypeChecker processes the entire merged AST from ParserPass,
             // so it sees all definitions across modules.
-            
+
             match checker.check_program(program) {
                 Ok(_) => {
                     // Type Checking erfolgreich
@@ -40,19 +40,21 @@ impl Pass for TypeCheckPass {
                     }
                 }
             }
-            
+
             // Borrow Checking (auf IR)
             if context.errors.is_empty() {
                 let mut builder = IRBuilder::new();
                 let ir_module = builder.build_module(program);
-                
+
                 let mut borrow_checker = BorrowChecker::new();
                 if let Err(borrow_errors) = borrow_checker.check(&ir_module) {
                     for borrow_error in borrow_errors {
-                        context.errors.push(crate::error::CompilerError::parse_error(
-                            borrow_error.to_string(),
-                            crate::error::ErrorLocation::new(0, 0),
-                        ));
+                        context
+                            .errors
+                            .push(crate::error::CompilerError::parse_error(
+                                borrow_error.to_string(),
+                                crate::error::ErrorLocation::new(0, 0),
+                            ));
                     }
                 }
             }

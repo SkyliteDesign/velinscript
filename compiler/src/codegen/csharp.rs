@@ -1,6 +1,6 @@
 use super::{CodeGenerator, CodegenConfig, TargetLanguage};
-use crate::parser::ast::*;
 use crate::codegen::framework::{Framework, FrameworkSelector};
+use crate::parser::ast::*;
 use anyhow::Result;
 
 pub struct CSharpCodeGenerator {
@@ -41,7 +41,7 @@ impl CSharpCodeGenerator {
     fn map_type(&self, t: &Type) -> String {
         match t {
             Type::String => "string".to_string(),
-            Type::Number => "double".to_string(), 
+            Type::Number => "double".to_string(),
             Type::Boolean => "bool".to_string(),
             Type::Void => "void".to_string(),
             Type::Any => "object".to_string(),
@@ -56,7 +56,11 @@ impl CSharpCodeGenerator {
                     .join(", ");
                 format!("{}<{}>", name, params_str)
             }
-            Type::Map { key, value } => format!("Dictionary<{}, {}>", self.map_type(key), self.map_type(value)),
+            Type::Map { key, value } => format!(
+                "Dictionary<{}, {}>",
+                self.map_type(key),
+                self.map_type(value)
+            ),
             _ => "object".to_string(),
         }
     }
@@ -66,7 +70,11 @@ impl CSharpCodeGenerator {
         self.writeln("{");
         self.indent();
         for field in &s.fields {
-            self.writeln(&format!("public {} {} {{ get; set; }}", self.map_type(&field.field_type), field.name));
+            self.writeln(&format!(
+                "public {} {} {{ get; set; }}",
+                self.map_type(&field.field_type),
+                field.name
+            ));
         }
         self.dedent();
         self.writeln("}");
@@ -95,7 +103,7 @@ impl CSharpCodeGenerator {
                         } else {
                             "".to_string()
                         };
-                        
+
                         if path.is_empty() {
                             self.writeln(&format!("[{}]", method));
                         } else {
@@ -108,23 +116,26 @@ impl CSharpCodeGenerator {
         }
 
         // Signature
-        let params: Vec<String> = f.params.iter()
+        let params: Vec<String> = f
+            .params
+            .iter()
             .map(|p| {
                 let mut prefix = String::new();
-                 if self.framework == Some(Framework::AspNet) {
-                     let is_primitive = matches!(p.param_type, Type::String | Type::Number | Type::Boolean);
-                     if !is_primitive {
-                         prefix = "[FromBody] ".to_string();
-                     } else {
-                         // [FromQuery] or [FromRoute] usually inferred, but can be explicit
-                         // Simplified:
-                         prefix = "[FromQuery] ".to_string(); 
-                     }
-                 }
+                if self.framework == Some(Framework::AspNet) {
+                    let is_primitive =
+                        matches!(p.param_type, Type::String | Type::Number | Type::Boolean);
+                    if !is_primitive {
+                        prefix = "[FromBody] ".to_string();
+                    } else {
+                        // [FromQuery] or [FromRoute] usually inferred, but can be explicit
+                        // Simplified:
+                        prefix = "[FromQuery] ".to_string();
+                    }
+                }
                 format!("{}{} {}", prefix, self.map_type(&p.param_type), p.name)
             })
             .collect();
-        
+
         let ret_type = if let Some(rt) = &f.return_type {
             self.map_type(rt)
         } else {
@@ -133,15 +144,24 @@ impl CSharpCodeGenerator {
 
         // ActionResult wrapper for Web API
         let final_ret = if self.framework == Some(Framework::AspNet) {
-            if ret_type == "void" { "IActionResult".to_string() } else { format!("ActionResult<{}>", ret_type) }
+            if ret_type == "void" {
+                "IActionResult".to_string()
+            } else {
+                format!("ActionResult<{}>", ret_type)
+            }
         } else {
             ret_type
         };
 
-        self.writeln(&format!("public {} {}({})", final_ret, f.name, params.join(", ")));
+        self.writeln(&format!(
+            "public {} {}({})",
+            final_ret,
+            f.name,
+            params.join(", ")
+        ));
         self.writeln("{");
         self.indent();
-        
+
         // Body
         for stmt in &f.body.statements {
             self.generate_statement(stmt);
@@ -180,18 +200,19 @@ impl CSharpCodeGenerator {
                 self.buffer.push_str(";\n");
             }
             Statement::Let(decl) => {
-                 let _kw = if decl.mutable { "" } else { "const " }; // C# uses types, const ...for constants
-                 self.buffer.push_str(&"    ".repeat(self.indent_level));
-                 let type_ann = if let Some(t) = &decl.var_type {
-                     self.map_type(t)
-                 } else {
-                     "var".to_string()
-                 };
-                 // C# const requires value at compile time, otherwise readonly, but for local vars 'const' or just type
-                 // Simplified: use var/type
-                 self.buffer.push_str(&format!("{} {} = ", type_ann, decl.name));
-                 self.generate_expression(&decl.value);
-                 self.buffer.push_str(";\n");
+                let _kw = if decl.mutable { "" } else { "const " }; // C# uses types, const ...for constants
+                self.buffer.push_str(&"    ".repeat(self.indent_level));
+                let type_ann = if let Some(t) = &decl.var_type {
+                    self.map_type(t)
+                } else {
+                    "var".to_string()
+                };
+                // C# const requires value at compile time, otherwise readonly, but for local vars 'const' or just type
+                // Simplified: use var/type
+                self.buffer
+                    .push_str(&format!("{} {} = ", type_ann, decl.name));
+                self.generate_expression(&decl.value);
+                self.buffer.push_str(";\n");
             }
             Statement::If(if_stmt) => {
                 self.buffer.push_str(&"    ".repeat(self.indent_level));
@@ -219,7 +240,7 @@ impl CSharpCodeGenerator {
     }
 
     fn generate_expression(&mut self, expr: &Expression) {
-         match expr {
+        match expr {
             Expression::Literal(lit) => match lit {
                 Literal::String(s) => self.buffer.push_str(&format!("\"{}\"", s)),
                 Literal::Number(n) => self.buffer.push_str(&n.to_string()),
@@ -240,7 +261,7 @@ impl CSharpCodeGenerator {
                     BinaryOperator::Gt => ">",
                     BinaryOperator::LtEq => "<=",
                     BinaryOperator::GtEq => ">=",
-                    _ => "+", 
+                    _ => "+",
                 };
                 self.buffer.push_str(&format!(" {} ", op_str));
                 self.generate_expression(right);
@@ -249,7 +270,9 @@ impl CSharpCodeGenerator {
                 self.generate_expression(callee);
                 self.buffer.push('(');
                 for (i, arg) in args.iter().enumerate() {
-                    if i > 0 { self.buffer.push_str(", "); }
+                    if i > 0 {
+                        self.buffer.push_str(", ");
+                    }
                     self.generate_expression(arg);
                 }
                 self.buffer.push(')');
@@ -259,7 +282,9 @@ impl CSharpCodeGenerator {
                 // Fallback to new List<object> if needed? new() is safer if context exists.
                 self.buffer.push_str("new() { ");
                 for (i, item) in items.iter().enumerate() {
-                    if i > 0 { self.buffer.push_str(", "); }
+                    if i > 0 {
+                        self.buffer.push_str(", ");
+                    }
                     self.generate_expression(item);
                 }
                 self.buffer.push_str(" }");
@@ -267,7 +292,9 @@ impl CSharpCodeGenerator {
             Expression::MapLiteral(entries) => {
                 self.buffer.push_str("new() { ");
                 for (i, (key, value)) in entries.iter().enumerate() {
-                    if i > 0 { self.buffer.push_str(", "); }
+                    if i > 0 {
+                        self.buffer.push_str(", ");
+                    }
                     self.buffer.push_str(&format!("{{ \"{}\", ", key));
                     self.generate_expression(value);
                     self.buffer.push_str(" }");
@@ -277,7 +304,9 @@ impl CSharpCodeGenerator {
             Expression::StructLiteral { name, fields } => {
                 self.buffer.push_str(&format!("new {} {{ ", name));
                 for (i, (field_name, value)) in fields.iter().enumerate() {
-                    if i > 0 { self.buffer.push_str(", "); }
+                    if i > 0 {
+                        self.buffer.push_str(", ");
+                    }
                     self.buffer.push_str(&format!("{} = ", field_name));
                     self.generate_expression(value);
                 }
@@ -290,12 +319,16 @@ impl CSharpCodeGenerator {
 
 impl CodeGenerator for CSharpCodeGenerator {
     fn generate(&mut self, program: &Program, config: &CodegenConfig) -> Result<String> {
-        self.framework = Some(FrameworkSelector::detect_framework(program, config.framework.as_deref()));
-        
+        self.framework = Some(FrameworkSelector::detect_framework(
+            program,
+            config.framework.as_deref(),
+        ));
+
         self.writeln(&format!("namespace {};", self.namespace));
         self.writeln("");
         if let Some(fw) = self.framework {
-            self.buffer.push_str(&FrameworkSelector::generate_imports(fw));
+            self.buffer
+                .push_str(&FrameworkSelector::generate_imports(fw));
         }
 
         if self.framework == Some(Framework::AspNet) {
@@ -305,15 +338,15 @@ impl CodeGenerator for CSharpCodeGenerator {
             self.writeln("{");
             self.indent();
         } else {
-             self.writeln("public class Program");
-             self.writeln("{");
-             self.indent();
+            self.writeln("public class Program");
+            self.writeln("{");
+            self.indent();
         }
 
         // Structs need to be outside Controller in C# usually, or nested.
         // Let's put them outside. But for this simple generator, nested is easier to manage context.
         // Actually, C# nested classes are fine.
-        
+
         for item in &program.items {
             if let Item::Struct(s) = item {
                 self.generate_struct(s);

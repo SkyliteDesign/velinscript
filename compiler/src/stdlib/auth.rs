@@ -1,9 +1,9 @@
 // JWT/OAuth2/OpenID Connect Authentication & Authorization
 
 #[cfg(feature = "oauth2")]
-use jsonwebtoken::{encode, decode, DecodingKey, EncodingKey, Header, Validation, Algorithm};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 fn hmac_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
     let mut key = key.to_vec();
@@ -15,20 +15,20 @@ fn hmac_sha256(key: &[u8], message: &[u8]) -> Vec<u8> {
     while key.len() < 64 {
         key.push(0);
     }
-    
+
     let mut o_key_pad = vec![0x5c; 64];
     let mut i_key_pad = vec![0x36; 64];
-    
+
     for i in 0..64 {
         o_key_pad[i] ^= key[i];
         i_key_pad[i] ^= key[i];
     }
-    
+
     let mut inner_hasher = Sha256::new();
     inner_hasher.update(&i_key_pad);
     inner_hasher.update(message);
     let inner_hash = inner_hasher.finalize();
-    
+
     let mut outer_hasher = Sha256::new();
     outer_hasher.update(&o_key_pad);
     outer_hasher.update(&inner_hash);
@@ -42,7 +42,7 @@ pub struct JWTToken {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserClaims {
-    pub sub: String,  // user_id (OIDC standard)
+    pub sub: String, // user_id (OIDC standard)
     pub user_id: String,
     pub email: String,
     pub roles: Vec<String>,
@@ -58,20 +58,23 @@ impl AuthService {
     pub fn new(secret: String) -> Self {
         AuthService { secret }
     }
-    
+
     #[cfg(feature = "oauth2")]
-    pub fn generate_token(&self, claims: UserClaims) -> Result<JWTToken, jsonwebtoken::errors::Error> {
+    pub fn generate_token(
+        &self,
+        claims: UserClaims,
+    ) -> Result<JWTToken, jsonwebtoken::errors::Error> {
         let header = Header::new(Algorithm::HS256);
         let encoding_key = EncodingKey::from_secret(self.secret.as_ref());
-        
+
         let token = encode(&header, &claims, &encoding_key)?;
-        
+
         Ok(JWTToken {
             token,
             expires_at: claims.exp as u64,
         })
     }
-    
+
     #[cfg(not(feature = "oauth2"))]
     pub fn generate_token(&self, claims: UserClaims) -> JWTToken {
         // Fallback implementation without jsonwebtoken
@@ -81,17 +84,17 @@ impl AuthService {
             expires_at: claims.exp as u64,
         }
     }
-    
+
     #[cfg(feature = "oauth2")]
     pub fn verify_token(&self, token: &str) -> Result<UserClaims, jsonwebtoken::errors::Error> {
         let decoding_key = DecodingKey::from_secret(self.secret.as_ref());
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["sub", "exp"]);
-        
+
         let token_data = decode::<UserClaims>(token, &decoding_key, &validation)?;
         Ok(token_data.claims)
     }
-    
+
     #[cfg(not(feature = "oauth2"))]
     pub fn verify_token(&self, token: &str) -> Option<UserClaims> {
         // Fallback implementation
@@ -108,7 +111,7 @@ impl AuthService {
             None
         }
     }
-    
+
     pub fn extract_user_id(&self, token: &str) -> Option<String> {
         #[cfg(feature = "oauth2")]
         {
@@ -119,7 +122,7 @@ impl AuthService {
             self.verify_token(token).map(|claims| claims.user_id)
         }
     }
-    
+
     pub fn has_role(&self, token: &str, role: &str) -> bool {
         #[cfg(feature = "oauth2")]
         {
@@ -163,15 +166,18 @@ impl AuthStdlib {
 #[cfg(feature = "oauth2")]
 pub mod oauth2_integration {
     use super::*;
+    use oauth2::basic::BasicClient;
+    use oauth2::{
+        AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, PkceCodeChallenge,
+        PkceCodeVerifier, RedirectUrl, Scope, TokenUrl,
+    };
     #[cfg(feature = "ml")]
     use reqwest;
-    use oauth2::{AuthUrl, TokenUrl, ClientId, ClientSecret, RedirectUrl, Scope, AuthorizationCode, CsrfToken, PkceCodeChallenge, PkceCodeVerifier};
-    use oauth2::basic::BasicClient;
-    
+
     pub struct OAuth2Provider {
         pub client: BasicClient,
     }
-    
+
     impl OAuth2Provider {
         pub fn new(
             client_id: String,
@@ -187,28 +193,35 @@ pub mod oauth2_integration {
                 Some(TokenUrl::new(token_url)?),
             )
             .set_redirect_uri(RedirectUrl::new(redirect_uri)?);
-            
+
             Ok(OAuth2Provider { client })
         }
-        
+
         pub fn get_authorization_url(&self) -> (String, PkceCodeVerifier) {
             let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-            let (auth_url, _csrf_token) = self.client
+            let (auth_url, _csrf_token) = self
+                .client
                 .authorize_url(CsrfToken::new_random)
                 .set_pkce_challenge(pkce_challenge)
                 .add_scope(Scope::new("openid".to_string()))
                 .add_scope(Scope::new("profile".to_string()))
                 .add_scope(Scope::new("email".to_string()))
                 .url();
-            
+
             (auth_url.as_str().to_string(), pkce_verifier)
         }
-        
+
         pub async fn exchange_code(
             &self,
             code: AuthorizationCode,
             pkce_verifier: PkceCodeVerifier,
-        ) -> Result<oauth2::StandardTokenResponse<oauth2::EmptyExtraTokenFields, oauth2::basic::BasicTokenType>, Box<dyn std::error::Error>> {
+        ) -> Result<
+            oauth2::StandardTokenResponse<
+                oauth2::EmptyExtraTokenFields,
+                oauth2::basic::BasicTokenType,
+            >,
+            Box<dyn std::error::Error>,
+        > {
             self.client
                 .exchange_code(code)
                 .set_pkce_verifier(pkce_verifier)
@@ -235,12 +248,14 @@ impl OAuth2Provider {
             redirect_uri,
         }
     }
-    
+
     pub fn get_authorization_url(&self, state: &str) -> String {
-        format!("https://oauth.provider.com/authorize?client_id={}&redirect_uri={}&state={}", 
-                self.client_id, self.redirect_uri, state)
+        format!(
+            "https://oauth.provider.com/authorize?client_id={}&redirect_uri={}&state={}",
+            self.client_id, self.redirect_uri, state
+        )
     }
-    
+
     pub fn exchange_code(&self, code: &str) -> Option<JWTToken> {
         // Fallback implementation
         Some(JWTToken {
@@ -271,40 +286,41 @@ impl MFAService {
         let time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or(std::time::Duration::from_secs(0))
-            .as_secs() / 30;
-            
+            .as_secs()
+            / 30;
+
         // Check current window and previous window (allow 30s drift)
         for i in 0..2 {
             let t = time - i;
             let t_bytes = t.to_be_bytes();
             // Use local hmac_sha256 helper
             let hmac = hmac_sha256(secret.as_bytes(), &t_bytes);
-            
+
             let offset = (hmac[hmac.len() - 1] & 0xf) as usize;
             let code = ((hmac[offset] as u32 & 0x7f) << 24)
                 | ((hmac[offset + 1] as u32 & 0xff) << 16)
                 | ((hmac[offset + 2] as u32 & 0xff) << 8)
                 | (hmac[offset + 3] as u32 & 0xff);
-            
+
             // 6 digits
             let code = code % 1_000_000;
             let code_str = format!("{:06}", code);
-            
+
             if code_str == token {
                 return true;
             }
         }
         false
     }
-    
+
     pub fn verify_sms_code(code: &str, expected: &str) -> bool {
         code == expected
     }
-    
+
     pub fn verify_email_code(code: &str, expected: &str) -> bool {
         code == expected
     }
-    
+
     pub fn generate_mfa_token(user_id: String, mfa_method: String) -> MFAToken {
         MFAToken {
             user_id,

@@ -1,6 +1,6 @@
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
 use crate::autofix::AutoFixer;
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use anyhow::Result;
 
 pub struct AutoFixPass {
@@ -32,7 +32,10 @@ impl Pass for AutoFixPass {
             if result.fixed {
                 println!("✨ {} Fehler automatisch repariert:", result.reports.len());
                 for report in &result.reports {
-                    println!("  - {}: {} -> {}", report.rule, report.original, report.fixed);
+                    println!(
+                        "  - {}: {} -> {}",
+                        report.rule, report.original, report.fixed
+                    );
                 }
                 *source = result.code;
             } else {

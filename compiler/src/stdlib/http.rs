@@ -25,27 +25,28 @@ impl HttpRequest {
             query_params: std::collections::HashMap::new(),
         }
     }
-    
+
     pub fn header(&mut self, key: String, value: String) {
         self.headers.insert(key, value);
     }
-    
+
     pub fn get_header(&self, key: &str) -> Option<&String> {
         self.headers.get(key)
     }
-    
+
     pub fn query_param(&mut self, key: String, value: String) {
         self.query_params.insert(key, value);
     }
-    
+
     pub fn get_query_param(&self, key: &str) -> Option<&String> {
         self.query_params.get(key)
     }
-    
+
     pub fn set_content_type(&mut self, content_type: &str) {
-        self.headers.insert("Content-Type".to_string(), content_type.to_string());
+        self.headers
+            .insert("Content-Type".to_string(), content_type.to_string());
     }
-    
+
     pub fn set_status(&mut self, _status: u16) {
         // This method seems to be misplaced on HttpRequest, usually status is for Response
         // But keeping it as it was in the original file snippet I saw (implied)
@@ -61,7 +62,7 @@ impl HttpResponse {
             body: Some(body),
         }
     }
-    
+
     pub fn created(body: String) -> Self {
         HttpResponse {
             status: 201,
@@ -69,7 +70,7 @@ impl HttpResponse {
             body: Some(body),
         }
     }
-    
+
     pub fn bad_request(message: String) -> Self {
         HttpResponse {
             status: 400,
@@ -77,7 +78,7 @@ impl HttpResponse {
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
     }
-    
+
     pub fn unauthorized(message: String) -> Self {
         HttpResponse {
             status: 401,
@@ -85,7 +86,7 @@ impl HttpResponse {
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
     }
-    
+
     pub fn forbidden(message: String) -> Self {
         HttpResponse {
             status: 403,
@@ -93,7 +94,7 @@ impl HttpResponse {
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
     }
-    
+
     pub fn not_found(message: String) -> Self {
         HttpResponse {
             status: 404,
@@ -101,7 +102,7 @@ impl HttpResponse {
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
     }
-    
+
     pub fn internal_server_error(message: String) -> Self {
         HttpResponse {
             status: 500,
@@ -147,9 +148,10 @@ pub fn internal_server_error(message: &str) -> impl axum::response::IntoResponse
         "error": message
     }))).into_response()
 }
-"#.to_string()
+"#
+        .to_string()
     }
-    
+
     /// Generiert Rust-Code für HTTP Error-Responses (Actix)
     pub fn generate_actix_error_helpers() -> String {
         r#"
@@ -182,7 +184,8 @@ pub fn internal_server_error(message: &str) -> actix_web::HttpResponse {
         "error": message
     }))
 }
-"#.to_string()
+"#
+        .to_string()
     }
 }
 

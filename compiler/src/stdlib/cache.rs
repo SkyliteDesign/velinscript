@@ -2,7 +2,7 @@
 // Cache-Funktionen für in-memory und persistent caching
 
 use std::collections::HashMap;
-use std::time::{SystemTime, Duration};
+use std::time::{Duration, SystemTime};
 
 /// Cache Entry mit TTL (Time To Live)
 pub struct CacheEntry<T> {
@@ -22,7 +22,7 @@ impl<T> Cache<T> {
             data: HashMap::new(),
         }
     }
-    
+
     /// Setzt einen Wert mit optionaler TTL (in Sekunden)
     pub fn set(&mut self, key: String, value: T, ttl_seconds: Option<u64>) {
         let expires_at = if let Some(ttl) = ttl_seconds {
@@ -30,13 +30,10 @@ impl<T> Cache<T> {
         } else {
             SystemTime::now() + Duration::from_secs(u64::MAX)
         };
-        
-        self.data.insert(key, CacheEntry {
-            value,
-            expires_at,
-        });
+
+        self.data.insert(key, CacheEntry { value, expires_at });
     }
-    
+
     /// Holt einen Wert aus dem Cache
     pub fn get(&self, key: &str) -> Option<&T> {
         if let Some(entry) = self.data.get(key) {
@@ -49,23 +46,23 @@ impl<T> Cache<T> {
             None
         }
     }
-    
+
     /// Entfernt einen Wert aus dem Cache
     pub fn remove(&mut self, key: &str) -> bool {
         self.data.remove(key).is_some()
     }
-    
+
     /// Löscht alle abgelaufenen Einträge
     pub fn cleanup(&mut self) {
         let now = SystemTime::now();
         self.data.retain(|_, entry| entry.expires_at > now);
     }
-    
+
     /// Löscht den gesamten Cache
     pub fn clear(&mut self) {
         self.data.clear();
     }
-    
+
     /// Prüft ob ein Key existiert
     pub fn exists(&self, key: &str) -> bool {
         if let Some(entry) = self.data.get(key) {
@@ -74,7 +71,7 @@ impl<T> Cache<T> {
             false
         }
     }
-    
+
     /// Gibt die Anzahl der Einträge zurück
     pub fn size(&self) -> usize {
         self.data.len()
@@ -94,27 +91,30 @@ impl CacheStdlib {
     /// Generiert Rust-Code für cache.set()
     pub fn generate_set_code(key: &str, value: &str, ttl: Option<&str>) -> String {
         if let Some(ttl_val) = ttl {
-            format!("cache.set(\"{}\".to_string(), {}, Some({} as u64))", key, value, ttl_val)
+            format!(
+                "cache.set(\"{}\".to_string(), {}, Some({} as u64))",
+                key, value, ttl_val
+            )
         } else {
             format!("cache.set(\"{}\".to_string(), {}, None)", key, value)
         }
     }
-    
+
     /// Generiert Rust-Code für cache.get()
     pub fn generate_get_code(key: &str) -> String {
         format!("cache.get(\"{}\")", key)
     }
-    
+
     /// Generiert Rust-Code für cache.remove()
     pub fn generate_remove_code(key: &str) -> String {
         format!("cache.remove(\"{}\")", key)
     }
-    
+
     /// Generiert Rust-Code für cache.clear()
     pub fn generate_clear_code() -> String {
         "cache.clear()".to_string()
     }
-    
+
     /// Generiert Rust-Code für cache.exists()
     pub fn generate_exists_code(key: &str) -> String {
         format!("cache.exists(\"{}\")", key)
@@ -124,7 +124,7 @@ impl CacheStdlib {
     pub fn generate_size_code() -> String {
         "cache.size()".to_string()
     }
-    
+
     /// Liste der verfügbaren Cache-Funktionen
     pub fn get_functions() -> Vec<FunctionInfo> {
         vec![

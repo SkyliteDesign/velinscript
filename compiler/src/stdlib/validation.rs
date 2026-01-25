@@ -13,11 +13,9 @@ pub struct Validator {
 
 impl Validator {
     pub fn new() -> Self {
-        Validator {
-            errors: Vec::new(),
-        }
+        Validator { errors: Vec::new() }
     }
-    
+
     pub fn required(&mut self, field: &str, value: Option<&String>) -> &mut Self {
         if value.is_none() || value.unwrap().is_empty() {
             self.errors.push(ValidationError {
@@ -27,7 +25,7 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn min_length(&mut self, field: &str, value: &str, min: usize) -> &mut Self {
         if value.len() < min {
             self.errors.push(ValidationError {
@@ -37,7 +35,7 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn max_length(&mut self, field: &str, value: &str, max: usize) -> &mut Self {
         if value.len() > max {
             self.errors.push(ValidationError {
@@ -47,7 +45,7 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn email(&mut self, field: &str, value: &str) -> &mut Self {
         let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
         if !email_regex.is_match(value) {
@@ -58,7 +56,7 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn pattern(&mut self, field: &str, value: &str, pattern: &str, message: &str) -> &mut Self {
         match Regex::new(pattern) {
             Ok(regex) => {
@@ -78,7 +76,7 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn min(&mut self, field: &str, value: f64, min: f64) -> &mut Self {
         if value < min {
             self.errors.push(ValidationError {
@@ -88,7 +86,7 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn max(&mut self, field: &str, value: f64, max: f64) -> &mut Self {
         if value > max {
             self.errors.push(ValidationError {
@@ -98,7 +96,7 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn range(&mut self, field: &str, value: f64, min: f64, max: f64) -> &mut Self {
         if value < min || value > max {
             self.errors.push(ValidationError {
@@ -108,7 +106,7 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn custom<F>(&mut self, field: &str, value: &str, validator: F) -> &mut Self
     where
         F: Fn(&str) -> Option<String>,
@@ -121,15 +119,14 @@ impl Validator {
         }
         self
     }
-    
+
     pub fn is_valid(&self) -> bool {
         self.errors.is_empty()
     }
-    
+
     pub fn errors(&self) -> &Vec<ValidationError> {
         &self.errors
     }
-    
 }
 
 pub struct ValidationStdlib;
@@ -143,11 +140,21 @@ impl ValidationStdlib {
         format!("{}.required({}, {})", validator, field, value)
     }
 
-    pub fn generate_min_length_code(validator: &str, field: &str, value: &str, min: &str) -> String {
+    pub fn generate_min_length_code(
+        validator: &str,
+        field: &str,
+        value: &str,
+        min: &str,
+    ) -> String {
         format!("{}.min_length({}, {}, {})", validator, field, value, min)
     }
 
-    pub fn generate_max_length_code(validator: &str, field: &str, value: &str, max: &str) -> String {
+    pub fn generate_max_length_code(
+        validator: &str,
+        field: &str,
+        value: &str,
+        max: &str,
+    ) -> String {
         format!("{}.max_length({}, {}, {})", validator, field, value, max)
     }
 
@@ -155,8 +162,17 @@ impl ValidationStdlib {
         format!("{}.email({}, {})", validator, field, value)
     }
 
-    pub fn generate_pattern_code(validator: &str, field: &str, value: &str, pattern: &str, message: &str) -> String {
-        format!("{}.pattern({}, {}, {}, {})", validator, field, value, pattern, message)
+    pub fn generate_pattern_code(
+        validator: &str,
+        field: &str,
+        value: &str,
+        pattern: &str,
+        message: &str,
+    ) -> String {
+        format!(
+            "{}.pattern({}, {}, {}, {})",
+            validator, field, value, pattern, message
+        )
     }
 
     pub fn generate_min_code(validator: &str, field: &str, value: &str, min: &str) -> String {
@@ -171,7 +187,7 @@ impl ValidationStdlib {
     pub fn generate_import() -> String {
         "use regex::Regex;\n".to_string()
     }
-    
+
     /// Generiert Rust-Code für Validator-Struktur
     pub fn generate_validator_struct() -> String {
         r#"#[derive(Debug, Clone)]
@@ -290,6 +306,7 @@ impl Validator {
         &self.errors
     }
 }
-"#.to_string()
+"#
+        .to_string()
     }
 }

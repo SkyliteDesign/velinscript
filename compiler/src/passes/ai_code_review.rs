@@ -1,28 +1,27 @@
+use crate::compiler::config::CompilerConfig;
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
+use crate::parser::ast::*;
 /// AI Code Review - Validiert und reviewt AI-generierten Code
-/// 
+///
 /// Dieses Modul implementiert einen Code-Review-Mechanismus für AI-generierten Code:
 /// - Syntax-Validierung
 /// - Type-Checking
 /// - Security-Checks
 /// - Sandbox-Execution (optional)
-/// 
+///
 /// # Beispiel
-/// 
+///
 /// ```rust
 /// use velin_compiler::passes::ai_code_review::AICodeReviewer;
-/// 
+///
 /// let reviewer = AICodeReviewer::new();
 /// match reviewer.review_code(generated_code) {
 ///     Ok(approved) => println!("Code approved: {}", approved),
 ///     Err(e) => println!("Code rejected: {}", e),
 /// }
 /// ```
-
 use crate::parser::parser::Parser;
-use crate::parser::ast::*;
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
-use crate::compiler::config::CompilerConfig;
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -125,7 +124,12 @@ impl AICodeReviewer {
     }
 
     /// Prüft Typen (vereinfacht)
-    fn check_types(&self, program: &Program, _warnings: &mut Vec<String>, errors: &mut Vec<String>) -> Result<()> {
+    fn check_types(
+        &self,
+        program: &Program,
+        _warnings: &mut Vec<String>,
+        errors: &mut Vec<String>,
+    ) -> Result<()> {
         // Prüfe auf undefinierte Typen
         let defined_structs: HashSet<String> = program
             .items
@@ -207,7 +211,12 @@ impl AICodeReviewer {
     }
 
     /// Prüft Komplexität
-    fn check_complexity(&self, program: &Program, warnings: &mut Vec<String>, suggestions: &mut Vec<String>) -> Result<()> {
+    fn check_complexity(
+        &self,
+        program: &Program,
+        warnings: &mut Vec<String>,
+        suggestions: &mut Vec<String>,
+    ) -> Result<()> {
         for item in &program.items {
             if let Item::Function(f) = item {
                 let complexity = self.calculate_complexity(&f.body);
@@ -262,12 +271,17 @@ impl AICodeReviewer {
     }
 
     /// Prüft Imports
-    fn check_imports(&self, program: &Program, errors: &mut Vec<String>, security_issues: &mut Vec<String>) -> Result<()> {
+    fn check_imports(
+        &self,
+        program: &Program,
+        errors: &mut Vec<String>,
+        security_issues: &mut Vec<String>,
+    ) -> Result<()> {
         for item in &program.items {
             if let Item::Use(use_stmt) = item {
                 // Use hat path: Vec<String>, nimm ersten Teil als Modul-Name
                 let module_name = use_stmt.path.first().map(|s| s.as_str()).unwrap_or("");
-                
+
                 // Prüfe ob Import erlaubt ist
                 if !self.allowed_imports.contains(module_name) {
                     security_issues.push(format!(
@@ -295,18 +309,13 @@ impl AICodeReviewer {
     fn check_patterns(&self, code: &str, security_issues: &mut Vec<String>) -> Result<()> {
         for pattern in &self.forbidden_patterns {
             if code.contains(pattern) {
-                security_issues.push(format!(
-                    "Code contains forbidden pattern: '{}'",
-                    pattern
-                ));
+                security_issues.push(format!("Code contains forbidden pattern: '{}'", pattern));
             }
         }
 
         // Prüfe auf verdächtige String-Literale
         if code.contains("api_key") || code.contains("password") || code.contains("secret") {
-            security_issues.push(
-                "Code contains potentially sensitive string literals".to_string()
-            );
+            security_issues.push("Code contains potentially sensitive string literals".to_string());
         }
 
         Ok(())
@@ -320,7 +329,7 @@ impl Default for AICodeReviewer {
 }
 
 /// AI Code Review Pass
-/// 
+///
 /// Reviewt AI-generierten Code auf Sicherheit und Qualität
 pub struct AICodeReviewPass {
     reviewer: AICodeReviewer,
@@ -350,13 +359,13 @@ impl Pass for AICodeReviewPass {
         if let Some(program) = &context.program {
             // Review nur AI-generierte Funktionen/Structs
             // (könnte durch Metadaten markiert sein)
-            
+
             // Für jetzt: Review alle Funktionen die nach AICodeGenerationPass hinzugefügt wurden
             // In einer vollständigen Implementierung würde man Metadaten verwenden
-            
+
             // Vereinfachte Implementierung: Review das gesamte Programm
             let code = format!("{:?}", program); // Vereinfacht - sollte echten Code-String verwenden
-            
+
             match self.reviewer.review_code(&code) {
                 Ok(result) => {
                     if !result.approved {

@@ -2,14 +2,15 @@ use super::{Template, TemplateConfig};
 use anyhow::Result;
 
 /// API Server Template
-/// 
+///
 /// Generiert vollständigen Axum/Actix-Web Server
 /// Mit Routing, Middleware, Error Handling
 pub struct APIServerTemplate;
 
 impl Template for APIServerTemplate {
     fn generate(&self, config: &TemplateConfig) -> Result<String, String> {
-        let framework = config.options
+        let framework = config
+            .options
             .get("framework")
             .and_then(|v| v.as_str())
             .unwrap_or("axum");

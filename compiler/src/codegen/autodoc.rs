@@ -1,4 +1,3 @@
-
 use crate::parser::ast::*;
 use serde_json::json;
 
@@ -39,8 +38,11 @@ impl AutoDocGenerator {
         for doc in docs {
             if let Some(name) = doc.get("name").and_then(|n| n.as_str()) {
                 if let Some(kind) = doc.get("kind").and_then(|k| k.as_str()) {
-                    let description = doc.get("documentation").and_then(|d| d.as_str()).unwrap_or("No description provided.");
-                    
+                    let description = doc
+                        .get("documentation")
+                        .and_then(|d| d.as_str())
+                        .unwrap_or("No description provided.");
+
                     entries.push(json!({
                         "question": format!("How do I use the {} {}?", kind, name),
                         "answer": format!("The {} '{}' is defined as follows:\n\nDescription: {}\n\nSignature: {}", kind, name, description, doc.get("signature").and_then(|s| s.as_str()).unwrap_or("")),
@@ -65,22 +67,34 @@ impl AutoDocGenerator {
     fn generate_function(&self, func: &Function) -> Option<serde_json::Value> {
         // Only document if @VelinAutoDoc is present or it has doc comments
         let has_autodoc = func.decorators.iter().any(|d| d.name == "VelinAutoDoc");
-        
+
         if !has_autodoc && func.documentation.is_none() {
             return None;
         }
 
-        let params = func.params.iter().map(|p| {
-            json!({
-                "name": p.name,
-                "type": p.param_type.to_string(),
-                "default": p.default.is_some()
+        let params = func
+            .params
+            .iter()
+            .map(|p| {
+                json!({
+                    "name": p.name,
+                    "type": p.param_type.to_string(),
+                    "default": p.default.is_some()
+                })
             })
-        }).collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
-        let return_type = func.return_type.as_ref().map(|t| t.to_string()).unwrap_or("void".to_string());
+        let return_type = func
+            .return_type
+            .as_ref()
+            .map(|t| t.to_string())
+            .unwrap_or("void".to_string());
 
-        let decorators = func.decorators.iter().map(|d| d.name.clone()).collect::<Vec<_>>();
+        let decorators = func
+            .decorators
+            .iter()
+            .map(|d| d.name.clone())
+            .collect::<Vec<_>>();
 
         // AI-Hint: This structure is ready to be fed into an LLM for "explanation generation"
         Some(json!({
@@ -104,18 +118,22 @@ impl AutoDocGenerator {
 
     fn generate_struct(&self, struc: &Struct) -> Option<serde_json::Value> {
         let has_autodoc = struc.decorators.iter().any(|d| d.name == "VelinAutoDoc");
-        
+
         if !has_autodoc && struc.documentation.is_none() {
             return None;
         }
 
-        let fields = struc.fields.iter().map(|f| {
-            json!({
-                "name": f.name,
-                "type": f.field_type.to_string(),
-                "is_public": f.visibility == Visibility::Public
+        let fields = struc
+            .fields
+            .iter()
+            .map(|f| {
+                json!({
+                    "name": f.name,
+                    "type": f.field_type.to_string(),
+                    "is_public": f.visibility == Visibility::Public
+                })
             })
-        }).collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         Some(json!({
             "kind": "struct",

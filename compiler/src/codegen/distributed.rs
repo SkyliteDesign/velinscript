@@ -3,7 +3,7 @@ use crate::parser::ast::*;
 use anyhow::Result;
 
 /// Deployment Analyzer für verteilte Systeme
-/// 
+///
 /// Analysiert Code und generiert Deployment-Pläne:
 /// - Analysiert Ressourcen-Anforderungen
 /// - Evaluiert Deployment-Optionen
@@ -50,7 +50,7 @@ impl DeploymentAnalyzer {
     /// Generiert Infrastructure-Code
     pub fn generate_infrastructure(&self, plan: &DeploymentPlan) -> Result<InfrastructureCode> {
         use crate::codegen::infrastructure::InfrastructureGenerator;
-        
+
         let generator = InfrastructureGenerator::new();
         generator.generate(plan)
     }
@@ -90,7 +90,7 @@ impl ResourceAnalyzer {
         // Verbesserte Komplexitäts-Analyse mit cyclomatic complexity
         let base_complexity = self.analyze_block_complexity(&func.body);
         let cyclomatic = self.calculate_cyclomatic_complexity(&func.body);
-        
+
         // Kombiniere beide Metriken
         base_complexity + cyclomatic
     }
@@ -100,15 +100,17 @@ impl ResourceAnalyzer {
         for stmt in &block.statements {
             complexity += match stmt {
                 Statement::If(if_stmt) => {
-                    1 + self.analyze_block_complexity(&if_stmt.then_block) 
-                      + if_stmt.else_block.as_ref().map(|b| self.analyze_block_complexity(b)).unwrap_or(0)
+                    1 + self.analyze_block_complexity(&if_stmt.then_block)
+                        + if_stmt
+                            .else_block
+                            .as_ref()
+                            .map(|b| self.analyze_block_complexity(b))
+                            .unwrap_or(0)
                 }
                 Statement::While(while_stmt) => {
                     5 + self.analyze_block_complexity(&while_stmt.body) // Loops sind teurer
                 }
-                Statement::For(for_stmt) => {
-                    5 + self.analyze_block_complexity(&for_stmt.body)
-                }
+                Statement::For(for_stmt) => 5 + self.analyze_block_complexity(&for_stmt.body),
                 Statement::Match(match_stmt) => {
                     // Match-Statements sind komplexer
                     2 + match_stmt.arms.len() as u32
@@ -127,7 +129,7 @@ impl ResourceAnalyzer {
         }
         complexity
     }
-    
+
     fn calculate_cyclomatic_complexity(&self, block: &Block) -> u32 {
         let mut complexity = 1; // Basis-Komplexität
         for stmt in &block.statements {
@@ -141,14 +143,19 @@ impl ResourceAnalyzer {
         }
         complexity
     }
-    
+
     fn estimate_expression_complexity(&self, expr: &crate::parser::ast::Expression) -> u32 {
         match expr {
             crate::parser::ast::Expression::Call { .. } => 2,
             crate::parser::ast::Expression::BinaryOp { left, right, .. } => {
-                1 + self.estimate_expression_complexity(left) + self.estimate_expression_complexity(right)
+                1 + self.estimate_expression_complexity(left)
+                    + self.estimate_expression_complexity(right)
             }
-            crate::parser::ast::Expression::If { condition, then_expr, else_expr } => {
+            crate::parser::ast::Expression::If {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
                 1 + self.estimate_expression_complexity(condition)
                     + self.estimate_expression_complexity(then_expr)
                     + self.estimate_expression_complexity(else_expr)
@@ -161,14 +168,14 @@ impl ResourceAnalyzer {
         // Verbesserte Memory-Schätzung
         let vars = self.count_variables(&func.body);
         let complexity = self.estimate_complexity(func);
-        
+
         // Basis: 10MB
         // + 1MB pro Variable
         // + 0.1MB pro Komplexitäts-Punkt (für Stack-Overhead)
         let base_mb = 10u64;
         let var_mb = vars as u64;
         let complexity_mb = (complexity as f64 * 0.1) as u64;
-        
+
         base_mb + var_mb + complexity_mb
     }
 
@@ -206,11 +213,11 @@ impl ResourceAnalyzer {
         if func.name.contains(pattern) {
             return true;
         }
-        
+
         // Prüfe auch im Body nach Pattern
         self.has_pattern_in_block(&func.body, pattern)
     }
-    
+
     fn has_pattern_in_block(&self, block: &crate::parser::ast::Block, pattern: &str) -> bool {
         for stmt in &block.statements {
             match stmt {
@@ -252,31 +259,40 @@ impl ResourceAnalyzer {
         }
         false
     }
-    
-    fn has_pattern_in_expression(&self, expr: &crate::parser::ast::Expression, pattern: &str) -> bool {
+
+    fn has_pattern_in_expression(
+        &self,
+        expr: &crate::parser::ast::Expression,
+        pattern: &str,
+    ) -> bool {
         match expr {
             crate::parser::ast::Expression::Identifier(name) => name.contains(pattern),
             crate::parser::ast::Expression::Member { object, member } => {
                 member.contains(pattern) || self.has_pattern_in_expression(object, pattern)
             }
             crate::parser::ast::Expression::Call { callee, args } => {
-                self.has_pattern_in_expression(callee, pattern) ||
-                args.iter().any(|arg| self.has_pattern_in_expression(arg, pattern))
+                self.has_pattern_in_expression(callee, pattern)
+                    || args
+                        .iter()
+                        .any(|arg| self.has_pattern_in_expression(arg, pattern))
             }
             crate::parser::ast::Expression::BinaryOp { left, right, .. } => {
-                self.has_pattern_in_expression(left, pattern) ||
-                self.has_pattern_in_expression(right, pattern)
+                self.has_pattern_in_expression(left, pattern)
+                    || self.has_pattern_in_expression(right, pattern)
             }
-            crate::parser::ast::Expression::LLMCall { args, .. } => {
-                args.iter().any(|arg| self.has_pattern_in_expression(arg, pattern))
-            }
+            crate::parser::ast::Expression::LLMCall { args, .. } => args
+                .iter()
+                .any(|arg| self.has_pattern_in_expression(arg, pattern)),
             _ => false,
         }
     }
 }
 
 impl DeploymentAnalyzer {
-    fn evaluate_deployment_options(&self, resources: &ResourceRequirements) -> Result<Vec<DeploymentOption>> {
+    fn evaluate_deployment_options(
+        &self,
+        resources: &ResourceRequirements,
+    ) -> Result<Vec<DeploymentOption>> {
         let mut options = Vec::new();
 
         // Option 1: Local (für Entwicklung)
@@ -320,18 +336,28 @@ impl DeploymentAnalyzer {
         Ok(options)
     }
 
-    fn choose_best_option<'a>(&self, options: &'a [DeploymentOption]) -> Result<&'a DeploymentOption> {
+    fn choose_best_option<'a>(
+        &self,
+        options: &'a [DeploymentOption],
+    ) -> Result<&'a DeploymentOption> {
         // Einfache Heuristik: Wähle Option mit bestem Cost/Performance-Verhältnis
-        options.iter()
+        options
+            .iter()
             .min_by(|a, b| {
                 let score_a = a.scalability.score() / a.cost_per_month.max(0.1);
                 let score_b = b.scalability.score() / b.cost_per_month.max(0.1);
-                score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+                score_b
+                    .partial_cmp(&score_a)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             })
             .ok_or_else(|| anyhow::anyhow!("No deployment options available"))
     }
 
-    fn generate_deployment_plan(&self, option: &DeploymentOption, resources: &ResourceRequirements) -> Result<DeploymentPlan> {
+    fn generate_deployment_plan(
+        &self,
+        option: &DeploymentOption,
+        resources: &ResourceRequirements,
+    ) -> Result<DeploymentPlan> {
         Ok(DeploymentPlan {
             deployment_type: option.deployment_type.clone(),
             needs_caching: resources.needs_caching,
@@ -348,13 +374,13 @@ impl DeploymentAnalyzer {
         // Verbesserte Skalierungs-Heuristik
         // Basis: Mindestens 1 Replica
         let base_replicas = 1u32;
-        
+
         // CPU-basierte Skalierung: 1 Replica pro CPU Core (mit Minimum)
         let cpu_replicas = resources.cpu_cores.max(1);
-        
+
         // Memory-basierte Skalierung: 1 Replica pro 512MB
         let memory_replicas = (resources.memory_mb / 512).max(1) as u32;
-        
+
         // Nimm das Maximum für High Availability
         // Aber begrenze auf 10 Replicas (kann konfiguriert werden)
         let max_replicas = 10u32;

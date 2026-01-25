@@ -72,6 +72,7 @@ Willkommen zur vollständigen Dokumentation von VelinScript 3.1.0!
 ### Core-Architektur
 - **[Compiler Architecture](architecture/compiler-architecture.md)** - Pass-System und Core
 - **[Pass-Verlauf & Funktionsweise](architecture/pass-verlauf.md)** ✅ (Neu in 3.1.0) - Detaillierte Erklärung aller Passes
+- **[Fehlerbehandlung & Lösungsvorschläge](architecture/error-handling.md)** ✅ (Neu in 3.1.0) <- 25.01.2026 -> Extra - Umfassendes Fehlerbehandlungssystem
 - **[ParserPass](architecture/parser-pass.md)** ✅ (Neu in 3.1.0) - Parsing & Modul-Auflösung
 - **[DesugaringPass](architecture/desugaring-pass.md)** ✅ (Neu in 3.1.0) - Syntaktischer Zucker Transformation
 - **[CodeOrderingPass](architecture/code-ordering-pass.md)** ✅ (Neu in 3.1.0) - Automatische Code-Sortierung
@@ -139,6 +140,7 @@ Willkommen zur vollständigen Dokumentation von VelinScript 3.1.0!
 
 ### Projekt-Beispiele
 Siehe [examples/](../../examples/) für vollständige Beispiel-Projekte:
+- **[System Diagnosis](system-diagnose.md)** ✅ (Neu in 3.1.0) - Umfassendes System Monitoring und Security Checks (2,372 LoC)
 - **[01-hello-api](../../examples/01-hello-api/)** - Einfaches Einstiegsbeispiel
 - **[02-llm-chat](../../examples/02-llm-chat/)** - LLM-Integration
 - **[05-ultimate-showcase](../../examples/05-ultimate-showcase/)** - Alle Features
@@ -187,5 +189,5 @@ Siehe [examples/](../../examples/) für vollständige Beispiel-Projekte:
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
+**Letzte Aktualisierung:** 2026-02-02  
 **Version:** 3.1.0

@@ -1,11 +1,11 @@
-use crate::compiler::pass::Pass;
 use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use crate::parser::ast::*;
 use anyhow::Result;
-use petgraph::graph::{DiGraph, NodeIndex};
-use petgraph::algo::toposort;
 use indexmap::IndexMap;
-use std::collections::{HashSet, HashMap};
+use petgraph::algo::toposort;
+use petgraph::graph::{DiGraph, NodeIndex};
+use std::collections::{HashMap, HashSet};
 
 pub struct CodeOrderingPass;
 
@@ -17,7 +17,7 @@ impl CodeOrderingPass {
     fn order_program(&self, program: &mut Program) -> Result<()> {
         // Build dependency graph
         let (graph, _node_map, item_map) = self.build_dependency_graph(&program.items)?;
-        
+
         // Perform topological sort
         let sorted_indices = match toposort(&graph, None) {
             Ok(indices) => indices,
@@ -30,7 +30,7 @@ impl CodeOrderingPass {
                 ));
             }
         };
-        
+
         // Reorder items based on topological sort
         let mut ordered_items = Vec::new();
         let mut item_map_mut = item_map;
@@ -39,12 +39,13 @@ impl CodeOrderingPass {
                 ordered_items.push(item);
             }
         }
-        
+
         // Add any items that weren't in the graph (shouldn't happen, but safety check)
-        let graph_item_names: HashSet<String> = item_map_mut.values()
+        let graph_item_names: HashSet<String> = item_map_mut
+            .values()
             .filter_map(|item| self.get_item_name(item))
             .collect();
-        
+
         for item in &program.items {
             if let Some(name) = self.get_item_name(item) {
                 if !graph_item_names.contains(&name) {
@@ -52,7 +53,7 @@ impl CodeOrderingPass {
                 }
             }
         }
-        
+
         program.items = ordered_items;
         Ok(())
     }
@@ -60,11 +61,15 @@ impl CodeOrderingPass {
     fn build_dependency_graph(
         &self,
         items: &[Item],
-    ) -> Result<(DiGraph<String, ()>, IndexMap<String, NodeIndex>, HashMap<NodeIndex, Item>)> {
+    ) -> Result<(
+        DiGraph<String, ()>,
+        IndexMap<String, NodeIndex>,
+        HashMap<NodeIndex, Item>,
+    )> {
         let mut graph = DiGraph::new();
         let mut node_map = IndexMap::new();
         let mut item_map = HashMap::new();
-        
+
         // First pass: Add all items as nodes
         for item in items {
             if let Some(name) = self.get_item_name(item) {
@@ -75,13 +80,13 @@ impl CodeOrderingPass {
                 }
             }
         }
-        
+
         // Second pass: Add edges based on dependencies
         for item in items {
             if let Some(item_name) = self.get_item_name(item) {
                 let item_idx = *node_map.get(&item_name).unwrap();
                 let dependencies = self.extract_dependencies(item);
-                
+
                 for dep in dependencies {
                     if let Some(dep_idx) = node_map.get(&dep) {
                         // Add edge: dependency -> item (item depends on dependency)
@@ -90,7 +95,7 @@ impl CodeOrderingPass {
                 }
             }
         }
-        
+
         Ok((graph, node_map, item_map))
     }
 
@@ -110,19 +115,19 @@ impl CodeOrderingPass {
 
     fn extract_dependencies(&self, item: &Item) -> Vec<String> {
         let mut deps = Vec::new();
-        
+
         match item {
             Item::Function(f) => {
                 // Dependencies from parameters
                 for param in &f.params {
                     deps.extend(self.extract_type_dependencies(&param.param_type));
                 }
-                
+
                 // Dependencies from return type
                 if let Some(ref return_type) = f.return_type {
                     deps.extend(self.extract_type_dependencies(return_type));
                 }
-                
+
                 // Dependencies from function body (called functions, used types)
                 self.extract_expression_dependencies(&Expression::Block(f.body.clone()), &mut deps);
             }
@@ -131,7 +136,7 @@ impl CodeOrderingPass {
                 for field in &s.fields {
                     deps.extend(self.extract_type_dependencies(&field.field_type));
                 }
-                
+
                 // Dependencies from generic parameters
                 for _type_param in &s.type_params {
                     // Type parameters themselves don't create dependencies
@@ -166,7 +171,7 @@ impl CodeOrderingPass {
             Item::Impl(i) => {
                 // Dependencies from trait name
                 deps.push(i.trait_name.clone());
-                
+
                 // Dependencies from methods
                 for method in &i.methods {
                     for param in &method.params {
@@ -175,7 +180,10 @@ impl CodeOrderingPass {
                     if let Some(ref return_type) = method.return_type {
                         deps.extend(self.extract_type_dependencies(return_type));
                     }
-                    self.extract_expression_dependencies(&Expression::Block(method.body.clone()), &mut deps);
+                    self.extract_expression_dependencies(
+                        &Expression::Block(method.body.clone()),
+                        &mut deps,
+                    );
                 }
             }
             Item::Module(m) => {
@@ -196,13 +204,13 @@ impl CodeOrderingPass {
                 self.extract_expression_dependencies(&expr_stmt.expression, &mut deps);
             }
         }
-        
+
         deps
     }
 
     fn extract_type_dependencies(&self, ty: &Type) -> Vec<String> {
         let mut deps = Vec::new();
-        
+
         match ty {
             Type::Named(name) => {
                 deps.push(name.clone());
@@ -232,7 +240,10 @@ impl CodeOrderingPass {
                     deps.extend(self.extract_type_dependencies(t));
                 }
             }
-            Type::Function { params, return_type } => {
+            Type::Function {
+                params,
+                return_type,
+            } => {
                 for param in params {
                     deps.extend(self.extract_type_dependencies(param));
                 }
@@ -240,7 +251,7 @@ impl CodeOrderingPass {
             }
             _ => {} // Basic types don't create dependencies
         }
-        
+
         deps
     }
 
@@ -258,7 +269,7 @@ impl CodeOrderingPass {
                     // Method call - extract object type
                     self.extract_expression_dependencies(object, deps);
                 }
-                
+
                 // Extract dependencies from arguments
                 for arg in args {
                     self.extract_expression_dependencies(arg, deps);
@@ -278,7 +289,11 @@ impl CodeOrderingPass {
             Expression::UnaryOp { expr, .. } => {
                 self.extract_expression_dependencies(expr, deps);
             }
-            Expression::If { condition, then_expr, else_expr } => {
+            Expression::If {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
                 self.extract_expression_dependencies(condition, deps);
                 self.extract_expression_dependencies(then_expr, deps);
                 self.extract_expression_dependencies(else_expr, deps);
@@ -288,7 +303,11 @@ impl CodeOrderingPass {
                     self.extract_statement_dependencies(stmt, deps);
                 }
             }
-            Expression::Lambda { params, return_type, body } => {
+            Expression::Lambda {
+                params,
+                return_type,
+                body,
+            } => {
                 for param in params {
                     deps.extend(self.extract_type_dependencies(&param.param_type));
                 }
@@ -303,7 +322,11 @@ impl CodeOrderingPass {
                     self.extract_expression_dependencies(value, deps);
                 }
             }
-            Expression::GenericConstructor { name, type_params, args } => {
+            Expression::GenericConstructor {
+                name,
+                type_params,
+                args,
+            } => {
                 deps.push(name.clone());
                 for type_param in type_params {
                     deps.extend(self.extract_type_dependencies(type_param));
@@ -363,51 +386,75 @@ impl CodeOrderingPass {
             }
             Statement::If(if_stmt) => {
                 self.extract_expression_dependencies(&if_stmt.condition, deps);
-                self.extract_statement_dependencies(&Statement::Expression(ExpressionStatement {
-                    expression: Expression::Block(if_stmt.then_block.clone()),
-                }), deps);
+                self.extract_statement_dependencies(
+                    &Statement::Expression(ExpressionStatement {
+                        expression: Expression::Block(if_stmt.then_block.clone()),
+                    }),
+                    deps,
+                );
                 if let Some(ref else_block) = if_stmt.else_block {
-                    self.extract_statement_dependencies(&Statement::Expression(ExpressionStatement {
-                        expression: Expression::Block(else_block.clone()),
-                    }), deps);
+                    self.extract_statement_dependencies(
+                        &Statement::Expression(ExpressionStatement {
+                            expression: Expression::Block(else_block.clone()),
+                        }),
+                        deps,
+                    );
                 }
             }
             Statement::For(for_stmt) => {
                 self.extract_expression_dependencies(&for_stmt.iterable, deps);
-                self.extract_statement_dependencies(&Statement::Expression(ExpressionStatement {
-                    expression: Expression::Block(for_stmt.body.clone()),
-                }), deps);
+                self.extract_statement_dependencies(
+                    &Statement::Expression(ExpressionStatement {
+                        expression: Expression::Block(for_stmt.body.clone()),
+                    }),
+                    deps,
+                );
             }
             Statement::While(while_stmt) => {
                 self.extract_expression_dependencies(&while_stmt.condition, deps);
-                self.extract_statement_dependencies(&Statement::Expression(ExpressionStatement {
-                    expression: Expression::Block(while_stmt.body.clone()),
-                }), deps);
+                self.extract_statement_dependencies(
+                    &Statement::Expression(ExpressionStatement {
+                        expression: Expression::Block(while_stmt.body.clone()),
+                    }),
+                    deps,
+                );
             }
             Statement::Match(match_stmt) => {
                 self.extract_expression_dependencies(&match_stmt.expression, deps);
                 for arm in &match_stmt.arms {
-                    self.extract_statement_dependencies(&Statement::Expression(ExpressionStatement {
-                        expression: Expression::Block(arm.body.clone()),
-                    }), deps);
+                    self.extract_statement_dependencies(
+                        &Statement::Expression(ExpressionStatement {
+                            expression: Expression::Block(arm.body.clone()),
+                        }),
+                        deps,
+                    );
                 }
             }
             Statement::Throw(throw_stmt) => {
                 self.extract_expression_dependencies(&throw_stmt.expression, deps);
             }
             Statement::Try(try_stmt) => {
-                self.extract_statement_dependencies(&Statement::Expression(ExpressionStatement {
-                    expression: Expression::Block(try_stmt.try_block.clone()),
-                }), deps);
+                self.extract_statement_dependencies(
+                    &Statement::Expression(ExpressionStatement {
+                        expression: Expression::Block(try_stmt.try_block.clone()),
+                    }),
+                    deps,
+                );
                 for catch_block in &try_stmt.catch_blocks {
-                    self.extract_statement_dependencies(&Statement::Expression(ExpressionStatement {
-                        expression: Expression::Block(catch_block.body.clone()),
-                    }), deps);
+                    self.extract_statement_dependencies(
+                        &Statement::Expression(ExpressionStatement {
+                            expression: Expression::Block(catch_block.body.clone()),
+                        }),
+                        deps,
+                    );
                 }
                 if let Some(ref finally_block) = try_stmt.finally_block {
-                    self.extract_statement_dependencies(&Statement::Expression(ExpressionStatement {
-                        expression: Expression::Block(finally_block.clone()),
-                    }), deps);
+                    self.extract_statement_dependencies(
+                        &Statement::Expression(ExpressionStatement {
+                            expression: Expression::Block(finally_block.clone()),
+                        }),
+                        deps,
+                    );
                 }
             }
             Statement::Break(_) => {}

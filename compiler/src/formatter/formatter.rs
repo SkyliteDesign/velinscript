@@ -1,5 +1,5 @@
-use crate::parser::ast::*;
 use crate::formatter::config::FormatConfig;
+use crate::parser::ast::*;
 use std::fmt::Write;
 
 pub struct Formatter {
@@ -16,21 +16,21 @@ impl Formatter {
             indent_level: 0,
         }
     }
-    
+
     pub fn format(&mut self, program: &Program) -> String {
         self.output.clear();
         self.indent_level = 0;
-        
+
         for (i, item) in program.items.iter().enumerate() {
             if i > 0 {
                 self.writeln("");
             }
             self.format_item(item);
         }
-        
+
         self.output.clone()
     }
-    
+
     fn format_item(&mut self, item: &Item) {
         match item {
             Item::Function(f) => self.format_function(f),
@@ -52,26 +52,26 @@ impl Formatter {
             }
         }
     }
-    
+
     fn format_function(&mut self, function: &Function) {
         // Format decorators
         for decorator in &function.decorators {
             self.format_decorator(decorator);
         }
-        
+
         // Format function signature
         if function.visibility == Visibility::Public {
             self.write("pub ");
         }
-        
+
         if function.is_async {
             self.write("async ");
         }
-        
+
         self.write("fn ");
         self.write(&function.name);
         self.write("(");
-        
+
         // Format parameters
         for (i, param) in function.params.iter().enumerate() {
             if i > 0 {
@@ -79,23 +79,23 @@ impl Formatter {
             }
             self.format_parameter(param);
         }
-        
+
         self.write(")");
-        
+
         // Format return type
         if let Some(ref return_type) = function.return_type {
             self.write(": ");
             self.format_type(return_type);
         }
-        
+
         self.write(" ");
         self.format_block(&function.body);
     }
-    
+
     fn format_decorator(&mut self, decorator: &Decorator) {
         self.write("@");
         self.write(&decorator.name);
-        
+
         if !decorator.args.is_empty() {
             self.write("(");
             for (i, arg) in decorator.args.iter().enumerate() {
@@ -108,7 +108,7 @@ impl Formatter {
         }
         self.writeln("");
     }
-    
+
     fn format_decorator_arg(&mut self, arg: &DecoratorArg) {
         match arg {
             DecoratorArg::String(s) => {
@@ -132,28 +132,28 @@ impl Formatter {
             }
         }
     }
-    
+
     fn format_parameter(&mut self, param: &Parameter) {
         self.write(&param.name);
         self.write(": ");
         self.format_type(&param.param_type);
-        
+
         if let Some(ref default) = param.default {
             self.write(" = ");
             self.format_expression(default);
         }
     }
-    
+
     fn format_struct(&mut self, struct_def: &Struct) {
         if struct_def.visibility == Visibility::Public {
             self.write("pub ");
         }
-        
+
         self.write("struct ");
         self.write(&struct_def.name);
         self.write(" {");
         self.writeln("");
-        
+
         self.indent_level += 1;
         for (i, field) in struct_def.fields.iter().enumerate() {
             if i > 0 {
@@ -163,33 +163,33 @@ impl Formatter {
             self.format_struct_field(field);
         }
         self.indent_level -= 1;
-        
+
         self.writeln("");
         self.indent();
         self.write("}");
     }
-    
+
     fn format_struct_field(&mut self, field: &StructField) {
         if field.visibility == Visibility::Public {
             self.write("pub ");
         }
-        
+
         self.write(&field.name);
         self.write(": ");
         self.format_type(&field.field_type);
         self.write(",");
     }
-    
+
     fn format_enum(&mut self, enum_def: &Enum) {
         if enum_def.visibility == Visibility::Public {
             self.write("pub ");
         }
-        
+
         self.write("enum ");
         self.write(&enum_def.name);
         self.write(" {");
         self.writeln("");
-        
+
         self.indent_level += 1;
         for (i, variant) in enum_def.variants.iter().enumerate() {
             if i > 0 {
@@ -199,15 +199,15 @@ impl Formatter {
             self.format_enum_variant(variant);
         }
         self.indent_level -= 1;
-        
+
         self.writeln("");
         self.indent();
         self.write("}");
     }
-    
+
     fn format_enum_variant(&mut self, variant: &EnumVariant) {
         self.write(&variant.name);
-        
+
         if let Some(ref data) = variant.data {
             if !data.is_empty() {
                 self.write("(");
@@ -220,59 +220,59 @@ impl Formatter {
                 self.write(")");
             }
         }
-        
+
         self.write(",");
     }
-    
+
     fn format_type_alias(&mut self, type_alias: &TypeAlias) {
         if type_alias.visibility == Visibility::Public {
             self.write("pub ");
         }
-        
+
         self.write("type ");
         self.write(&type_alias.name);
         self.write(" = ");
         self.format_type(&type_alias.aliased_type);
         self.write(";");
     }
-    
+
     fn format_module(&mut self, module: &Module) {
         if module.visibility == Visibility::Public {
             self.write("pub ");
         }
-        
+
         self.write("mod ");
         self.write(&module.name);
         self.write(" {");
         self.writeln("");
-        
+
         self.indent_level += 1;
         for item in &module.items {
             self.format_item(item);
             self.writeln("");
         }
         self.indent_level -= 1;
-        
+
         self.indent();
         self.write("}");
     }
-    
+
     fn format_use(&mut self, use_stmt: &Use) {
         self.write("use ");
         self.write(&use_stmt.path.join("::"));
-        
+
         if let Some(ref alias) = use_stmt.alias {
             self.write(" as ");
             self.write(alias);
         }
-        
+
         self.write(";");
     }
-    
+
     fn format_block(&mut self, block: &Block) {
         self.write("{");
         self.writeln("");
-        
+
         self.indent_level += 1;
         for statement in &block.statements {
             self.indent();
@@ -280,11 +280,11 @@ impl Formatter {
             self.writeln("");
         }
         self.indent_level -= 1;
-        
+
         self.indent();
         self.write("}");
     }
-    
+
     fn format_statement(&mut self, statement: &Statement) {
         match statement {
             Statement::Let(let_stmt) => self.format_let_statement(let_stmt),
@@ -310,49 +310,49 @@ impl Formatter {
             }
         }
     }
-    
+
     fn format_let_statement(&mut self, let_stmt: &LetStatement) {
         if let_stmt.mutable {
             self.write("let mut ");
         } else {
             self.write("let ");
         }
-        
+
         self.write(&let_stmt.name);
-        
+
         if let Some(ref var_type) = let_stmt.var_type {
             self.write(": ");
             self.format_type(var_type);
         }
-        
+
         self.write(" = ");
         self.format_expression(&let_stmt.value);
         self.write(";");
     }
-    
+
     fn format_return_statement(&mut self, return_stmt: &ReturnStatement) {
         self.write("return");
-        
+
         if let Some(ref value) = return_stmt.value {
             self.write(" ");
             self.format_expression(value);
         }
-        
+
         self.write(";");
     }
-    
+
     fn format_if_statement(&mut self, if_stmt: &IfStatement) {
         self.write("if ");
         self.format_expression(&if_stmt.condition);
         self.write(" ");
         self.format_block(&if_stmt.then_block);
-        
+
         if let Some(ref else_block) = if_stmt.else_block {
             self.write(" else ");
             self.format_block(else_block);
         }
     }
-    
+
     fn format_for_statement(&mut self, for_stmt: &ForStatement) {
         self.write("for ");
         self.write(&for_stmt.variable);
@@ -361,20 +361,20 @@ impl Formatter {
         self.write(" ");
         self.format_block(&for_stmt.body);
     }
-    
+
     fn format_while_statement(&mut self, while_stmt: &WhileStatement) {
         self.write("while ");
         self.format_expression(&while_stmt.condition);
         self.write(" ");
         self.format_block(&while_stmt.body);
     }
-    
+
     fn format_match_statement(&mut self, match_stmt: &MatchStatement) {
         self.write("match ");
         self.format_expression(&match_stmt.expression);
         self.write(" {");
         self.writeln("");
-        
+
         self.indent_level += 1;
         for (i, arm) in match_stmt.arms.iter().enumerate() {
             if i > 0 {
@@ -382,13 +382,13 @@ impl Formatter {
             }
             self.indent();
             self.format_pattern(&arm.pattern);
-            
+
             // Format guard if present
             if let Some(ref guard) = arm.guard {
                 self.write(" if ");
                 self.format_expression(guard);
             }
-            
+
             self.write(" => ");
             self.format_block(&arm.body);
             if i < match_stmt.arms.len() - 1 {
@@ -396,52 +396,52 @@ impl Formatter {
             }
         }
         self.indent_level -= 1;
-        
+
         self.writeln("");
         self.indent();
         self.write("}");
     }
-    
+
     fn format_try_statement(&mut self, try_stmt: &TryStatement) {
         self.write("try ");
         self.format_block(&try_stmt.try_block);
-        
+
         for catch_block in &try_stmt.catch_blocks {
             self.format_catch_block(catch_block);
         }
-        
+
         if let Some(ref finally_block) = try_stmt.finally_block {
             self.format_finally_block(finally_block);
         }
     }
-    
+
     fn format_catch_block(&mut self, catch_block: &CatchBlock) {
         self.write(" catch");
-        
+
         if catch_block.error_var.is_some() || catch_block.error_type.is_some() {
             self.write(" (");
-            
+
             if let Some(ref var_name) = catch_block.error_var {
                 self.write(var_name);
             }
-            
+
             if let Some(ref error_type) = catch_block.error_type {
                 self.write(": ");
                 self.format_type(error_type);
             }
-            
+
             self.write(")");
         }
-        
+
         self.write(" ");
         self.format_block(&catch_block.body);
     }
-    
+
     fn format_finally_block(&mut self, finally_block: &Block) {
         self.write(" finally ");
         self.format_block(finally_block);
     }
-    
+
     fn format_pattern(&mut self, pattern: &Pattern) {
         match pattern {
             Pattern::Literal(lit) => self.format_literal(lit),
@@ -457,7 +457,11 @@ impl Formatter {
                 self.write(")");
             }
             Pattern::Wildcard => self.write("_"),
-            Pattern::Range { start, end, inclusive } => {
+            Pattern::Range {
+                start,
+                end,
+                inclusive,
+            } => {
                 self.format_expression(start);
                 if *inclusive {
                     self.write("..=");
@@ -502,7 +506,7 @@ impl Formatter {
             }
         }
     }
-    
+
     fn format_expression(&mut self, expr: &Expression) {
         match expr {
             Expression::Literal(lit) => self.format_literal(lit),
@@ -540,7 +544,11 @@ impl Formatter {
                 self.format_expression(index);
                 self.write("]");
             }
-            Expression::If { condition, then_expr, else_expr } => {
+            Expression::If {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
                 self.write("if ");
                 self.format_expression(condition);
                 self.write(" ");
@@ -559,7 +567,7 @@ impl Formatter {
                 self.write(" {");
                 self.writeln("");
                 self.indent_level += 1;
-                
+
                 for (i, (field_name, field_expr)) in fields.iter().enumerate() {
                     if i > 0 {
                         self.writeln(",");
@@ -569,7 +577,7 @@ impl Formatter {
                     self.write(": ");
                     self.format_expression(field_expr);
                 }
-                
+
                 self.writeln("");
                 self.indent_level -= 1;
                 self.indent();
@@ -602,7 +610,11 @@ impl Formatter {
                 }
                 self.write("]");
             }
-            Expression::Lambda { params, return_type, body } => {
+            Expression::Lambda {
+                params,
+                return_type,
+                body,
+            } => {
                 self.write("(");
                 for (i, param) in params.iter().enumerate() {
                     if i > 0 {
@@ -611,14 +623,14 @@ impl Formatter {
                     self.format_parameter(param);
                 }
                 self.write(")");
-                
+
                 if let Some(ref ret_type) = return_type {
                     self.write(": ");
                     self.format_type(ret_type);
                 }
-                
+
                 self.write(" => ");
-                
+
                 match body.as_ref() {
                     Expression::Block(_) => {
                         self.format_expression(body);
@@ -628,7 +640,11 @@ impl Formatter {
                     }
                 }
             }
-            Expression::GenericConstructor { name, type_params, args } => {
+            Expression::GenericConstructor {
+                name,
+                type_params,
+                args,
+            } => {
                 self.write(name);
                 if !type_params.is_empty() {
                     self.write("<");
@@ -686,7 +702,7 @@ impl Formatter {
             }
         }
     }
-    
+
     fn format_literal(&mut self, lit: &Literal) {
         match lit {
             Literal::String(s) => {
@@ -705,11 +721,11 @@ impl Formatter {
             }
         }
     }
-    
+
     fn format_type(&mut self, typ: &Type) {
         self.write(&typ.to_string());
     }
-    
+
     fn format_binary_operator(&mut self, op: &BinaryOperator) {
         let op_str = match op {
             BinaryOperator::Add => "+",
@@ -725,10 +741,11 @@ impl Formatter {
             BinaryOperator::GtEq => ">=",
             BinaryOperator::And => "&&",
             BinaryOperator::Or => "||",
+            BinaryOperator::In => "in",
         };
         self.write(op_str);
     }
-    
+
     fn format_unary_operator(&mut self, op: &UnaryOperator) {
         let op_str = match op {
             UnaryOperator::Not => "!",
@@ -736,16 +753,16 @@ impl Formatter {
         };
         self.write(op_str);
     }
-    
+
     // Helper methods
     fn write(&mut self, s: &str) {
         let _ = write!(self.output, "{}", s);
     }
-    
+
     fn writeln(&mut self, s: &str) {
         let _ = writeln!(self.output, "{}", s);
     }
-    
+
     fn indent(&mut self) {
         let indent = self.config.indent_string();
         for _ in 0..self.indent_level {

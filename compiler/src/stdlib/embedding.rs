@@ -1,4 +1,3 @@
-
 pub struct EmbeddingStdlib;
 
 impl EmbeddingStdlib {

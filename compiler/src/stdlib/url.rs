@@ -1,19 +1,12 @@
-
 pub struct UrlStdlib;
 
 impl UrlStdlib {
     pub fn generate_parse_code(url_str: &str) -> String {
-        format!(
-            "url::Url::parse({}).map_err(|e| e.to_string())",
-            url_str
-        )
+        format!("url::Url::parse({}).map_err(|e| e.to_string())", url_str)
     }
 
     pub fn generate_protocol_code(url: &str) -> String {
-        format!(
-            "{}.scheme().to_string()",
-            url
-        )
+        format!("{}.scheme().to_string()", url)
     }
 
     pub fn generate_hostname_code(url: &str) -> String {
@@ -34,10 +27,7 @@ impl UrlStdlib {
     }
 
     pub fn generate_pathname_code(url: &str) -> String {
-        format!(
-            "{}.path().to_string()",
-            url
-        )
+        format!("{}.path().to_string()", url)
     }
 
     pub fn generate_search_code(url: &str) -> String {

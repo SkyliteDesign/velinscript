@@ -1,5 +1,5 @@
-use crate::compiler::language::VELISCH_LANGUAGE_NAME;
 use crate::codegen::traits::TargetLanguage;
+use crate::compiler::language::VELISCH_LANGUAGE_NAME;
 
 #[derive(Debug, Clone)]
 pub struct CompilerConfig {
@@ -14,7 +14,7 @@ pub struct CompilerConfig {
     pub enable_ai_bug_detection: bool,
     pub enable_ai_codegen: bool,
     pub enable_ai_code_review: bool, // Review für AI-generierten Code
-    pub enable_ai_sandbox: bool, // Sandbox-Validierung für AI-generierten Code
+    pub enable_ai_sandbox: bool,     // Sandbox-Validierung für AI-generierten Code
     pub enable_ai_optimization: bool,
     pub ai_provider: Option<String>, // "openai", "anthropic", "local"
     pub ai_api_key: Option<String>,
@@ -24,7 +24,7 @@ impl Default for CompilerConfig {
     fn default() -> Self {
         // Velisch Identity - Fingerabdruck in Config
         let _velisch_check = VELISCH_LANGUAGE_NAME;
-        
+
         Self {
             enable_autofix: false,
             enable_type_check: true,
@@ -37,7 +37,7 @@ impl Default for CompilerConfig {
             enable_ai_bug_detection: false,
             enable_ai_codegen: false,
             enable_ai_code_review: false, // Standardmäßig deaktiviert
-            enable_ai_sandbox: false, // Standardmäßig deaktiviert
+            enable_ai_sandbox: false,     // Standardmäßig deaktiviert
             enable_ai_optimization: false,
             ai_provider: None,
             ai_api_key: None,

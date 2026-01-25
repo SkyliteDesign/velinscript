@@ -1,4 +1,3 @@
-
 pub struct UtilsStdlib;
 
 impl UtilsStdlib {
@@ -7,7 +6,10 @@ impl UtilsStdlib {
     }
 
     pub fn generate_sleep_code(ms: &str) -> String {
-        format!("tokio::time::sleep(std::time::Duration::from_millis({} as u64)).await", ms)
+        format!(
+            "tokio::time::sleep(std::time::Duration::from_millis({} as u64)).await",
+            ms
+        )
     }
 
     pub fn generate_retry_code(func: &str, times: &str) -> String {

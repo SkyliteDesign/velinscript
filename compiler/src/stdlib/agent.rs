@@ -1,4 +1,3 @@
-
 pub struct AgentStdlib;
 
 impl AgentStdlib {
@@ -72,7 +71,8 @@ impl AgentTask {
         format!("Executed {} steps", plan.len())
     }
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     pub fn generate_memory_store_code(key: &str, value: &str) -> String {

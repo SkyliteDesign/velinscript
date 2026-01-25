@@ -2,14 +2,15 @@ use super::{Template, TemplateConfig};
 use anyhow::Result;
 
 /// Auth Template
-/// 
+///
 /// Generiert JWT/OAuth2 Auth
 /// Mit Middleware, Token-Validierung
 pub struct AuthTemplate;
 
 impl Template for AuthTemplate {
     fn generate(&self, config: &TemplateConfig) -> Result<String, String> {
-        let auth_type = config.options
+        let auth_type = config
+            .options
             .get("type")
             .and_then(|v| v.as_str())
             .unwrap_or("jwt");
@@ -84,7 +85,8 @@ pub fn generate_token(user_id: &str) -> Result<String, String> {
     jsonwebtoken::encode(&Header::new(Algorithm::HS256), &claims, &key)
         .map_err(|e| format!("Failed to generate token: {}", e))
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_oauth2_auth(&self) -> String {

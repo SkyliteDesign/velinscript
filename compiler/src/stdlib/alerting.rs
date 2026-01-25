@@ -1,4 +1,3 @@
-
 pub struct AlertingStdlib;
 
 impl AlertingStdlib {

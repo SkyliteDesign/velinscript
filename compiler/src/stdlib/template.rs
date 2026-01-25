@@ -1,4 +1,3 @@
-
 pub struct TemplateStdlib;
 
 impl TemplateStdlib {

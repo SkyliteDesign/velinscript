@@ -1,6 +1,6 @@
 use super::{CodeGenerator, CodegenConfig, TargetLanguage};
-use crate::parser::ast::*;
 use crate::codegen::framework::{Framework, FrameworkSelector};
+use crate::parser::ast::*;
 use anyhow::Result;
 
 pub struct TypeScriptCodeGenerator {
@@ -60,7 +60,9 @@ impl TypeScriptCodeGenerator {
                     format!("{}<{}>", name, params_str)
                 }
             }
-            Type::Map { key, value } => format!("Record<{}, {}>", self.map_type(key), self.map_type(value)),
+            Type::Map { key, value } => {
+                format!("Record<{}, {}>", self.map_type(key), self.map_type(value))
+            }
             _ => "any".to_string(),
         }
     }
@@ -70,7 +72,11 @@ impl TypeScriptCodeGenerator {
         self.writeln(&format!("export interface {} {{", s.name));
         self.indent();
         for field in &s.fields {
-            self.writeln(&format!("{}: {};", field.name, self.map_type(&field.field_type)));
+            self.writeln(&format!(
+                "{}: {};",
+                field.name,
+                self.map_type(&field.field_type)
+            ));
         }
         self.dedent();
         self.writeln("}");
@@ -79,13 +85,16 @@ impl TypeScriptCodeGenerator {
 
     fn generate_function(&mut self, f: &Function) {
         let is_handler = f.decorators.iter().any(|d| {
-            matches!(d.name.as_str(), "Get" | "Post" | "Put" | "Delete" | "@Get" | "@Post" | "@Put" | "@Delete")
+            matches!(
+                d.name.as_str(),
+                "Get" | "Post" | "Put" | "Delete" | "@Get" | "@Post" | "@Put" | "@Delete"
+            )
         });
 
         // For Express/NestJS handlers
         if is_handler && self.framework.is_some() {
             let fw = self.framework.unwrap();
-            
+
             // Extract route info
             for decorator in &f.decorators {
                 let name = decorator.name.trim_start_matches('@');
@@ -100,13 +109,14 @@ impl TypeScriptCodeGenerator {
                         } else {
                             "/".to_string()
                         };
-                        
+
                         if fw == Framework::NestJS {
                             // NestJS Decorator Style
                             self.writeln(&format!("@{}(\"{}\")", name, path));
                         } else {
                             // Express: Register route for main generation later
-                            self.routes.push((method.clone(), path.clone(), f.name.clone()));
+                            self.routes
+                                .push((method.clone(), path.clone(), f.name.clone()));
                         }
                     }
                     _ => {}
@@ -115,10 +125,12 @@ impl TypeScriptCodeGenerator {
         }
 
         // Function signature
-        let params: Vec<String> = f.params.iter()
+        let params: Vec<String> = f
+            .params
+            .iter()
             .map(|p| format!("{}: {}", p.name, self.map_type(&p.param_type)))
             .collect();
-        
+
         // Return type
         let ret_type = if let Some(rt) = &f.return_type {
             self.map_type(rt)
@@ -127,44 +139,66 @@ impl TypeScriptCodeGenerator {
         };
 
         if self.framework == Some(Framework::NestJS) && is_handler {
-             // NestJS Handler method inside Controller class (handled by generate_program wrapper)
-             // But here we are just generating function. 
-             // Ideally we should wrap functions in a class for NestJS.
-             // For now, let's assume we are inside a class or module context if we were doing full NestJS.
-             // But since Velin functions are top-level, we might generate a wrapper class later?
-             // Let's stick to simple function generation for now, NestJS might need class wrapper logic in `generate`.
-             self.writeln(&format!("async {}({}): Promise<{}> {{", f.name, params.join(", "), ret_type));
+            // NestJS Handler method inside Controller class (handled by generate_program wrapper)
+            // But here we are just generating function.
+            // Ideally we should wrap functions in a class for NestJS.
+            // For now, let's assume we are inside a class or module context if we were doing full NestJS.
+            // But since Velin functions are top-level, we might generate a wrapper class later?
+            // Let's stick to simple function generation for now, NestJS might need class wrapper logic in `generate`.
+            self.writeln(&format!(
+                "async {}({}): Promise<{}> {{",
+                f.name,
+                params.join(", "),
+                ret_type
+            ));
         } else if self.framework == Some(Framework::Express) && is_handler {
-             // Express Handler: (req: Request, res: Response)
-             self.writeln(&format!("const {} = async (req: Request, res: Response): Promise<void> => {{", f.name));
+            // Express Handler: (req: Request, res: Response)
+            self.writeln(&format!(
+                "const {} = async (req: Request, res: Response): Promise<void> => {{",
+                f.name
+            ));
         } else {
-             // Standard TS Function
-             self.writeln(&format!("export async function {}({}): Promise<{}> {{", f.name, params.join(", "), ret_type));
+            // Standard TS Function
+            self.writeln(&format!(
+                "export async function {}({}): Promise<{}> {{",
+                f.name,
+                params.join(", "),
+                ret_type
+            ));
         }
 
         self.indent();
 
         // If Express handler, bind params
         if self.framework == Some(Framework::Express) && is_handler {
-             for param in &f.params {
-                 // Simple binding logic
-                 // If param name is in route (e.g. :id), use req.params
-                 // If complex type, use req.body
-                 // If simple type not in route, use req.query
-                 
-                 // Check if route has :param.name
-                 // For simplicity, let's assume complex = body, simple = query unless :name exists
-                 let is_primitive = matches!(param.param_type, Type::String | Type::Number | Type::Boolean);
-                 
-                 if !is_primitive {
-                     self.writeln(&format!("const {}: {} = req.body;", param.name, self.map_type(&param.param_type)));
-                 } else {
-                     // We don't have easy access to path string here to check :param
-                     // Just try params -> query fallback
-                     self.writeln(&format!("const {} = req.params.{} ? req.params.{} : req.query.{} as any;", 
-                         param.name, param.name, param.name, param.name));
-                 }
-             }
+            for param in &f.params {
+                // Simple binding logic
+                // If param name is in route (e.g. :id), use req.params
+                // If complex type, use req.body
+                // If simple type not in route, use req.query
+
+                // Check if route has :param.name
+                // For simplicity, let's assume complex = body, simple = query unless :name exists
+                let is_primitive = matches!(
+                    param.param_type,
+                    Type::String | Type::Number | Type::Boolean
+                );
+
+                if !is_primitive {
+                    self.writeln(&format!(
+                        "const {}: {} = req.body;",
+                        param.name,
+                        self.map_type(&param.param_type)
+                    ));
+                } else {
+                    // We don't have easy access to path string here to check :param
+                    // Just try params -> query fallback
+                    self.writeln(&format!(
+                        "const {} = req.params.{} ? req.params.{} : req.query.{} as any;",
+                        param.name, param.name, param.name, param.name
+                    ));
+                }
+            }
         }
 
         // Body
@@ -175,7 +209,7 @@ impl TypeScriptCodeGenerator {
                 self.generate_statement(stmt);
             }
         }
-        
+
         // Express: Send response if return type is not void
         if self.framework == Some(Framework::Express) && is_handler {
             // If the last statement was a return, it's already handled by generate_statement logic?
@@ -185,9 +219,9 @@ impl TypeScriptCodeGenerator {
             // But we can't easily change user code.
             // Simpler approach: Velin handler returns data. We wrap it.
             // But here we are generating the function body directly.
-            
+
             // NOTE: Ideally, we should generate `handler_impl` and then a wrapper.
-            // But for this pass, let's just let the body generate as is, 
+            // But for this pass, let's just let the body generate as is,
             // and assume user uses `res.json` if they write raw code, OR
             // if we are transpiling Velin `return x` -> `res.json(x)`.
         }
@@ -202,11 +236,11 @@ impl TypeScriptCodeGenerator {
             Statement::Return(ret) => {
                 if let Some(val) = &ret.value {
                     if self.framework == Some(Framework::Express) {
-                         self.buffer.push_str(&"    ".repeat(self.indent_level));
-                         self.buffer.push_str("res.json(");
-                         self.generate_expression(val);
-                         self.buffer.push_str(");\n");
-                         self.writeln("return;");
+                        self.buffer.push_str(&"    ".repeat(self.indent_level));
+                        self.buffer.push_str("res.json(");
+                        self.generate_expression(val);
+                        self.buffer.push_str(");\n");
+                        self.writeln("return;");
                     } else {
                         self.buffer.push_str(&"    ".repeat(self.indent_level));
                         self.buffer.push_str("return ");
@@ -235,7 +269,8 @@ impl TypeScriptCodeGenerator {
                 } else {
                     "".to_string()
                 };
-                self.buffer.push_str(&format!("{} {}{} = ", kw, decl.name, type_ann));
+                self.buffer
+                    .push_str(&format!("{} {}{} = ", kw, decl.name, type_ann));
                 self.generate_expression(&decl.value);
                 self.buffer.push_str(";\n");
             }
@@ -260,7 +295,7 @@ impl TypeScriptCodeGenerator {
                     self.writeln("}");
                 }
             }
-             _ => {} // Implement others as needed
+            _ => {} // Implement others as needed
         }
     }
 
@@ -295,7 +330,9 @@ impl TypeScriptCodeGenerator {
                 self.generate_expression(callee);
                 self.buffer.push('(');
                 for (i, arg) in args.iter().enumerate() {
-                    if i > 0 { self.buffer.push_str(", "); }
+                    if i > 0 {
+                        self.buffer.push_str(", ");
+                    }
                     self.generate_expression(arg);
                 }
                 self.buffer.push(')');
@@ -303,7 +340,9 @@ impl TypeScriptCodeGenerator {
             Expression::ListLiteral(items) => {
                 self.buffer.push('[');
                 for (i, item) in items.iter().enumerate() {
-                    if i > 0 { self.buffer.push_str(", "); }
+                    if i > 0 {
+                        self.buffer.push_str(", ");
+                    }
                     self.generate_expression(item);
                 }
                 self.buffer.push(']');
@@ -311,7 +350,9 @@ impl TypeScriptCodeGenerator {
             Expression::MapLiteral(entries) => {
                 self.buffer.push('{');
                 for (i, (key, value)) in entries.iter().enumerate() {
-                    if i > 0 { self.buffer.push_str(", "); }
+                    if i > 0 {
+                        self.buffer.push_str(", ");
+                    }
                     self.buffer.push_str(&format!("\"{}\": ", key));
                     self.generate_expression(value);
                 }
@@ -320,7 +361,9 @@ impl TypeScriptCodeGenerator {
             Expression::StructLiteral { name: _, fields } => {
                 self.buffer.push('{');
                 for (i, (name, value)) in fields.iter().enumerate() {
-                    if i > 0 { self.buffer.push_str(", "); }
+                    if i > 0 {
+                        self.buffer.push_str(", ");
+                    }
                     self.buffer.push_str(&format!("{}: ", name));
                     self.generate_expression(value);
                 }
@@ -333,20 +376,24 @@ impl TypeScriptCodeGenerator {
 
 impl CodeGenerator for TypeScriptCodeGenerator {
     fn generate(&mut self, program: &Program, config: &CodegenConfig) -> Result<String> {
-        self.framework = Some(FrameworkSelector::detect_framework(program, config.framework.as_deref()));
-        
+        self.framework = Some(FrameworkSelector::detect_framework(
+            program,
+            config.framework.as_deref(),
+        ));
+
         // Imports
         if let Some(fw) = self.framework {
-            self.buffer.push_str(&FrameworkSelector::generate_imports(fw));
+            self.buffer
+                .push_str(&FrameworkSelector::generate_imports(fw));
         }
 
         // Generate Items
         let mut functions = Vec::new();
-        
+
         if self.framework == Some(Framework::NestJS) {
-             self.writeln("@Controller()");
-             self.writeln("export class AppController {");
-             self.indent();
+            self.writeln("@Controller()");
+            self.writeln("export class AppController {");
+            self.indent();
         }
 
         for item in &program.items {
@@ -355,20 +402,23 @@ impl CodeGenerator for TypeScriptCodeGenerator {
                 Item::Function(f) => {
                     self.generate_function(f);
                     functions.push(f);
-                },
+                }
                 _ => {}
             }
         }
 
         if self.framework == Some(Framework::NestJS) {
-             self.dedent();
-             self.writeln("}");
+            self.dedent();
+            self.writeln("}");
         }
 
         // Express Main
         if self.framework == Some(Framework::Express) && !self.routes.is_empty() {
-             self.buffer.push_str("\n");
-             self.buffer.push_str(&FrameworkSelector::generate_node_main(Framework::Express, self.routes.clone()));
+            self.buffer.push_str("\n");
+            self.buffer.push_str(&FrameworkSelector::generate_node_main(
+                Framework::Express,
+                self.routes.clone(),
+            ));
         }
 
         Ok(self.buffer.clone())

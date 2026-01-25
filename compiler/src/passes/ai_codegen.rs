@@ -1,16 +1,16 @@
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
-use crate::compiler::config::CompilerConfig;
 use crate::codegen::boilerplate::BoilerplateGenerator;
-use crate::stdlib::ml::{LLMClient, LLMProvider};
+use crate::compiler::config::CompilerConfig;
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use crate::parser::ast::*;
-use crate::prompt::sanitizer::PromptSanitizer;
 use crate::passes::ai_code_review::AICodeReviewer;
 use crate::passes::ai_sandbox::AICodeSandbox;
+use crate::prompt::sanitizer::PromptSanitizer;
+use crate::stdlib::ml::{LLMClient, LLMProvider};
 use anyhow::Result;
 
 /// KI-basierter Code Generation Pass
-/// 
+///
 /// Generiert fehlende Code-Teile automatisch:
 /// - Identifiziert fehlende Komponenten
 /// - Generiert fehlende Funktionen
@@ -77,7 +77,11 @@ impl AICodeGenerationPass {
     }
 
     /// Identifiziert fehlende Komponenten
-    fn identify_missing_components(&self, program: &Program, context: &CompilationContext) -> Vec<MissingComponent> {
+    fn identify_missing_components(
+        &self,
+        program: &Program,
+        context: &CompilationContext,
+    ) -> Vec<MissingComponent> {
         let mut missing = Vec::new();
 
         // Prüfe auf fehlende Komponenten basierend auf Semantic Metadata
@@ -86,7 +90,10 @@ impl AICodeGenerationPass {
                 missing.push(MissingComponent {
                     component_type: ComponentType::Function,
                     name: component_name.clone(),
-                    specification: format!("Function {} is referenced but not defined", component_name),
+                    specification: format!(
+                        "Function {} is referenced but not defined",
+                        component_name
+                    ),
                     requirements: Vec::new(),
                 });
             }
@@ -149,20 +156,27 @@ impl AICodeGenerationPass {
     }
 
     /// Generiert Code für fehlende Komponente mit KI
-    fn generate_code_with_ai(&self, component: &MissingComponent, program: &Program) -> Result<String> {
+    fn generate_code_with_ai(
+        &self,
+        component: &MissingComponent,
+        program: &Program,
+    ) -> Result<String> {
         if let Some(ref client) = self.llm_client {
             let code_context = self.extract_code_context(program);
-            
+
             // Sanitize Code-Kontext
             let sanitized_context = self.prompt_sanitizer.sanitize_code_context(&code_context);
-            
+
             // Sanitize Specification und Requirements
-            let sanitized_spec = self.prompt_sanitizer.sanitize_user_input(&component.specification);
-            let sanitized_reqs: Vec<String> = component.requirements
+            let sanitized_spec = self
+                .prompt_sanitizer
+                .sanitize_user_input(&component.specification);
+            let sanitized_reqs: Vec<String> = component
+                .requirements
                 .iter()
                 .map(|r| self.prompt_sanitizer.sanitize_user_input(r))
                 .collect();
-            
+
             let prompt = format!(
                 "Generate VelinScript code for the following missing component:\n\n\
                 Type: {:?}\n\
@@ -180,7 +194,7 @@ impl AICodeGenerationPass {
 
             // Sanitize Prompt vor dem Senden
             let sanitized_prompt = self.prompt_sanitizer.sanitize(&prompt);
-            
+
             if !self.prompt_sanitizer.is_safe(&sanitized_prompt) {
                 // Prompt enthält gefährliche Patterns, nutze Fallback
                 return self.generate_code_fallback(component);
@@ -264,7 +278,7 @@ impl AICodeGenerationPass {
     /// Extrahiert Code-Kontext für KI
     fn extract_code_context(&self, program: &Program) -> String {
         let mut context = String::new();
-        
+
         // Zeige relevante Funktionen und Structs
         for item in &program.items {
             match item {
@@ -292,7 +306,7 @@ impl AICodeGenerationPass {
                 _ => {}
             }
         }
-        
+
         context
     }
 
@@ -305,7 +319,9 @@ impl AICodeGenerationPass {
 
         // Prüfe auf grundlegende VelinScript-Syntax
         if !code.contains("fn") && !code.contains("struct") {
-            return Err(anyhow::anyhow!("Generated code does not contain valid VelinScript syntax"));
+            return Err(anyhow::anyhow!(
+                "Generated code does not contain valid VelinScript syntax"
+            ));
         }
 
         Ok(code.to_string())
@@ -314,7 +330,7 @@ impl AICodeGenerationPass {
     /// Fügt generierte Komponente zum AST hinzu
     fn add_component_to_ast(&self, context: &mut CompilationContext, code: &str) -> Result<()> {
         use crate::parser::parser::Parser;
-        
+
         // Parse generierten Code
         match Parser::parse(code) {
             Ok(mut generated_program) => {
@@ -329,9 +345,12 @@ impl AICodeGenerationPass {
             }
             Err(e) => {
                 // Parsing fehlgeschlagen, speichere als Metadaten für später
-                context.errors.push(crate::error::CompilerError::Warning(
-                    format!("Failed to parse generated code: {}. Code will be added manually.", e)
-                ));
+                context
+                    .errors
+                    .push(crate::error::CompilerError::Warning(format!(
+                        "Failed to parse generated code: {}. Code will be added manually.",
+                        e
+                    )));
                 Ok(())
             }
         }
@@ -371,9 +390,12 @@ impl Pass for AICodeGenerationPass {
                 Ok(code) => code,
                 Err(e) => {
                     // Log Fehler aber fahre fort
-                    context.errors.push(crate::error::CompilerError::warning(
-                        format!("Failed to generate code for {}: {}", component.name, e)
-                    ));
+                    context
+                        .errors
+                        .push(crate::error::CompilerError::warning(format!(
+                            "Failed to generate code for {}: {}",
+                            component.name, e
+                        )));
                     continue;
                 }
             };
@@ -382,9 +404,12 @@ impl Pass for AICodeGenerationPass {
             let validated = match self.validate_generated_code(&generated_code) {
                 Ok(code) => code,
                 Err(e) => {
-                    context.errors.push(crate::error::CompilerError::warning(
-                        format!("Generated code for {} is invalid: {}", component.name, e)
-                    ));
+                    context
+                        .errors
+                        .push(crate::error::CompilerError::warning(format!(
+                            "Generated code for {} is invalid: {}",
+                            component.name, e
+                        )));
                     continue;
                 }
             };
@@ -394,24 +419,32 @@ impl Pass for AICodeGenerationPass {
                 Ok(review_result) => {
                     if !review_result.approved {
                         // Code wurde nicht approved
-                        context.errors.push(crate::error::CompilerError::warning(
-                            format!("Generated code for {} was rejected by code review: {:?}", 
-                                component.name, review_result.errors)
-                        ));
+                        context
+                            .errors
+                            .push(crate::error::CompilerError::warning(format!(
+                                "Generated code for {} was rejected by code review: {:?}",
+                                component.name, review_result.errors
+                            )));
                         continue;
                     }
-                    
+
                     // Warnungen aus Review hinzufügen
                     for warning in review_result.warnings {
-                        context.errors.push(crate::error::CompilerError::warning(
-                            format!("Code review warning for {}: {}", component.name, warning)
-                        ));
+                        context
+                            .errors
+                            .push(crate::error::CompilerError::warning(format!(
+                                "Code review warning for {}: {}",
+                                component.name, warning
+                            )));
                     }
                 }
                 Err(e) => {
-                    context.errors.push(crate::error::CompilerError::warning(
-                        format!("Code review failed for {}: {}", component.name, e)
-                    ));
+                    context
+                        .errors
+                        .push(crate::error::CompilerError::warning(format!(
+                            "Code review failed for {}: {}",
+                            component.name, e
+                        )));
                     continue;
                 }
             }
@@ -420,26 +453,34 @@ impl Pass for AICodeGenerationPass {
             match self.code_sandbox.execute_safely(&validated) {
                 Ok(sandbox_result) => {
                     if !sandbox_result.success {
-                        context.errors.push(crate::error::CompilerError::warning(
-                            format!("Generated code for {} failed sandbox check: {:?}", 
-                                component.name, sandbox_result.errors)
-                        ));
+                        context
+                            .errors
+                            .push(crate::error::CompilerError::warning(format!(
+                                "Generated code for {} failed sandbox check: {:?}",
+                                component.name, sandbox_result.errors
+                            )));
                         continue;
                     }
                 }
                 Err(e) => {
-                    context.errors.push(crate::error::CompilerError::warning(
-                        format!("Sandbox check failed for {}: {}", component.name, e)
-                    ));
+                    context
+                        .errors
+                        .push(crate::error::CompilerError::warning(format!(
+                            "Sandbox check failed for {}: {}",
+                            component.name, e
+                        )));
                     continue;
                 }
             }
 
             // 7. Zum AST hinzufügen (nur wenn alle Checks bestanden)
             if let Err(e) = self.add_component_to_ast(context, &validated) {
-                context.errors.push(crate::error::CompilerError::warning(
-                    format!("Failed to add generated code for {}: {}", component.name, e)
-                ));
+                context
+                    .errors
+                    .push(crate::error::CompilerError::warning(format!(
+                        "Failed to add generated code for {}: {}",
+                        component.name, e
+                    )));
             }
         }
 

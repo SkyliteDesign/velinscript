@@ -47,7 +47,8 @@ pub fn create_tls_client_config() -> Result<ClientConfig, Box<dyn std::error::Er
         .with_no_client_auth();
     
     Ok(config)
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Axum TLS Server
@@ -83,7 +84,8 @@ pub async fn start_axum_tls_server(
             }
         });
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Actix TLS Server
@@ -103,7 +105,8 @@ pub async fn start_actix_tls_server(
         .await?;
     
     Ok(())
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Certificate Loading aus Vault
@@ -138,7 +141,8 @@ pub async fn load_certificate_from_vault(
         .with_single_cert(certs, keys[0].clone())?;
     
     Ok(config)
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert ALPN Support für HTTP/2
@@ -153,7 +157,8 @@ pub async fn load_certificate_from_vault(
     config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     
     Ok(config)
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Modern TLS 1.3 Config
@@ -168,7 +173,8 @@ pub async fn load_certificate_from_vault(
     // Additional configuration for cipher suites, etc.
     
     Ok(config)
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Certificate Validation
@@ -192,6 +198,7 @@ impl ServerCertVerifier for CustomCertVerifier {
         // In production, implement proper validation
         Ok(ServerCertVerified::assertion())
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
 }

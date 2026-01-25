@@ -1,16 +1,15 @@
 /// Prompt Sanitizer - Verhindert Prompt Injection
-/// 
+///
 /// Dieser Sanitizer entfernt gefährliche Patterns aus Prompts, die für Prompt Injection genutzt werden könnten.
-/// 
+///
 /// # Beispiel
-/// 
+///
 /// ```rust
 /// use velin_compiler::prompt::sanitizer::PromptSanitizer;
-/// 
+///
 /// let sanitizer = PromptSanitizer::new();
 /// let safe_prompt = sanitizer.sanitize(user_input);
 /// ```
-
 use regex::Regex;
 use std::collections::HashSet;
 
@@ -24,32 +23,51 @@ impl PromptSanitizer {
     /// Erstellt einen neuen Prompt Sanitizer
     pub fn new() -> Self {
         let mut dangerous_patterns = Vec::new();
-        
+
         // Gefährliche Patterns für Prompt Injection
         // Ignore previous instructions / Forget previous instructions
         dangerous_patterns.push(Regex::new(r"(?i)(ignore|forget|disregard|skip)\s+(all\s+)?(previous|prior|earlier|above)\s+(instructions?|prompts?|commands?|directives?)").unwrap());
-        
+
         // System/User role manipulation
-        dangerous_patterns.push(Regex::new(r"(?i)(you\s+are\s+now|act\s+as|pretend\s+to\s+be|roleplay\s+as)\s+").unwrap());
-        
+        dangerous_patterns.push(
+            Regex::new(r"(?i)(you\s+are\s+now|act\s+as|pretend\s+to\s+be|roleplay\s+as)\s+")
+                .unwrap(),
+        );
+
         // Command injection patterns
-        dangerous_patterns.push(Regex::new(r"(?i)(execute|run|eval|system|shell|command|bash|sh)\s*[\(\[{]").unwrap());
-        
+        dangerous_patterns.push(
+            Regex::new(r"(?i)(execute|run|eval|system|shell|command|bash|sh)\s*[\(\[{]").unwrap(),
+        );
+
         // Code block injection
-        dangerous_patterns.push(Regex::new(r"```(?:python|javascript|bash|sh|powershell|cmd|sql|html|xml)").unwrap());
-        
+        dangerous_patterns.push(
+            Regex::new(r"```(?:python|javascript|bash|sh|powershell|cmd|sql|html|xml)").unwrap(),
+        );
+
         // JSON manipulation
-        dangerous_patterns.push(Regex::new(r"(?i)(modify|change|replace|update)\s+(the\s+)?(json|response|output|result)").unwrap());
-        
+        dangerous_patterns.push(
+            Regex::new(
+                r"(?i)(modify|change|replace|update)\s+(the\s+)?(json|response|output|result)",
+            )
+            .unwrap(),
+        );
+
         // Output format manipulation
-        dangerous_patterns.push(Regex::new(r"(?i)(output|respond|return|generate)\s+(in\s+)?(json|xml|yaml|markdown|code|raw)").unwrap());
-        
+        dangerous_patterns.push(
+            Regex::new(
+                r"(?i)(output|respond|return|generate)\s+(in\s+)?(json|xml|yaml|markdown|code|raw)",
+            )
+            .unwrap(),
+        );
+
         // Leakage attempts
         dangerous_patterns.push(Regex::new(r"(?i)(show|reveal|display|print|output|leak|expose)(\s+me|\s+your|\s+the|\s+system|\s+internal|\s+private|\s+secret)?\s+(api\s+key|key|token|password|credential|secret)").unwrap());
-        
+
         // Direct API key mentions
-        dangerous_patterns.push(Regex::new(r"(?i)\b(api\s+key|api\s+token|secret\s+key|access\s+token)\b").unwrap());
-        
+        dangerous_patterns.push(
+            Regex::new(r"(?i)\b(api\s+key|api\s+token|secret\s+key|access\s+token)\b").unwrap(),
+        );
+
         // Allowed commands (safe operations)
         let allowed_commands = HashSet::from([
             "analyze".to_string(),
@@ -69,34 +87,39 @@ impl PromptSanitizer {
     /// Sanitized einen Prompt
     pub fn sanitize(&self, prompt: &str) -> String {
         let mut sanitized = prompt.to_string();
-        
+
         // 1. Entferne gefährliche Patterns
         for pattern in &self.dangerous_patterns {
             sanitized = pattern.replace_all(&sanitized, "[REDACTED]").to_string();
         }
-        
+
         // 2. Escaped spezielle Zeichen die für Injection genutzt werden könnten
         sanitized = self.escape_special_chars(&sanitized);
-        
+
         // 3. Entferne mehrfache Leerzeichen
-        sanitized = Regex::new(r"\s+").unwrap().replace_all(&sanitized, " ").to_string();
-        
+        sanitized = Regex::new(r"\s+")
+            .unwrap()
+            .replace_all(&sanitized, " ")
+            .to_string();
+
         // 4. Trim
         sanitized.trim().to_string()
     }
 
     /// Escaped spezielle Zeichen
     fn escape_special_chars(&self, text: &str) -> String {
-        text.chars().map(|c| {
-            match c {
-                // Potenziell gefährliche Zeichen escapen
-                '\n' if text.contains("```") => "\\n".to_string(), // Code blocks
-                '\r' => "".to_string(),
-                '\t' => " ".to_string(),
-                // Behalte normale Zeichen
-                _ => c.to_string(),
-            }
-        }).collect::<String>()
+        text.chars()
+            .map(|c| {
+                match c {
+                    // Potenziell gefährliche Zeichen escapen
+                    '\n' if text.contains("```") => "\\n".to_string(), // Code blocks
+                    '\r' => "".to_string(),
+                    '\t' => " ".to_string(),
+                    // Behalte normale Zeichen
+                    _ => c.to_string(),
+                }
+            })
+            .collect::<String>()
     }
 
     /// Validiert ob ein Prompt sicher ist
@@ -112,22 +135,24 @@ impl PromptSanitizer {
     /// Sanitized Code-Kontext für AI-Prompts
     pub fn sanitize_code_context(&self, code: &str) -> String {
         let mut sanitized = code.to_string();
-        
+
         // Entferne Kommentare die Injection enthalten könnten
         let comment_pattern = Regex::new(r"//.*").unwrap();
         sanitized = comment_pattern.replace_all(&sanitized, "").to_string();
-        
+
         // Entferne String-Literale die verdächtig sind
         let string_pattern = Regex::new(r#""([^"]*)"#).unwrap();
-        sanitized = string_pattern.replace_all(&sanitized, |caps: &regex::Captures| {
-            let content = caps.get(1).map(|m| m.as_str()).unwrap_or("");
-            if self.is_safe(content) {
-                format!("\"{}\"", content)
-            } else {
-                "\"[REDACTED]\"".to_string()
-            }
-        }).to_string();
-        
+        sanitized = string_pattern
+            .replace_all(&sanitized, |caps: &regex::Captures| {
+                let content = caps.get(1).map(|m| m.as_str()).unwrap_or("");
+                if self.is_safe(content) {
+                    format!("\"{}\"", content)
+                } else {
+                    "\"[REDACTED]\"".to_string()
+                }
+            })
+            .to_string();
+
         sanitized
     }
 
@@ -135,23 +160,24 @@ impl PromptSanitizer {
     pub fn sanitize_user_input(&self, input: &str) -> String {
         // Für User-Input: striktere Sanitization
         let mut sanitized = input.to_string();
-        
+
         // Entferne alle gefährlichen Patterns
         for pattern in &self.dangerous_patterns {
             sanitized = pattern.replace_all(&sanitized, "").to_string();
         }
-        
+
         // Entferne Control-Zeichen
-        sanitized = sanitized.chars()
+        sanitized = sanitized
+            .chars()
             .filter(|c| !c.is_control() || *c == '\n' || *c == '\r')
             .collect();
-        
+
         // Limit Länge (verhindert sehr lange Injection-Versuche)
         if sanitized.len() > 10000 {
             sanitized.truncate(10000);
             sanitized.push_str("... [truncated]");
         }
-        
+
         sanitized.trim().to_string()
     }
 }

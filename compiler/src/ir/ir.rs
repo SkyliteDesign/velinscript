@@ -1,8 +1,7 @@
 /// IR-Strukturen für VelinScript
-/// 
+///
 /// Dieses Modul definiert alle IR-Strukturen für die Intermediate Representation.
 /// Die IR verwendet SSA (Single Static Assignment) Format.
-
 use crate::parser::ast::Visibility;
 
 /// Eindeutige ID für einen Block
@@ -36,7 +35,7 @@ impl VarId {
 }
 
 /// Haupt-IR-Modul
-/// 
+///
 /// Repräsentiert ein vollständiges VelinScript-Modul in IR-Format.
 #[derive(Debug, Clone)]
 pub struct IRModule {
@@ -60,7 +59,7 @@ impl IRModule {
 }
 
 /// IR-Funktion
-/// 
+///
 /// Repräsentiert eine Funktion in IR-Format mit SSA-Body.
 #[derive(Debug, Clone)]
 pub struct IRFunction {
@@ -74,7 +73,7 @@ pub struct IRFunction {
 }
 
 /// IR-Parameter
-/// 
+///
 /// Repräsentiert einen Funktionsparameter mit Typ und Ownership-Information.
 #[derive(Debug, Clone)]
 pub struct IRParameter {
@@ -84,7 +83,7 @@ pub struct IRParameter {
 }
 
 /// IR-Attribut (aus Decorator)
-/// 
+///
 /// Konvertiert aus AST-Decorator zu IR-Attribut.
 #[derive(Debug, Clone)]
 pub struct IRAttribute {
@@ -102,7 +101,7 @@ pub enum IRAttributeArg {
 }
 
 /// IR-Block (SSA - Single Static Assignment)
-/// 
+///
 /// Ein Block enthält eine Liste von Instructions und Informationen über
 /// Control Flow (Predecessors, Successors).
 #[derive(Debug, Clone)]
@@ -125,7 +124,7 @@ impl IRBlock {
 }
 
 /// IR-Instruction (SSA-Format)
-/// 
+///
 /// Jede Instruction produziert höchstens einen Wert (SSA-Prinzip).
 #[derive(Debug, Clone)]
 pub enum IRInstruction {
@@ -155,7 +154,7 @@ pub enum IRInstruction {
         left: IRValue,
         right: IRValue,
     },
-    
+
     // Vergleichs-Operationen
     Eq {
         dest: IRValue,
@@ -187,7 +186,7 @@ pub enum IRInstruction {
         left: IRValue,
         right: IRValue,
     },
-    
+
     // Logische Operationen
     And {
         dest: IRValue,
@@ -203,7 +202,7 @@ pub enum IRInstruction {
         dest: IRValue,
         operand: IRValue,
     },
-    
+
     // Speicher-Operationen
     Load {
         dest: IRValue,
@@ -217,7 +216,7 @@ pub enum IRInstruction {
         dest: IRValue,
         ty: IRType,
     },
-    
+
     // Kontrollfluss
     Branch {
         condition: IRValue,
@@ -230,7 +229,7 @@ pub enum IRInstruction {
     Return {
         value: Option<IRValue>,
     },
-    
+
     // Funktions-Aufrufe
     Call {
         dest: Option<IRValue>,
@@ -242,7 +241,7 @@ pub enum IRInstruction {
         func: IRValue,
         args: Vec<IRValue>,
     },
-    
+
     // Struct/Enum Operationen
     StructAccess {
         dest: IRValue,
@@ -260,13 +259,13 @@ pub enum IRInstruction {
         variant: String,
         data: Option<IRValue>,
     },
-    
+
     // Pattern Matching
     Match {
         value: IRValue,
         arms: Vec<IRMatchArm>,
     },
-    
+
     // Collections
     ListGet {
         dest: IRValue,
@@ -288,7 +287,7 @@ pub enum IRInstruction {
         key: IRValue,
         value: IRValue,
     },
-    
+
     // Phi-Node (für SSA bei Control Flow)
     Phi {
         dest: IRValue,
@@ -297,7 +296,7 @@ pub enum IRInstruction {
 }
 
 /// IR-Match-Arm
-/// 
+///
 /// Repräsentiert einen Match-Arm mit Pattern und Body.
 #[derive(Debug, Clone)]
 pub struct IRMatchArm {
@@ -307,7 +306,7 @@ pub struct IRMatchArm {
 }
 
 /// IR-Pattern
-/// 
+///
 /// Repräsentiert ein Pattern für Pattern Matching.
 #[derive(Debug, Clone)]
 pub enum IRPattern {
@@ -326,7 +325,7 @@ pub enum IRPattern {
 }
 
 /// IR-Wert (SSA)
-/// 
+///
 /// Ein Wert in SSA-Format kann eine Konstante, Variable oder temporäre Variable sein.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IRValue {
@@ -346,7 +345,7 @@ impl IRValue {
 }
 
 /// IR-Konstante
-/// 
+///
 /// Repräsentiert einen konstanten Wert.
 #[derive(Debug, Clone)]
 pub enum IRConstant {
@@ -404,7 +403,7 @@ impl IRConstant {
 }
 
 /// IR-Variable (mit Ownership-Information)
-/// 
+///
 /// Repräsentiert eine Variable mit Typ und Ownership-Information.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct IRVariable {
@@ -415,7 +414,7 @@ pub struct IRVariable {
 }
 
 /// Ownership-Information
-/// 
+///
 /// Definiert die Ownership-Semantik für eine Variable.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Ownership {
@@ -432,7 +431,7 @@ pub enum Ownership {
 }
 
 /// Lifetime-Information
-/// 
+///
 /// Definiert die Lifetime einer Referenz.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Lifetime {
@@ -461,7 +460,7 @@ impl ScopeId {
 }
 
 /// IR-Typ
-/// 
+///
 /// Repräsentiert einen Typ in der IR.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum IRType {
@@ -505,8 +504,12 @@ impl IRType {
             IRType::Pointer(inner) => format!("&{}", inner.to_string()),
             IRType::Struct(name) => name.clone(),
             IRType::Enum(name) => name.clone(),
-            IRType::Function { params, return_type } => {
-                let params_str = params.iter()
+            IRType::Function {
+                params,
+                return_type,
+            } => {
+                let params_str = params
+                    .iter()
                     .map(|p| p.to_string())
                     .collect::<Vec<_>>()
                     .join(", ");
@@ -517,7 +520,8 @@ impl IRType {
                 format!("Map<{}, {}>", key.to_string(), value.to_string())
             }
             IRType::Tuple(types) => {
-                let types_str = types.iter()
+                let types_str = types
+                    .iter()
                     .map(|t| t.to_string())
                     .collect::<Vec<_>>()
                     .join(", ");
@@ -532,7 +536,7 @@ impl IRType {
 }
 
 /// IR-Struct
-/// 
+///
 /// Repräsentiert einen Struct in IR-Format.
 #[derive(Debug, Clone)]
 pub struct IRStruct {
@@ -550,7 +554,7 @@ pub struct IRStructField {
 }
 
 /// IR-Enum
-/// 
+///
 /// Repräsentiert einen Enum in IR-Format.
 #[derive(Debug, Clone)]
 pub struct IREnum {

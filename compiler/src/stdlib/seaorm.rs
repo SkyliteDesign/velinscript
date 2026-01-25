@@ -17,7 +17,7 @@ impl SeaORMStdlib {
         for field in &struct_def.fields {
             let rust_type = Self::velin_to_seaorm_type(&field.field_type);
             let column_name = Self::field_name_to_column(&field.name);
-            
+
             code.push_str(&format!("    #[sea_orm(primary_key)]\n",));
             code.push_str(&format!("    pub {}: {},\n", field.name, rust_type));
         }
@@ -25,7 +25,9 @@ impl SeaORMStdlib {
         code.push_str("}\n\n");
 
         // ActiveModel generieren
-        code.push_str("#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]\npub enum Relation {}\n\n");
+        code.push_str(
+            "#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]\npub enum Relation {}\n\n",
+        );
         code.push_str("impl ActiveModelBehavior for ActiveModel {}\n");
 
         code
@@ -41,10 +43,7 @@ impl SeaORMStdlib {
 
     /// Generiert SeaORM Query-Code für db.findAll()
     pub fn generate_find_all_code(entity_name: &str) -> String {
-        format!(
-            "{}::Entity::find().all(&db).await",
-            entity_name
-        )
+        format!("{}::Entity::find().all(&db).await", entity_name)
     }
 
     /// Generiert SeaORM Query-Code für db.save()

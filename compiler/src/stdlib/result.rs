@@ -37,50 +37,50 @@ impl VelinError {
             source: None,
         }
     }
-    
+
     /// Fügt Context hinzu
     pub fn with_context(mut self, key: String, value: String) -> Self {
         self.context.insert(key, value);
         self
     }
-    
+
     /// Fügt Stack Trace Eintrag hinzu
     pub fn add_stack_frame(mut self, frame: String) -> Self {
         self.stack_trace.push(frame);
         self
     }
-    
+
     /// Setzt die Source-Error
     pub fn with_source(mut self, source: Box<dyn std::error::Error + Send + Sync>) -> Self {
         self.source = Some(source);
         self
     }
-    
+
     /// Gibt den Error als strukturierten String zurück
     pub fn to_structured_string(&self) -> String {
         let mut output = format!("[{}] {}\n", self.error_type, self.message);
-        
+
         if !self.context.is_empty() {
             output.push_str("Context:\n");
             for (key, value) in &self.context {
                 output.push_str(&format!("  {}: {}\n", key, value));
             }
         }
-        
+
         if !self.stack_trace.is_empty() {
             output.push_str("Stack Trace:\n");
             for (i, frame) in self.stack_trace.iter().enumerate() {
                 output.push_str(&format!("  {}: {}\n", i, frame));
             }
         }
-        
+
         if let Some(ref source) = self.source {
             output.push_str(&format!("Source: {}\n", source));
         }
-        
+
         output
     }
-    
+
     /// Exportiert Error als JSON
     pub fn to_json(&self) -> String {
         let mut json = format!(
@@ -88,17 +88,17 @@ impl VelinError {
             self.error_type,
             self.message.replace('"', "\\\"")
         );
-        
+
         if !self.context.is_empty() {
             let context_json = serde_json::to_string(&self.context).unwrap_or_default();
             json.push_str(&format!(r#""context":{},"#, context_json));
         }
-        
+
         if !self.stack_trace.is_empty() {
             let stack_json = serde_json::to_string(&self.stack_trace).unwrap_or_default();
             json.push_str(&format!(r#""stack_trace":{},"#, stack_json));
         }
-        
+
         json.push('}');
         json
     }
@@ -112,7 +112,9 @@ impl fmt::Display for VelinError {
 
 impl std::error::Error for VelinError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.source.as_ref().map(|e| e.as_ref() as &dyn std::error::Error)
+        self.source
+            .as_ref()
+            .map(|e| e.as_ref() as &dyn std::error::Error)
     }
 }
 
@@ -139,19 +141,19 @@ impl ErrorRecovery {
             max_retries: 3,
         }
     }
-    
+
     /// Setzt die Backoff-Strategie
     pub fn with_backoff(mut self, strategy: BackoffStrategy) -> Self {
         self.backoff_strategy = strategy;
         self
     }
-    
+
     /// Setzt die maximale Anzahl von Retries
     pub fn with_max_retries(mut self, max: u32) -> Self {
         self.max_retries = max;
         self
     }
-    
+
     /// Berechnet die Verzögerung für den nächsten Retry
     pub fn calculate_delay(&self, attempt: u32) -> u64 {
         match &self.backoff_strategy {
@@ -163,12 +165,12 @@ impl ErrorRecovery {
             BackoffStrategy::Fixed { delay_ms } => *delay_ms,
         }
     }
-    
+
     /// Prüft, ob ein Retry möglich ist
     pub fn can_retry(&self) -> bool {
         self.retry_count < self.max_retries
     }
-    
+
     /// Erhöht den Retry-Counter
     pub fn increment_retry(&mut self) {
         self.retry_count += 1;
@@ -195,13 +197,13 @@ impl ErrorReporter {
             max_errors: 1000,
         }
     }
-    
+
     /// Setzt die maximale Anzahl von gespeicherten Errors
     pub fn with_max_errors(mut self, max: usize) -> Self {
         self.max_errors = max;
         self
     }
-    
+
     /// Meldet einen Error
     pub fn report(&mut self, error: VelinError) {
         if self.errors.len() >= self.max_errors {
@@ -209,20 +211,18 @@ impl ErrorReporter {
         }
         self.errors.push(error);
     }
-    
+
     /// Gibt alle Errors zurück
     pub fn get_errors(&self) -> &[VelinError] {
         &self.errors
     }
-    
+
     /// Exportiert alle Errors als JSON
     pub fn export_json(&self) -> String {
-        let errors_json: Vec<String> = self.errors.iter()
-            .map(|e| e.to_json())
-            .collect();
+        let errors_json: Vec<String> = self.errors.iter().map(|e| e.to_json()).collect();
         format!("[{}]", errors_json.join(","))
     }
-    
+
     /// Löscht alle Errors
     pub fn clear(&mut self) {
         self.errors.clear();
@@ -334,15 +334,24 @@ impl<T, E> Result<T, E> {
 "#
         .to_string()
     }
-    
+
     /// Prüft, ob ein Expression ein Result-Methoden-Aufruf ist
     pub fn is_result_method(method_name: &str) -> bool {
         matches!(
             method_name,
-            "unwrap" | "expect" | "unwrap_or" | "unwrap_or_else" | "map" | "map_err" | "is_ok" | "is_err" | "ok" | "err"
+            "unwrap"
+                | "expect"
+                | "unwrap_or"
+                | "unwrap_or_else"
+                | "map"
+                | "map_err"
+                | "is_ok"
+                | "is_err"
+                | "ok"
+                | "err"
         )
     }
-    
+
     /// Generiert Code für einen Result-Methoden-Aufruf
     pub fn generate_result_method_call(method_name: &str, object: &str, args: &[String]) -> String {
         match method_name {

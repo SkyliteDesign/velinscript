@@ -14,6 +14,7 @@ Der `ParserPass` ist der **zweite Pass** im VelinScript Compiler (nach AutoFixPa
 2. **Syntax-Analyse** - Erstellung des Abstract Syntax Tree (AST)
 3. **Modul-Auflösung** - Rekursive Auflösung von `use` Statements
 4. **AST-Merging** - Zusammenführung aller Module in einen globalen AST
+5. **Parser-Kontext-Tracking** ✅ (Neu in 3.1.0) - Unterscheidung zwischen Struct-Definitionen und Struct-Literalen
 
 ---
 
@@ -284,6 +285,106 @@ fn getUsers(): List<User> {
 
 ---
 
+## Parser-Kontext-Tracking ✅ (Neu in 3.1.0)
+
+Der Parser verwendet ein **Kontext-Tracking-System**, um zwischen verschiedenen Parsing-Kontexten zu unterscheiden. Dies ist besonders wichtig für die Unterscheidung zwischen **Struct-Definitionen** und **Struct-Literalen**.
+
+### ParseContext Enum
+
+```rust
+enum ParseContext {
+    TopLevel,          // Top-Level Code (Funktionen, Structs, etc.)
+    Expression,        // Expression-Kontext (in return, let, etc.)
+    StructDefinition,  // Struct-Definition (struct Name { ... })
+    Pattern,           // Pattern-Matching (für zukünftige Features)
+    Type,              // Typ-Annotationen
+}
+```
+
+### Kontext-Stack
+
+Der Parser verwaltet einen **Stack von Kontexten**, um verschachtelte Strukturen korrekt zu handhaben:
+
+```rust
+struct Parser {
+    // ...
+    context: Vec<ParseContext>,  // Kontext-Stack
+}
+```
+
+### Kontext-Management
+
+**Methoden:**
+- `push_context(ctx: ParseContext)` - Fügt einen neuen Kontext zum Stack hinzu
+- `pop_context()` - Entfernt den obersten Kontext vom Stack
+- `current_context() -> ParseContext` - Gibt den aktuellen Kontext zurück
+
+### Verwendung
+
+**1. Expression-Kontext in `parse_return()`:**
+```rust
+fn parse_return(&mut self) -> Result<ReturnStatement, ParseError> {
+    self.push_context(ParseContext::Expression);
+    let expr = self.parse_expression();
+    self.pop_context();
+    // ...
+}
+```
+
+**2. Struct-Definition-Kontext in `parse_struct()`:**
+```rust
+fn parse_struct(&mut self, ...) -> Result<Struct, ParseError> {
+    self.push_context(ParseContext::StructDefinition);
+    // Parse Struct-Felder (erwartet Typen nach ':')
+    self.pop_context();
+    // ...
+}
+```
+
+**3. Struct-Literal-Erkennung in `parse_primary()`:**
+```rust
+// In parse_primary()
+if self.check(&Token::LBrace) {
+    // Wenn wir NICHT in einem Struct-Definition-Kontext sind,
+    // ist es ein Struct-Literal
+    if self.current_context() != ParseContext::StructDefinition {
+        let fields = self.parse_struct_literal_fields()?;
+        return Ok(Expression::StructLiteral { name, fields });
+    }
+}
+```
+
+**4. Expression-Kontext in `parse_struct_literal_fields()`:**
+```rust
+fn parse_struct_literal_fields(&mut self) -> Result<Vec<(String, Expression)>, ParseError> {
+    // ...
+    // Stelle sicher, dass wir im Expression-Kontext sind
+    let was_in_expression = self.current_context() == ParseContext::Expression;
+    if !was_in_expression {
+        self.push_context(ParseContext::Expression);
+    }
+    let value = self.parse_expression();  // Parse Expression, nicht Typ!
+    if !was_in_expression {
+        self.pop_context();
+    }
+    // ...
+}
+```
+
+### Vorteile
+
+- **Eindeutige Unterscheidung:** Der Parser kann zuverlässig zwischen Struct-Definitionen und Struct-Literalen unterscheiden
+- **Verschachtelte Strukturen:** Der Kontext-Stack ermöglicht korrektes Parsing von verschachtelten Strukturen
+- **Bessere Fehlermeldungen:** Der Parser kann präzisere Fehlermeldungen geben, wenn er den Kontext kennt
+
+### Bekannte Probleme
+
+⚠️ **Aktuell:** Das Problem "Expected type (found: Number(0.0))" in `examples/system-diagnosis/security_checks.velin` besteht weiterhin, obwohl das Kontext-Tracking implementiert wurde. Weitere Debug-Arbeit ist erforderlich.
+
+**Siehe:** `bauplan/Test/PARSER_STRUCT_LITERAL_BUG_ANALYSE.md` für Details.
+
+---
+
 ## Fehlerbehandlung
 
 ### Parsing-Fehler
@@ -471,5 +572,67 @@ if let Some(ref program) = context.program {
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
+**Letzte Aktualisierung:** 2026-02-02  
 **Version:** 3.1.0
+
+### 7. Parser-Debug-System ✅ (Neu in 3.1.0)
+
+Um Parsing-Probleme zu diagnostizieren, wurde ein umfassendes Debug-System implementiert.
+
+**Debug-Ausgaben:**
+- **`parse_struct()`**: Zeigt Start, Struct-Name, Feld-Parsing und Kontext-Änderungen
+- **`parse_struct_literal_fields()`**: Zeigt Start, Feld-Parsing und Token nach `:`
+- **`parse_struct_literal_value()`**: Zeigt Token, Kontext und Fallback-Warnungen
+- **`parse_type()`**: Zeigt Aufruf, Token, Kontext und Stack
+
+**Verwendung:**
+Debug-Ausgaben werden nur in Debug-Builds (`#[cfg(debug_assertions)]`) ausgegeben und helfen bei der Diagnose von Parsing-Problemen.
+
+**Beispiel:**
+```
+🔍 DEBUG parse_struct() START - Context: [TopLevel, StructDefinition]
+🔍 DEBUG parse_struct() - Struct-Name: LogAnalysis
+🔍 DEBUG parse_struct() - Parsing field 'warningCount' at line ~73
+   Context: StructDefinition, Stack: [TopLevel, StructDefinition]
+   Next token after ':': Some(Identifier("number"))
+🔍 DEBUG parse_type() aufgerufen - Token: Some(Identifier("number")), Line: ~73, Context: StructDefinition, Stack: [TopLevel, StructDefinition]
+   Successfully parsed field type: Number
+```
+
+**Siehe auch:**
+- `bauplan/Test/PARSER_DEBUG_ANALYSE.md` - Detaillierte Debug-Analyse
+
+---
+
+## Lambda-Erkennung & Leere Parameterlisten ✅ (Neu in 3.1.1)
+
+### Problem
+
+Wenn `()` (leere Parameterliste) geparst wird, versucht der Parser fälschlicherweise, eine Lambda-Funktion zu erkennen und ruft `consume_identifier()` auf, obwohl das nächste Token `RParen` ist. Dies führt zu dem Fehler "Expected identifier (found: LParen)".
+
+### Lösung
+
+In `parse_expression()` wird zuerst geprüft, ob nach `LParen` direkt `RParen` kommt. Wenn ja, wird die leere Parameterliste als Gruppierung behandelt, nicht als Lambda-Funktion.
+
+**Code-Änderung:** `compiler/src/parser/parser.rs`, Zeile 2397-2406
+
+```rust
+Some(Token::LParen) => {
+    self.advance();
+    
+    // FIX: Prüfe zuerst, ob es eine leere Parameterliste ist: ()
+    if self.check(&Token::RParen) {
+        // Leere Parameterliste: () - kein Lambda, sondern Gruppierung
+        self.advance(); // consume ')'
+        expr = Expr::Grouping(Box::new(expr));
+    } else {
+        // Lambda-Erkennung nur wenn Parameter vorhanden sind
+        // ...
+    }
+}
+```
+
+**Ergebnis:** Der Fehler "Expected identifier (found: LParen)" tritt nicht mehr auf, wenn leere Parameterlisten geparst werden.
+
+**Siehe auch:**
+- `bauplan/Test/PARSER_PROBLEM_ANALYSE.md` - Detaillierte Problem-Analyse

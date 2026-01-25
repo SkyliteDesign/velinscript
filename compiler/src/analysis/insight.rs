@@ -1,4 +1,3 @@
-
 use crate::parser::ast::*;
 use serde::Serialize;
 use std::collections::HashSet;
@@ -35,7 +34,7 @@ impl InsightAnalyzer {
             // Collect used types from functions
             if let Item::Function(f) = item {
                 self.collect_types_in_function(f, &mut used_types);
-                
+
                 // 2. Detect Complex Functions (Heuristic: Statement Count > 20)
                 if f.body.statements.len() > 20 {
                     report.complex_functions.push(f.name.clone());
@@ -53,7 +52,7 @@ impl InsightAnalyzer {
 
         // 3. Detect Redundant Queries (Stub)
         // Would analyze call graph for repetitive db.find() calls without caching
-        
+
         report
     }
 
@@ -68,7 +67,9 @@ impl InsightAnalyzer {
 
     fn collect_type(&self, ty: &Type, used: &mut HashSet<String>) {
         match ty {
-            Type::Named(n) => { used.insert(n.clone()); },
+            Type::Named(n) => {
+                used.insert(n.clone());
+            }
             Type::List(inner) => self.collect_type(inner, used),
             Type::Optional(inner) => self.collect_type(inner, used),
             _ => {}

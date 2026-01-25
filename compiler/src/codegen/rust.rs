@@ -1,13 +1,13 @@
-use crate::parser::ast::*;
 use crate::codegen::framework::{Framework, FrameworkSelector};
-use crate::compiler::language::VELISCH_FINGERPRINT;
 use crate::codegen::traits::{CodeGenerator, CodegenConfig, TargetLanguage};
-#[cfg(feature = "sea-orm")]
-use crate::stdlib::seaorm::SeaORMStdlib;
+use crate::compiler::language::VELISCH_FINGERPRINT;
+use crate::parser::ast::*;
 #[cfg(feature = "oauth2")]
 use crate::stdlib::oauth2::OAuth2Stdlib;
 #[cfg(feature = "privacy")]
 use crate::stdlib::privacy::PrivacyStdlib;
+#[cfg(feature = "sea-orm")]
+use crate::stdlib::seaorm::SeaORMStdlib;
 
 pub struct RustCodeGenerator {
     output: String,
@@ -41,24 +41,34 @@ impl RustCodeGenerator {
     }
 
     // Legacy method for backward compatibility, now calls internal implementation
-    pub fn generate(&mut self, program: &Program, config_framework: Option<&str>, config_orm: Option<&str>) -> String {
+    pub fn generate(
+        &mut self,
+        program: &Program,
+        config_framework: Option<&str>,
+        config_orm: Option<&str>,
+    ) -> String {
         self.generate_internal(program, config_framework, config_orm)
     }
 
-    fn generate_internal(&mut self, program: &Program, config_framework: Option<&str>, config_orm: Option<&str>) -> String {
+    fn generate_internal(
+        &mut self,
+        program: &Program,
+        config_framework: Option<&str>,
+        config_orm: Option<&str>,
+    ) -> String {
         self.output.clear();
-        
+
         // Velisch Fingerabdruck - darf nicht entfernt werden
         self.writeln(VELISCH_FINGERPRINT);
         self.writeln("#![allow(unused_imports, unused_variables, dead_code)]");
         self.writeln("");
-        
+
         // Detect framework
         let framework = FrameworkSelector::detect_framework(program, config_framework);
         self.framework = framework;
         let framework_imports = FrameworkSelector::generate_imports(framework);
         self.writeln(&framework_imports);
-        
+
         // Check for validation usage
         self.has_validation = self.has_validation_decorators(program);
         if self.has_validation {
@@ -68,7 +78,7 @@ impl RustCodeGenerator {
             self.writeln(&validator_code);
             self.writeln("");
         }
-        
+
         // Add necessary imports
         // self.writeln("use serde::{Serialize, Deserialize};"); // Included in framework imports
         self.writeln("use serde_json::Value as Any;");
@@ -81,7 +91,8 @@ impl RustCodeGenerator {
 
         // Inject AppError for Axum
         if matches!(self.framework, Framework::Axum) {
-            self.writeln(r#"
+            self.writeln(
+                r#"
 // Global Error Handler
 struct AppError(anyhow::Error);
 
@@ -103,11 +114,13 @@ where
         Self(err.into())
     }
 }
-"#);
+"#,
+            );
         }
-        
+
         // Check ORM
-        let use_seaorm = config_orm.map(|s| s == "seaorm").unwrap_or(false) || self.has_seaorm_usage(program);
+        let use_seaorm =
+            config_orm.map(|s| s == "seaorm").unwrap_or(false) || self.has_seaorm_usage(program);
         self.use_seaorm = use_seaorm;
         if self.use_seaorm {
             #[cfg(feature = "sea-orm")]
@@ -117,7 +130,7 @@ where
             }
         }
         self.writeln("");
-        
+
         // Check OAuth2/OIDC
         let has_oauth2 = self.has_oauth2_decorators(program);
         if has_oauth2 {
@@ -128,16 +141,16 @@ where
             }
         }
         self.writeln("");
-        
+
         // Inject Stdlib Runtime Code
         self.writeln("pub mod stdlib {");
-        
+
         // ML Runtime
         let has_ml = self.has_ml_usage(program);
         if has_ml {
             use crate::stdlib::ml::MLStdlib;
             self.writeln("    pub mod ml {");
-            self.writeln("        use super::super::*;"); 
+            self.writeln("        use super::super::*;");
             self.writeln(&MLStdlib::generate_ml_runtime_code());
             self.writeln("    }");
         }
@@ -151,7 +164,7 @@ where
             self.writeln(&FlowStdlib::generate_flow_runtime_code());
             self.writeln("    }");
         }
-        
+
         self.writeln("}");
         self.writeln("");
 
@@ -167,7 +180,7 @@ where
             }
         }
         self.writeln("");
-        
+
         // Check if security decorators are used
         let has_security = self.has_security_decorators(program);
         if has_security {
@@ -193,16 +206,16 @@ where
             }
             self.writeln("");
         }
-        
+
         // Check if Result type is used
         let has_result = self.has_result_usage(program);
-        
+
         // Generate all items
         for item in &program.items {
             self.generate_item(item, &framework, self.use_seaorm);
             self.writeln("");
         }
-        
+
         // Add Result methods if Result is used
         if has_result {
             use crate::stdlib::result::ResultStdlib;
@@ -211,10 +224,10 @@ where
             self.writeln("// Result Extension Methods");
             self.writeln(&result_methods);
         }
-        
+
         self.output.clone()
     }
-    
+
     fn has_security_decorators(&self, program: &Program) -> bool {
         for item in &program.items {
             if let Item::Function(f) = item {
@@ -227,7 +240,7 @@ where
         }
         false
     }
-    
+
     fn has_oauth2_decorators(&self, program: &Program) -> bool {
         for item in &program.items {
             if let Item::Function(f) = item {
@@ -241,7 +254,7 @@ where
         }
         false
     }
-    
+
     fn has_privacy_decorators(&self, program: &Program) -> bool {
         for item in &program.items {
             match item {
@@ -269,18 +282,21 @@ where
         }
         false
     }
-    
+
     fn has_seaorm_usage(&self, _program: &Program) -> bool {
         // Check if db.* calls are used (would use SeaORM)
         // This is a simple check - in production, do more sophisticated analysis
         false
     }
-    
+
     fn has_validation_decorators(&self, program: &Program) -> bool {
         for item in &program.items {
             if let Item::Function(f) = item {
                 for decorator in &f.decorators {
-                    if matches!(decorator.name.as_str(), "Validate" | "@Validate" | "Validation" | "@Validation") {
+                    if matches!(
+                        decorator.name.as_str(),
+                        "Validate" | "@Validate" | "Validation" | "@Validation"
+                    ) {
                         return true;
                     }
                 }
@@ -297,7 +313,7 @@ where
         }
         false
     }
-    
+
     fn has_result_usage(&self, program: &Program) -> bool {
         // Check if Result type is used anywhere in the program
         self.check_type_for_result(&program.items)
@@ -310,7 +326,7 @@ where
     fn has_flow_usage(&self, _program: &Program) -> bool {
         true
     }
-    
+
     fn check_type_for_result(&self, items: &[Item]) -> bool {
         for item in items {
             match item {
@@ -397,7 +413,7 @@ where
         }
         false
     }
-    
+
     fn is_result_type(&self, t: &Type) -> bool {
         match t {
             Type::Result { .. } => true,
@@ -406,13 +422,14 @@ where
             Type::Map { key, value } => self.is_result_type(key) || self.is_result_type(value),
             Type::Tuple(types) => types.iter().any(|t| self.is_result_type(t)),
             Type::Optional(inner) => self.is_result_type(inner),
-            Type::Function { params, return_type } => {
-                params.iter().any(|t| self.is_result_type(t)) || self.is_result_type(return_type)
-            }
+            Type::Function {
+                params,
+                return_type,
+            } => params.iter().any(|t| self.is_result_type(t)) || self.is_result_type(return_type),
             _ => false,
         }
     }
-    
+
     fn check_block_for_result(&self, block: &Block) -> bool {
         for statement in &block.statements {
             match statement {
@@ -491,7 +508,7 @@ where
         }
         false
     }
-    
+
     fn check_expression_for_result(&self, expr: &Expression) -> bool {
         match expr {
             Expression::Literal(_) => false,
@@ -501,15 +518,15 @@ where
                 self.check_expression_for_result(left) || self.check_expression_for_result(right)
             }
             Expression::UnaryOp { expr, .. } => self.check_expression_for_result(expr),
-            Expression::StructLiteral { name: _, fields } => {
-                fields.iter().any(|(_, expr)| self.check_expression_for_result(expr))
-            }
-            Expression::MapLiteral(fields) => {
-                fields.iter().any(|(_, expr)| self.check_expression_for_result(expr))
-            }
-            Expression::ListLiteral(elements) => {
-                elements.iter().any(|expr| self.check_expression_for_result(expr))
-            }
+            Expression::StructLiteral { name: _, fields } => fields
+                .iter()
+                .any(|(_, expr)| self.check_expression_for_result(expr)),
+            Expression::MapLiteral(fields) => fields
+                .iter()
+                .any(|(_, expr)| self.check_expression_for_result(expr)),
+            Expression::ListLiteral(elements) => elements
+                .iter()
+                .any(|expr| self.check_expression_for_result(expr)),
             Expression::Call { callee, args } => {
                 self.check_expression_for_result(callee)
                     || args.iter().any(|arg| self.check_expression_for_result(arg))
@@ -532,18 +549,14 @@ where
             Expression::GenericConstructor { type_params, .. } => {
                 type_params.iter().any(|t| self.is_result_type(t))
             }
-            Expression::Lambda { body, .. } => {
-                self.check_expression_for_result(body)
-            }
-            Expression::Assignment { target: _, value } => {
-                self.check_expression_for_result(value)
-            }
+            Expression::Lambda { body, .. } => self.check_expression_for_result(body),
+            Expression::Assignment { target: _, value } => self.check_expression_for_result(value),
             Expression::LLMCall { method: _, args } => {
                 args.iter().any(|arg| self.check_expression_for_result(arg))
             }
         }
     }
-    
+
     fn generate_item(&mut self, item: &Item, framework: &Framework, use_seaorm: bool) {
         match item {
             Item::Function(f) => self.generate_function(f, framework, use_seaorm),
@@ -564,22 +577,22 @@ where
             }
         }
     }
-    
+
     fn generate_function(&mut self, function: &Function, framework: &Framework, _use_seaorm: bool) {
         // Generate decorators as Rust attributes
         for decorator in &function.decorators {
             self.generate_decorator(decorator);
         }
-        
+
         // Generate function signature
         if function.visibility == Visibility::Public {
             self.write("pub ");
         }
-        
+
         if function.is_const {
             self.write("const ");
         }
-        
+
         // Check for @Flow decorator
         let is_flow = function.decorators.iter().any(|d| d.name == "Flow");
         let is_main = function.name == "main";
@@ -591,10 +604,10 @@ where
             self.writeln("#[tracing::instrument]");
             self.write("async ");
         }
-        
+
         self.write("fn ");
         self.write(&self.to_snake_case(&function.name));
-        
+
         // Generate generic type parameters with constraints
         if !function.type_params.is_empty() {
             self.write("<");
@@ -603,7 +616,7 @@ where
                     self.write(", ");
                 }
                 self.write(&param.name);
-                
+
                 // Generate constraints (T: Trait1 + Trait2)
                 if !param.constraints.is_empty() {
                     self.write(": ");
@@ -629,35 +642,45 @@ where
             }
             self.write(">");
         }
-        
+
         self.write("(");
-        
+
         // Generate parameters
         let route_info = self.is_route_handler(&function.decorators);
-        
+
         for (i, param) in function.params.iter().enumerate() {
             if i > 0 {
                 self.write(", ");
             }
-            
+
             let mut handled = false;
             if let Some((method, path)) = &route_info {
-                 // Check if it's a path parameter
-                 if path.contains(&format!(":{}", param.name)) || path.contains(&format!("{{{}}}", param.name)) {
-                     self.write(&format!("Path(mut {}): Path<", self.to_snake_case(&param.name)));
-                     self.generate_type(&param.param_type);
-                     self.write(">");
-                     handled = true;
-                 } 
-                 // Check if it's a body parameter (Complex type in POST/PUT/PATCH)
-                 else if self.is_complex_type(&param.param_type) && (method == "POST" || method == "PUT" || method == "PATCH") {
-                      self.write(&format!("Json(mut {}): Json<", self.to_snake_case(&param.name)));
-                      self.generate_type(&param.param_type);
-                      self.write(">");
-                      handled = true;
-                 }
+                // Check if it's a path parameter
+                if path.contains(&format!(":{}", param.name))
+                    || path.contains(&format!("{{{}}}", param.name))
+                {
+                    self.write(&format!(
+                        "Path(mut {}): Path<",
+                        self.to_snake_case(&param.name)
+                    ));
+                    self.generate_type(&param.param_type);
+                    self.write(">");
+                    handled = true;
+                }
+                // Check if it's a body parameter (Complex type in POST/PUT/PATCH)
+                else if self.is_complex_type(&param.param_type)
+                    && (method == "POST" || method == "PUT" || method == "PATCH")
+                {
+                    self.write(&format!(
+                        "Json(mut {}): Json<",
+                        self.to_snake_case(&param.name)
+                    ));
+                    self.generate_type(&param.param_type);
+                    self.write(">");
+                    handled = true;
+                }
             }
-            
+
             if !handled {
                 self.write("mut ");
                 self.write(&self.to_snake_case(&param.name));
@@ -665,9 +688,9 @@ where
                 self.generate_type(&param.param_type);
             }
         }
-        
+
         self.write(")");
-        
+
         // Generate return type
         if let Some(ref return_type) = function.return_type {
             self.write(" -> ");
@@ -689,7 +712,7 @@ where
                 self.generate_type(return_type);
             }
         }
-        
+
         self.writeln(" {");
         self.indent();
 
@@ -697,50 +720,53 @@ where
         let is_flow = function.decorators.iter().any(|d| d.name == "Flow");
 
         if is_flow {
-             self.writeln("use crate::stdlib::flow::{FlowManager};");
-             self.writeln(&format!("let flow = FlowManager::new(\"{}\");", function.name));
-             self.writeln("flow.start();");
-             self.writeln("");
-             self.writeln("// Execute flow body");
-             // For MVP, we wrap the body execution to capture result
-             self.writeln("let result = async {");
-             self.indent();
+            self.writeln("use crate::stdlib::flow::{FlowManager};");
+            self.writeln(&format!(
+                "let flow = FlowManager::new(\"{}\");",
+                function.name
+            ));
+            self.writeln("flow.start();");
+            self.writeln("");
+            self.writeln("// Execute flow body");
+            // For MVP, we wrap the body execution to capture result
+            self.writeln("let result = async {");
+            self.indent();
         }
-        
+
         // Generate validation code if needed
         if self.has_validation {
             self.generate_validation_code(function, framework);
         }
-        
+
         // Generate function body
         self.generate_block(&function.body);
-        
-        if is_flow {
-             self.unindent();
-             self.writeln("}.await;");
-             self.writeln("");
-             
-             let returns_result = if let Some(ref ret) = function.return_type {
-                 self.is_result_type(ret)
-             } else {
-                 false
-             };
 
-             if returns_result {
-                 self.writeln("match &result {");
-                 self.writeln("    Ok(_) => flow.commit(),");
-                 self.writeln("    Err(e) => flow.rollback(&e.to_string()),");
-                 self.writeln("}");
-             } else {
-                 self.writeln("flow.commit();");
-             }
-             self.writeln("result");
+        if is_flow {
+            self.unindent();
+            self.writeln("}.await;");
+            self.writeln("");
+
+            let returns_result = if let Some(ref ret) = function.return_type {
+                self.is_result_type(ret)
+            } else {
+                false
+            };
+
+            if returns_result {
+                self.writeln("match &result {");
+                self.writeln("    Ok(_) => flow.commit(),");
+                self.writeln("    Err(e) => flow.rollback(&e.to_string()),");
+                self.writeln("}");
+            } else {
+                self.writeln("flow.commit();");
+            }
+            self.writeln("result");
         }
-        
+
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_decorator(&mut self, decorator: &Decorator) {
         match decorator.name.as_str() {
             "GET" | "POST" | "PUT" | "DELETE" | "PATCH" => {
@@ -757,9 +783,14 @@ where
             "Role" => {
                 if let Some(arg) = decorator.args.first() {
                     if let DecoratorArg::String(role) = arg {
-                        self.writeln(&format!("#[actix_web::web::middleware(RoleMiddleware::new(\"{}\"))]", role));
+                        self.writeln(&format!(
+                            "#[actix_web::web::middleware(RoleMiddleware::new(\"{}\"))]",
+                            role
+                        ));
                     } else {
-                        self.writeln("#[actix_web::web::middleware(RoleMiddleware::new(\"user\"))]");
+                        self.writeln(
+                            "#[actix_web::web::middleware(RoleMiddleware::new(\"user\"))]",
+                        );
                     }
                 } else {
                     self.writeln("#[actix_web::web::middleware(RoleMiddleware::new(\"user\"))]");
@@ -833,38 +864,50 @@ where
             "fixture" => {
                 // Fixture wird als Setup/Teardown-Funktion generiert
                 // Wird in der Funktion selbst behandelt
-                let fixture_name = decorator.args.first().and_then(|arg| {
-                    if let DecoratorArg::String(s) = arg {
-                        Some(s.as_str())
-                    } else {
-                        None
-                    }
-                }).unwrap_or("default");
+                let fixture_name = decorator
+                    .args
+                    .first()
+                    .and_then(|arg| {
+                        if let DecoratorArg::String(s) = arg {
+                            Some(s.as_str())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or("default");
                 // Fixture-Code wird später in der Funktion generiert
                 self.writeln(&format!("// Fixture: {}", fixture_name));
             }
             "mock" => {
                 // Mock wird als Trait-Implementierung generiert
-                let trait_name = decorator.args.iter().find_map(|arg| {
-                    if let DecoratorArg::Named { name, value } = arg {
-                        if name == "trait" {
-                            if let DecoratorArg::String(s) = value.as_ref() {
-                                return Some(s.as_str());
+                let trait_name = decorator
+                    .args
+                    .iter()
+                    .find_map(|arg| {
+                        if let DecoratorArg::Named { name, value } = arg {
+                            if name == "trait" {
+                                if let DecoratorArg::String(s) = value.as_ref() {
+                                    return Some(s.as_str());
+                                }
                             }
                         }
-                    }
-                    None
-                }).unwrap_or("MockTrait");
-                let struct_name = decorator.args.iter().find_map(|arg| {
-                    if let DecoratorArg::Named { name, value } = arg {
-                        if name == "struct" {
-                            if let DecoratorArg::String(s) = value.as_ref() {
-                                return Some(s.as_str());
+                        None
+                    })
+                    .unwrap_or("MockTrait");
+                let struct_name = decorator
+                    .args
+                    .iter()
+                    .find_map(|arg| {
+                        if let DecoratorArg::Named { name, value } = arg {
+                            if name == "struct" {
+                                if let DecoratorArg::String(s) = value.as_ref() {
+                                    return Some(s.as_str());
+                                }
                             }
                         }
-                    }
-                    None
-                }).unwrap_or("Mock");
+                        None
+                    })
+                    .unwrap_or("Mock");
                 self.writeln(&format!("// Mock: {} for {}", struct_name, trait_name));
             }
             "Optimize" | "Flow" | "Generate" => {
@@ -877,14 +920,18 @@ where
                     args.push(self.decorator_arg_to_string(arg));
                 }
                 if !args.is_empty() {
-                    self.writeln(&format!("#[{}({})]", decorator.name.to_lowercase(), args.join(", ")));
+                    self.writeln(&format!(
+                        "#[{}({})]",
+                        decorator.name.to_lowercase(),
+                        args.join(", ")
+                    ));
                 } else {
                     self.writeln(&format!("#[{}]", decorator.name.to_lowercase()));
                 }
             }
         }
     }
-    
+
     fn decorator_arg_to_string(&self, arg: &DecoratorArg) -> String {
         match arg {
             DecoratorArg::String(s) => format!("\"{}\"", s),
@@ -896,12 +943,12 @@ where
             }
         }
     }
-    
+
     fn generate_struct(&mut self, struct_def: &Struct, _use_seaorm: bool) {
         // Prüfe auf @Derive oder @AutoDerive Decorators
         let mut has_auto_derive = false;
         let mut custom_derives = Vec::new();
-        
+
         for decorator in &struct_def.decorators {
             if decorator.name == "AutoDerive" {
                 has_auto_derive = true;
@@ -914,46 +961,50 @@ where
                 }
             }
         }
-        
+
         // Generate struct with derives
         if has_auto_derive {
             // Alle sinnvollen Derives
             self.writeln("#[derive(Debug, Clone, Serialize, Deserialize, validator::Validate, derive_more::Add, derive_more::Display, derive_more::From, derive_more::Into, derive_more::Deref)]");
         } else if !custom_derives.is_empty() {
             // Nur angegebene Derives
-            let derive_list = custom_derives.iter()
+            let derive_list = custom_derives
+                .iter()
                 .map(|d| format!("derive_more::{}", d))
                 .collect::<Vec<_>>()
                 .join(", ");
-            self.writeln(&format!("#[derive(Debug, Clone, Serialize, Deserialize, validator::Validate, {})]", derive_list));
+            self.writeln(&format!(
+                "#[derive(Debug, Clone, Serialize, Deserialize, validator::Validate, {})]",
+                derive_list
+            ));
         } else {
             // Standard Derives
             self.writeln("#[derive(Debug, Clone, Serialize, Deserialize, validator::Validate)]");
         }
-        
+
         if struct_def.visibility == Visibility::Public {
             self.write("pub ");
         }
         self.write("struct ");
         self.write(&self.to_pascal_case(&struct_def.name));
-        
+
         // Handle Generics
         if !struct_def.type_params.is_empty() {
-             self.write("<");
-             self.write(&struct_def.type_params.join(", "));
-             self.write(">");
+            self.write("<");
+            self.write(&struct_def.type_params.join(", "));
+            self.write(">");
         }
 
         self.writeln(" {");
         self.indent();
-        
+
         for field in &struct_def.fields {
             if field.visibility == Visibility::Public {
                 self.write("    pub ");
             } else {
                 self.write("    ");
             }
-            
+
             // Prüfe auf Privacy Decorator
             let is_privacy = self.is_privacy_field(field);
             if is_privacy {
@@ -962,25 +1013,25 @@ where
                     self.write("PrivacyWrapper<");
                 }
             }
-            
+
             self.write(&self.to_snake_case(&field.name));
             self.write(": ");
             self.generate_type(&field.field_type);
-            
+
             if is_privacy {
                 #[cfg(feature = "privacy")]
                 {
                     self.write(">");
                 }
             }
-            
+
             self.writeln(",");
         }
-        
+
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_enum(&mut self, enum_def: &Enum) {
         self.writeln("#[derive(Debug, Clone, Serialize, Deserialize)]");
         if enum_def.visibility == Visibility::Public {
@@ -990,13 +1041,13 @@ where
         self.write(&self.to_pascal_case(&enum_def.name));
         self.writeln(" {");
         self.indent();
-        
+
         for (i, variant) in enum_def.variants.iter().enumerate() {
             if i > 0 {
                 self.writeln(",");
             }
             self.write(&self.to_pascal_case(&variant.name));
-            
+
             if let Some(ref types) = variant.data {
                 if types.len() == 1 {
                     self.write("(");
@@ -1014,19 +1065,19 @@ where
                 }
             }
         }
-        
+
         self.writeln("");
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_trait(&mut self, trait_def: &Trait) {
         if trait_def.visibility == Visibility::Public {
             self.write("pub ");
         }
         self.write("trait ");
         self.write(&self.to_pascal_case(&trait_def.name));
-        
+
         // Generate generic type parameters
         if !trait_def.type_params.is_empty() {
             self.write("<");
@@ -1038,16 +1089,16 @@ where
             }
             self.write(">");
         }
-        
+
         self.writeln(" {");
         self.indent();
-        
+
         // Generate trait methods
         for method in &trait_def.methods {
             self.write("    fn ");
             self.write(&self.to_snake_case(&method.name));
             self.write("(");
-            
+
             // Generate parameters
             for (i, param) in method.params.iter().enumerate() {
                 if i > 0 {
@@ -1057,25 +1108,25 @@ where
                 self.write(": ");
                 self.generate_type(&param.param_type);
             }
-            
+
             self.write(")");
-            
+
             // Generate return type
             if let Some(ref return_type) = method.return_type {
                 self.write(" -> ");
                 self.generate_type(return_type);
             }
-            
+
             self.writeln(";");
         }
-        
+
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_impl(&mut self, impl_def: &Impl, framework: &Framework, use_seaorm: bool) {
         self.write("impl");
-        
+
         // Generate generic type parameters
         if !impl_def.type_params.is_empty() {
             self.write("<");
@@ -1087,28 +1138,28 @@ where
             }
             self.write(">");
         }
-        
+
         // Generate trait name (if not blank impl)
         if !impl_def.trait_name.is_empty() {
             self.write(" ");
             self.write(&self.to_pascal_case(&impl_def.trait_name));
             self.write(" for");
         }
-        
+
         self.write(" ");
-        
+
         // Generate the type being implemented
         self.generate_type(&impl_def.for_type);
-        
+
         self.writeln(" {");
         self.indent();
-        
+
         // Generate impl methods
         for method in &impl_def.methods {
             self.generate_function(method, framework, use_seaorm);
             self.writeln("");
         }
-        
+
         self.unindent();
         self.writeln("}");
         if !impl_def.trait_name.is_empty() {
@@ -1118,23 +1169,23 @@ where
         } else {
             self.write(" ");
         }
-        
+
         // Generate type
         self.generate_type(&impl_def.for_type);
-        
+
         self.writeln(" {");
         self.indent();
-        
+
         // Generate impl methods
         for method in &impl_def.methods {
             self.generate_function(method, framework, use_seaorm);
             self.writeln("");
         }
-        
+
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_type_alias(&mut self, type_alias: &TypeAlias) {
         if type_alias.visibility == Visibility::Public {
             self.write("pub ");
@@ -1145,7 +1196,7 @@ where
         self.generate_type(&type_alias.aliased_type);
         self.writeln(";");
     }
-    
+
     fn generate_module(&mut self, module: &Module) {
         if module.visibility == Visibility::Public {
             self.write("pub ");
@@ -1154,17 +1205,17 @@ where
         self.write(&self.to_snake_case(&module.name));
         self.writeln(" {");
         self.indent();
-        
+
         let framework = self.framework.clone();
         let use_seaorm = self.use_seaorm;
         for item in &module.items {
             self.generate_item(item, &framework, use_seaorm);
         }
-        
+
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_type(&mut self, type_def: &Type) {
         match type_def {
             Type::String => self.write("String"),
@@ -1189,7 +1240,9 @@ where
             Type::Tuple(types) => {
                 self.write("(");
                 for (i, t) in types.iter().enumerate() {
-                    if i > 0 { self.write(", "); }
+                    if i > 0 {
+                        self.write(", ");
+                    }
                     self.generate_type(t);
                 }
                 self.write(")");
@@ -1206,107 +1259,110 @@ where
                 self.generate_type(err);
                 self.write(">");
             }
-            Type::Function { params, return_type } => {
+            Type::Function {
+                params,
+                return_type,
+            } => {
                 // Rust function type? e.g. fn(A) -> B
                 // But typically used in closures: impl Fn(A) -> B
                 // For now use Box<dyn Fn(...) -> ...>
                 self.write("Box<dyn Fn(");
                 for (i, param) in params.iter().enumerate() {
-                    if i > 0 { self.write(", "); }
+                    if i > 0 {
+                        self.write(", ");
+                    }
                     self.generate_type(param);
                 }
                 self.write(") -> ");
                 self.generate_type(return_type);
                 self.write(">");
             }
-            Type::Generic { name, params } => {
-                match name.as_str() {
-                    "List" => {
-                        if let Some(param) = params.first() {
-                            self.write("Vec<");
-                            self.generate_type(param);
-                            self.write(">");
-                        } else {
-                            self.write("Vec<()>");
-                        }
-                    }
-                    "Map" => {
-                        if params.len() >= 2 {
-                            self.write("std::collections::HashMap<");
-                            self.generate_type(&params[0]);
-                            self.write(", ");
-                            self.generate_type(&params[1]);
-                            self.write(">");
-                        } else {
-                            self.write("std::collections::HashMap<String, ()>");
-                        }
-                    }
-                    "Optional" => {
-                        if let Some(param) = params.first() {
-                            self.write("Option<");
-                            self.generate_type(param);
-                            self.write(">");
-                        } else {
-                            self.write("Option<()>");
-                        }
-                    }
-                    _ => {
-                        self.write(&self.to_pascal_case(name));
-                        self.write("<");
-                        for (i, param) in params.iter().enumerate() {
-                            if i > 0 {
-                                self.write(", ");
-                            }
-                            self.generate_type(param);
-                        }
+            Type::Generic { name, params } => match name.as_str() {
+                "List" => {
+                    if let Some(param) = params.first() {
+                        self.write("Vec<");
+                        self.generate_type(param);
                         self.write(">");
+                    } else {
+                        self.write("Vec<()>");
                     }
                 }
-            }
+                "Map" => {
+                    if params.len() >= 2 {
+                        self.write("std::collections::HashMap<");
+                        self.generate_type(&params[0]);
+                        self.write(", ");
+                        self.generate_type(&params[1]);
+                        self.write(">");
+                    } else {
+                        self.write("std::collections::HashMap<String, ()>");
+                    }
+                }
+                "Optional" => {
+                    if let Some(param) = params.first() {
+                        self.write("Option<");
+                        self.generate_type(param);
+                        self.write(">");
+                    } else {
+                        self.write("Option<()>");
+                    }
+                }
+                _ => {
+                    self.write(&self.to_pascal_case(name));
+                    self.write("<");
+                    for (i, param) in params.iter().enumerate() {
+                        if i > 0 {
+                            self.write(", ");
+                        }
+                        self.generate_type(param);
+                    }
+                    self.write(">");
+                }
+            },
         }
     }
-    
+
     fn generate_block(&mut self, block: &Block) {
         // Check if we are inside a Pipeline function
-        // Note: For full pipeline support, we should pass down context. 
+        // Note: For full pipeline support, we should pass down context.
         // For MVP, we assume standard generation unless we implement the complex re-writer.
         // But wait, the user wants Pipeline support.
         // Let's integrate the PipelineOptimizer here!
-        
+
         // This is a simplified integration. In a real compiler, the optimizer would
         // transform the AST before codegen. Here we do it on the fly or just use the optimizer
         // to guide generation.
-        
+
         // Since we didn't transform the AST, we will generate standard code for now,
         // but we add a comment indicating where the optimization would happen.
-        
+
         use crate::optimizer::pipeline::PipelineOptimizer;
         let optimizer = PipelineOptimizer::new();
         let parallel_groups = optimizer.identify_parallel_groups(block);
-        
+
         if parallel_groups.iter().any(|g| g.len() > 1) {
-             self.writeln("// VelinPipeline: Parallel execution block start");
-             // Real implementation would re-order statements here.
-             // For now, we just output them sequentially but grouped logically
+            self.writeln("// VelinPipeline: Parallel execution block start");
+            // Real implementation would re-order statements here.
+            // For now, we just output them sequentially but grouped logically
         }
 
         for statement in &block.statements {
             self.generate_statement(statement);
         }
     }
-    
+
     fn generate_statement(&mut self, statement: &Statement) {
         match statement {
             Statement::Let(let_stmt) => {
                 // Always make variables mutable to support VelinScript semantics where let is mutable
                 self.write("let mut ");
                 self.write(&self.to_snake_case(&let_stmt.name));
-                
+
                 if let Some(ref var_type) = let_stmt.var_type {
                     self.write(": ");
                     self.generate_type(var_type);
                 }
-                
+
                 self.write(" = ");
                 self.generate_expression(&let_stmt.value);
                 self.writeln(";");
@@ -1330,14 +1386,14 @@ where
                 self.indent();
                 self.generate_block(&if_stmt.then_block);
                 self.unindent();
-                
+
                 if let Some(ref else_block) = if_stmt.else_block {
                     self.writeln("} else {");
                     self.indent();
                     self.generate_block(else_block);
                     self.unindent();
                 }
-                
+
                 self.writeln("}");
             }
             Statement::For(for_stmt) => {
@@ -1365,21 +1421,21 @@ where
                 self.generate_expression(&match_stmt.expression);
                 self.writeln(" {");
                 self.indent();
-                
+
                 for arm in &match_stmt.arms {
                     self.generate_pattern(&arm.pattern);
-                    
+
                     // Generate guard if present
                     if let Some(ref guard) = arm.guard {
                         self.write(" if ");
                         self.generate_expression(guard);
                     }
-                    
+
                     self.write(" => ");
                     self.generate_block(&arm.body);
                     self.writeln(",");
                 }
-                
+
                 self.unindent();
                 self.writeln("}");
             }
@@ -1397,7 +1453,7 @@ where
             }
         }
     }
-    
+
     fn generate_expression(&mut self, expr: &Expression) {
         match expr {
             Expression::Literal(lit) => {
@@ -1407,11 +1463,22 @@ where
                 self.write(&self.to_snake_case(name));
             }
             Expression::BinaryOp { left, op, right } => {
-                self.generate_expression(left);
-                self.write(" ");
-                self.generate_binary_operator(op);
-                self.write(" ");
-                self.generate_expression(right);
+                // Special handling for 'in' operator
+                match op {
+                    BinaryOperator::In => {
+                        self.generate_expression(right);
+                        self.write(".contains(&");
+                        self.generate_expression(left);
+                        self.write(")");
+                    }
+                    _ => {
+                        self.generate_expression(left);
+                        self.write(" ");
+                        self.generate_binary_operator(op);
+                        self.write(" ");
+                        self.generate_expression(right);
+                    }
+                }
             }
             Expression::UnaryOp { op, expr } => {
                 self.generate_unary_operator(op);
@@ -1432,10 +1499,10 @@ where
                     self.write(field_name);
                     self.write(": ");
                     if let Expression::Literal(Literal::String(s)) = field_expr {
-                         let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
-                         self.write(&format!("\"{}\".to_string()", escaped));
+                        let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+                        self.write(&format!("\"{}\".to_string()", escaped));
                     } else {
-                         self.generate_expression(field_expr);
+                        self.generate_expression(field_expr);
                     }
                 }
                 self.write("}");
@@ -1450,11 +1517,11 @@ where
                     self.write(&format!("\"{}\".to_string()", key));
                     self.write(", ");
                     if let Expression::Literal(Literal::String(s)) = value {
-                         let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
-                         self.write(&format!("\"{}\".to_string().into()", escaped));
+                        let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+                        self.write(&format!("\"{}\".to_string().into()", escaped));
                     } else {
-                         self.generate_expression(value);
-                         self.write(".into()");
+                        self.generate_expression(value);
+                        self.write(".into()");
                     }
                     self.write(")");
                 }
@@ -1467,10 +1534,10 @@ where
                         self.write(", ");
                     }
                     if let Expression::Literal(Literal::String(s)) = expr {
-                         let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
-                         self.write(&format!("\"{}\".to_string()", escaped));
+                        let escaped = s.replace('\\', "\\\\").replace('"', "\\\"");
+                        self.write(&format!("\"{}\".to_string()", escaped));
                     } else {
-                         self.generate_expression(expr);
+                        self.generate_expression(expr);
                     }
                 }
                 self.write("]");
@@ -1524,37 +1591,37 @@ where
                         return;
                     }
                 }
-                
+
                 // Check if this is a standard library function call
                 if let Expression::Member { object, member } = callee.as_ref() {
                     // Check for HTTP Client method calls
                     use crate::stdlib::http_client::is_http_client_method;
-                    
+
                     if is_http_client_method(member) {
                         self.generate_http_client_call(object, member, args);
                         return;
                     }
-                    
+
                     // Check for collections method calls: list.filter(), map.keys(), etc.
-                    
+
                     // Check if this is a List method
                     if self.is_list_method(member) {
                         self.generate_collections_call(object, member, args, "list");
                         return;
                     }
-                    
+
                     // Check if this is a Map method
                     if self.is_map_method(member) {
                         self.generate_collections_call(object, member, args, "map");
                         return;
                     }
-                    
+
                     // Check if this is a Set method
                     if self.is_set_method(member) {
                         self.generate_collections_call(object, member, args, "set");
                         return;
                     }
-                    
+
                     if let Expression::Identifier(obj_name) = object.as_ref() {
                         if obj_name == "db" {
                             self.generate_db_call(member, args);
@@ -1620,107 +1687,121 @@ where
                             self.generate_utils_call(member, args);
                             return;
                         } else if obj_name == "log" {
-                        self.generate_log_call(member, args);
-                        return;
-                    } else if obj_name == "queue" {
-                        self.generate_queue_call(member, args);
-                        return;
-                    } else if obj_name == "mongodb" {
-                        #[cfg(feature = "mongodb")]
-                        self.generate_mongodb_call(member, args);
-                        #[cfg(not(feature = "mongodb"))]
-                        self.write("// MongoDB support not enabled");
-                        return;
-                    } else if obj_name == "event_bus" {
-                        self.generate_event_bus_call(member, args);
-                        return;
-                    } else if obj_name == "encryption" {
-                        #[cfg(feature = "security")]
-                        self.generate_encryption_call(member, args);
-                        #[cfg(not(feature = "security"))]
-                        self.write("// Encryption support not enabled");
-                        return;
-                    } else if obj_name == "analytics" {
-                        self.generate_analytics_call(member, args);
-                        return;
-                    } else if obj_name == "auth" {
-                        self.generate_auth_call(member, args);
-                        return;
-                    } else if obj_name == "compression" {
-                        self.generate_compression_call(member, args);
-                        return;
-                    } else if obj_name == "crypto" {
-                        self.generate_crypto_call(member, args);
-                        return;
-                    } else if obj_name == "email" {
-                        #[cfg(feature = "smtp")]
-                        self.generate_email_call(member, args);
-                        #[cfg(not(feature = "smtp"))]
-                        self.write("// Email support not enabled");
-                        return;
-                    } else if obj_name == "encoding" {
-                        self.generate_encoding_call(member, args);
-                        return;
-                    } else if obj_name == "file_storage" {
-                        self.generate_file_call(member, args);
-                        return;
-                    } else if obj_name == "geolocation" {
-                        self.generate_geolocation_call(member, args);
-                        return;
-                    } else if obj_name == "http" {
-                        self.generate_http_call(member, args);
-                        return;
-                    } else if obj_name == "i18n" {
-                        self.generate_i18n_call(member, args);
-                        return;
-                    } else if obj_name == "jwt" {
-                        self.generate_jwt_call(member, args);
-                        return;
-                    } else if obj_name == "logger" {
-                        self.generate_log_call(member, args);
-                        return;
-                    } else if obj_name == "pdf" {
-                        self.generate_pdf_call(member, args);
-                        return;
-                    } else if obj_name == "regex" || obj_name == "regex_lib" {
-                        self.generate_regex_lib_call(member, args);
-                        return;
-                    } else if obj_name == "search" {
-                        self.generate_search_call(member, args);
-                        return;
-                    } else if obj_name == "string_utils" {
-                        self.generate_string_utils_call(member, args);
-                        return;
-                    } else if obj_name == "system" {
-                        self.generate_system_call(member, args);
-                        return;
-                    } else if obj_name == "time" || obj_name == "time_lib" {
-                        self.generate_time_lib_call(member, args);
-                        return;
-                    } else if obj_name == "validation" {
-                        self.generate_validation_call(member, args);
-                        return;
-                    } else if obj_name == "xml" {
-                        self.generate_xml_call(member, args);
-                        return;
-                    }
-                    } else if let Expression::Member { object: inner_obj, member: inner_member } = object.as_ref() {
+                            self.generate_log_call(member, args);
+                            return;
+                        } else if obj_name == "queue" {
+                            self.generate_queue_call(member, args);
+                            return;
+                        } else if obj_name == "mongodb" {
+                            #[cfg(feature = "mongodb")]
+                            self.generate_mongodb_call(member, args);
+                            #[cfg(not(feature = "mongodb"))]
+                            self.write("// MongoDB support not enabled");
+                            return;
+                        } else if obj_name == "event_bus" {
+                            self.generate_event_bus_call(member, args);
+                            return;
+                        } else if obj_name == "encryption" {
+                            #[cfg(feature = "security")]
+                            self.generate_encryption_call(member, args);
+                            #[cfg(not(feature = "security"))]
+                            self.write("// Encryption support not enabled");
+                            return;
+                        } else if obj_name == "analytics" {
+                            self.generate_analytics_call(member, args);
+                            return;
+                        } else if obj_name == "auth" {
+                            self.generate_auth_call(member, args);
+                            return;
+                        } else if obj_name == "compression" {
+                            self.generate_compression_call(member, args);
+                            return;
+                        } else if obj_name == "crypto" {
+                            self.generate_crypto_call(member, args);
+                            return;
+                        } else if obj_name == "email" {
+                            #[cfg(feature = "smtp")]
+                            self.generate_email_call(member, args);
+                            #[cfg(not(feature = "smtp"))]
+                            self.write("// Email support not enabled");
+                            return;
+                        } else if obj_name == "encoding" {
+                            self.generate_encoding_call(member, args);
+                            return;
+                        } else if obj_name == "file_storage" {
+                            self.generate_file_call(member, args);
+                            return;
+                        } else if obj_name == "geolocation" {
+                            self.generate_geolocation_call(member, args);
+                            return;
+                        } else if obj_name == "http" {
+                            self.generate_http_call(member, args);
+                            return;
+                        } else if obj_name == "i18n" {
+                            self.generate_i18n_call(member, args);
+                            return;
+                        } else if obj_name == "jwt" {
+                            self.generate_jwt_call(member, args);
+                            return;
+                        } else if obj_name == "logger" {
+                            self.generate_log_call(member, args);
+                            return;
+                        } else if obj_name == "pdf" {
+                            self.generate_pdf_call(member, args);
+                            return;
+                        } else if obj_name == "regex" || obj_name == "regex_lib" {
+                            self.generate_regex_lib_call(member, args);
+                            return;
+                        } else if obj_name == "search" {
+                            self.generate_search_call(member, args);
+                            return;
+                        } else if obj_name == "string_utils" {
+                            self.generate_string_utils_call(member, args);
+                            return;
+                        } else if obj_name == "system" {
+                            self.generate_system_call(member, args);
+                            return;
+                        } else if obj_name == "time" || obj_name == "time_lib" {
+                            self.generate_time_lib_call(member, args);
+                            return;
+                        } else if obj_name == "validation" {
+                            self.generate_validation_call(member, args);
+                            return;
+                        } else if obj_name == "xml" {
+                            self.generate_xml_call(member, args);
+                            return;
+                        }
+                    } else if let Expression::Member {
+                        object: inner_obj,
+                        member: inner_member,
+                    } = object.as_ref()
+                    {
                         // Nested member access wie list.groupBy
                         if let Expression::Identifier(inner_name) = inner_obj.as_ref() {
                             if inner_name == "list" {
-                                self.generate_list_extension_call(inner_member, member, args, object);
+                                self.generate_list_extension_call(
+                                    inner_member,
+                                    member,
+                                    args,
+                                    object,
+                                );
                                 return;
                             } else if inner_name == "string" {
-                                self.generate_string_extension_call(inner_member, member, args, object);
+                                self.generate_string_extension_call(
+                                    inner_member,
+                                    member,
+                                    args,
+                                    object,
+                                );
                                 return;
                             } else if inner_name == "agent" {
                                 self.generate_agent_nested_call(inner_member, member, args);
                                 return;
                             }
                         }
+                    }
                 }
-            }
-                
+
                 self.generate_expression(callee);
                 self.write("(");
                 for (i, arg) in args.iter().enumerate() {
@@ -1730,7 +1811,7 @@ where
                     self.generate_expression(arg);
                 }
                 self.write(")");
-                
+
                 // Add await for async functions
                 if let Expression::Identifier(name) = callee.as_ref() {
                     if name == "process_workflow" {
@@ -1783,7 +1864,11 @@ where
                 self.generate_expression(expr);
                 self.write(".await");
             }
-            Expression::Lambda { params, return_type: _, body } => {
+            Expression::Lambda {
+                params,
+                return_type: _,
+                body,
+            } => {
                 // Generate Rust closure: |param1, param2| { body }
                 self.write("|");
                 for (i, param) in params.iter().enumerate() {
@@ -1795,7 +1880,7 @@ where
                     self.generate_type(&param.param_type);
                 }
                 self.write("| ");
-                
+
                 // Generate body
                 match body.as_ref() {
                     Expression::Block(block) => {
@@ -1829,19 +1914,17 @@ where
             Expression::FormatString { parts } => {
                 // Generate Rust format! macro
                 self.write("format!(");
-                
+
                 // Build format string and arguments
                 let mut format_str = String::new();
                 let mut args = Vec::new();
                 let mut arg_index = 0;
-                
+
                 for part in parts {
                     match part {
                         FormatStringPart::Text(text) => {
                             // Escape special characters for format! macro
-                            let escaped = text
-                                .replace('{', "{{")
-                                .replace('}', "}}");
+                            let escaped = text.replace('{', "{{").replace('}', "}}");
                             format_str.push_str(&escaped);
                         }
                         FormatStringPart::Expression(expr) => {
@@ -1851,20 +1934,24 @@ where
                         }
                     }
                 }
-                
+
                 // Write format string
                 let escaped_format = format_str.replace('\\', "\\\\").replace('"', "\\\"");
                 self.write(&format!("\"{}\"", escaped_format));
-                
+
                 // Write arguments
                 for arg in args {
                     self.write(", ");
                     self.generate_expression(arg);
                 }
-                
+
                 self.write(")");
             }
-            Expression::GenericConstructor { name, type_params, args: _args } => {
+            Expression::GenericConstructor {
+                name,
+                type_params,
+                args: _args,
+            } => {
                 match name.as_str() {
                     "Map" => {
                         if type_params.len() == 2 {
@@ -1905,7 +1992,7 @@ where
             }
         }
     }
-    
+
     fn generate_literal(&mut self, lit: &Literal) {
         match lit {
             Literal::String(s) => {
@@ -1929,7 +2016,7 @@ where
             }
         }
     }
-    
+
     fn generate_binary_operator(&mut self, op: &BinaryOperator) {
         match op {
             BinaryOperator::Add => self.write("+"),
@@ -1945,16 +2032,17 @@ where
             BinaryOperator::GtEq => self.write(">="),
             BinaryOperator::And => self.write("&&"),
             BinaryOperator::Or => self.write("||"),
+            BinaryOperator::In => self.write(".contains(&"), // Will be handled specially in binary op generation
         }
     }
-    
+
     fn generate_unary_operator(&mut self, op: &UnaryOperator) {
         match op {
             UnaryOperator::Not => self.write("!"),
             UnaryOperator::Minus => self.write("-"),
         }
     }
-    
+
     fn generate_pattern(&mut self, pattern: &Pattern) {
         match pattern {
             Pattern::Literal(lit) => {
@@ -1999,7 +2087,7 @@ where
                 } else {
                     self.write(&self.to_pascal_case(name));
                 }
-                
+
                 if let Some(ref patterns) = data {
                     self.write("(");
                     for (i, p) in patterns.iter().enumerate() {
@@ -2011,7 +2099,11 @@ where
                     self.write(")");
                 }
             }
-            Pattern::Range { start, end, inclusive } => {
+            Pattern::Range {
+                start,
+                end,
+                inclusive,
+            } => {
                 self.generate_expression(start);
                 if *inclusive {
                     self.write("..=");
@@ -2030,45 +2122,45 @@ where
             }
         }
     }
-    
+
     // Helper methods
     fn write(&mut self, s: &str) {
         self.output.push_str(s);
     }
-    
+
     fn writeln(&mut self, s: &str) {
         self.write(s);
         self.write("\n");
     }
-    
+
     fn indent(&mut self) {
         self.indent_level += 1;
     }
-    
+
     fn unindent(&mut self) {
         if self.indent_level > 0 {
             self.indent_level -= 1;
         }
     }
-    
+
     fn to_snake_case(&self, s: &str) -> String {
         let mut result = String::new();
         let mut chars = s.chars().peekable();
-        
+
         while let Some(ch) = chars.next() {
             if ch.is_uppercase() && !result.is_empty() {
                 result.push('_');
             }
             result.push(ch.to_lowercase().next().unwrap_or(ch));
         }
-        
+
         result
     }
-    
+
     fn to_pascal_case(&self, s: &str) -> String {
         let mut result = String::new();
         let mut capitalize = true;
-        
+
         for ch in s.chars() {
             if ch == '_' {
                 capitalize = true;
@@ -2079,25 +2171,35 @@ where
                 result.push(ch);
             }
         }
-        
+
         result
     }
-    
+
     #[allow(dead_code)]
     fn has_privacy_fields(&self, struct_def: &Struct) -> bool {
         struct_def.fields.iter().any(|f| self.is_privacy_field(f))
     }
-    
+
     fn is_privacy_field(&self, field: &StructField) -> bool {
         // StructField has no decorators field
         // Privacy decorators would be on the struct itself, not individual fields
-        
+
         // Prüfe Feldname auf PII-Keywords
         let field_lower = field.name.to_lowercase();
-        let pii_keywords = vec!["email", "phone", "ssn", "passport", "credit_card", "ip", "address"];
-        pii_keywords.iter().any(|keyword| field_lower.contains(keyword))
+        let pii_keywords = vec![
+            "email",
+            "phone",
+            "ssn",
+            "passport",
+            "credit_card",
+            "ip",
+            "address",
+        ];
+        pii_keywords
+            .iter()
+            .any(|keyword| field_lower.contains(keyword))
     }
-    
+
     fn generate_db_call(&mut self, method: &str, args: &[Expression]) {
         if self.use_seaorm {
             #[cfg(feature = "sea-orm")]
@@ -2149,7 +2251,10 @@ where
                         }
                     }
                     "query" => {
-                        if let Some(Expression::Literal(crate::parser::ast::Literal::String(query))) = args.first() {
+                        if let Some(Expression::Literal(crate::parser::ast::Literal::String(
+                            query,
+                        ))) = args.first()
+                        {
                             self.write("sea_orm::Statement::from_sql_and_values(sea_orm::DatabaseBackend::Postgres, ");
                             self.generate_expression(&args[0]);
                             self.write(", vec![]).execute(&db).await");
@@ -2181,7 +2286,7 @@ where
                 return;
             }
         }
-        
+
         // Fallback to sqlx/default
         match method {
             "find" => {
@@ -2299,7 +2404,9 @@ where
             "query" => {
                 // SECURITY: SQL-Parameterisierung erzwingen
                 // db.query("SELECT * FROM users WHERE id = $1", id) -> sqlx::query! mit Parametern
-                if let Some(Expression::Literal(crate::parser::ast::Literal::String(_))) = args.first() {
+                if let Some(Expression::Literal(crate::parser::ast::Literal::String(_))) =
+                    args.first()
+                {
                     // Wenn nur String, warnen aber Prepared Statement verwenden
                     self.write("// SECURITY: Use parameterized queries for user input\n");
                     self.write("sqlx::query(");
@@ -2362,7 +2469,7 @@ where
             }
         }
     }
-    
+
     fn generate_backup_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "create" => {
@@ -2410,7 +2517,7 @@ where
             }
         }
     }
-    
+
     fn generate_rollback_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "beginTransaction" | "begin_transaction" => {
@@ -2472,7 +2579,7 @@ where
             }
         }
     }
-    
+
     fn generate_file_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "read" | "readFile" => {
@@ -2705,18 +2812,18 @@ where
             "parse" => {
                 self.write("// XML Parsing requires 'quick-xml' crate\n");
                 self.write("quick_xml::events::Event::Text(");
-                 if let Some(arg) = args.first() {
+                if let Some(arg) = args.first() {
                     self.generate_expression(arg);
                 }
                 self.write(".into())");
             }
             "stringify" => {
-                 self.write("// Simple XML serialization\n");
-                 self.write("format!(\"<root>{}</root>\", ");
-                 if let Some(arg) = args.first() {
+                self.write("// Simple XML serialization\n");
+                self.write("format!(\"<root>{}</root>\", ");
+                if let Some(arg) = args.first() {
                     self.generate_expression(arg);
                 }
-                 self.write(")");
+                self.write(")");
             }
             _ => {
                 self.write("xml::");
@@ -2732,7 +2839,7 @@ where
             }
         }
     }
-    
+
     fn generate_iterator_call(&mut self, method: &str, args: &[Expression], object: &Expression) {
         match method {
             "groupBy" | "group_by" => {
@@ -2797,8 +2904,14 @@ where
             }
         }
     }
-    
-    fn generate_list_extension_call(&mut self, _list_method: &str, method: &str, args: &[Expression], object: &Expression) {
+
+    fn generate_list_extension_call(
+        &mut self,
+        _list_method: &str,
+        method: &str,
+        args: &[Expression],
+        object: &Expression,
+    ) {
         // list.groupBy, list.sorted, etc.
         match method {
             "groupBy" | "group_by" => {
@@ -2836,8 +2949,14 @@ where
             }
         }
     }
-    
-    fn generate_string_extension_call(&mut self, _string_method: &str, method: &str, args: &[Expression], object: &Expression) {
+
+    fn generate_string_extension_call(
+        &mut self,
+        _string_method: &str,
+        method: &str,
+        args: &[Expression],
+        object: &Expression,
+    ) {
         // string.camelCase, etc.
         match method {
             "camelCase" | "camel_case" => {
@@ -2865,34 +2984,43 @@ where
             }
         }
     }
-    
+
     fn generate_validation_code(&mut self, function: &Function, framework: &Framework) {
         // Check if function has @Validate decorator or needs auto-validation
         let has_validate_decorator = function.decorators.iter().any(|d| {
-            matches!(d.name.as_str(), "Validate" | "@Validate" | "Validation" | "@Validation")
+            matches!(
+                d.name.as_str(),
+                "Validate" | "@Validate" | "Validation" | "@Validation"
+            )
         });
-        
+
         if !has_validate_decorator && !self.has_validation {
             return;
         }
-        
+
         // Generate validator initialization
         self.write("    ");
         self.writeln("let mut validator = Validator::new();");
         self.writeln("");
-        
+
         // Generate validation for each parameter
         for param in &function.params {
             let param_name = &self.to_snake_case(&param.name);
-            
+
             match param.param_type {
                 Type::String => {
                     self.write("    ");
-                    self.writeln(&format!("validator.required(\"{}\", Some(&{}));", param_name, param_name));
+                    self.writeln(&format!(
+                        "validator.required(\"{}\", Some(&{}));",
+                        param_name, param_name
+                    ));
                     // Auto-validate email if parameter name contains "email"
                     if param_name.to_lowercase().contains("email") {
                         self.write("    ");
-                        self.writeln(&format!("validator.email(\"{}\", &{});", param_name, param_name));
+                        self.writeln(&format!(
+                            "validator.email(\"{}\", &{});",
+                            param_name, param_name
+                        ));
                     }
                 }
                 Type::Number => {
@@ -2911,14 +3039,14 @@ where
                 }
             }
         }
-        
+
         self.writeln("");
-        
+
         // Generate error handling
         self.write("    ");
         self.writeln("if !validator.is_valid() {");
         self.write("        ");
-        
+
         match framework {
             Framework::Axum => {
                 self.writeln("let errors: Vec<serde_json::Value> = validator.errors()");
@@ -2945,7 +3073,9 @@ where
                 self.write("            ");
                 self.writeln("});");
                 self.write("            ");
-                self.writeln("(axum::http::StatusCode::BAD_REQUEST, axum::Json(response)).into_response()");
+                self.writeln(
+                    "(axum::http::StatusCode::BAD_REQUEST, axum::Json(response)).into_response()",
+                );
                 self.write("        ");
                 self.writeln("});");
             }
@@ -2964,7 +3094,9 @@ where
                 self.write("            ");
                 self.writeln(".collect();");
                 self.write("        ");
-                self.writeln("return Ok(actix_web::HttpResponse::BadRequest().json(serde_json::json!({");
+                self.writeln(
+                    "return Ok(actix_web::HttpResponse::BadRequest().json(serde_json::json!({",
+                );
                 self.write("            ");
                 self.writeln("\"error\": \"Validation failed\",");
                 self.write("            ");
@@ -2977,53 +3109,90 @@ where
                 self.writeln("compile_error!(\"Unsupported framework for Rust target\");");
             }
         }
-        
+
         self.write("    ");
         self.writeln("}");
         self.writeln("");
     }
-    
+
     /// Prüft ob eine Methode eine List-Methode ist
     fn is_list_method(&self, method: &str) -> bool {
-        matches!(method, 
-            "filter" | "map" | "reduce" | "find" | "contains" | "indexOf" | 
-            "sort" | "reverse" | "chunk" | "slice" | "chunks" | "sorted" |
-            "unique" | "flatten" | "join" | "groupBy" | "group_by" | "push"
+        matches!(
+            method,
+            "filter"
+                | "map"
+                | "reduce"
+                | "find"
+                | "contains"
+                | "indexOf"
+                | "sort"
+                | "reverse"
+                | "chunk"
+                | "slice"
+                | "chunks"
+                | "sorted"
+                | "unique"
+                | "flatten"
+                | "join"
+                | "groupBy"
+                | "group_by"
+                | "push"
         )
     }
-    
+
     /// Prüft ob eine Methode eine Map-Methode ist
     fn is_map_method(&self, method: &str) -> bool {
-        matches!(method, 
-            "keys" | "values" | "entries" | "get" | "set" | "delete" | 
-            "has" | "size" | "containsKey" | "contains_key"
+        matches!(
+            method,
+            "keys"
+                | "values"
+                | "entries"
+                | "get"
+                | "set"
+                | "delete"
+                | "has"
+                | "size"
+                | "containsKey"
+                | "contains_key"
         )
     }
-    
+
     /// Prüft ob eine Methode eine Set-Methode ist
     fn is_set_method(&self, method: &str) -> bool {
-        matches!(method, 
-            "add" | "remove" | "has" | "size" | "union" | "intersection" | 
-            "difference" | "contains"
+        matches!(
+            method,
+            "add"
+                | "remove"
+                | "has"
+                | "size"
+                | "union"
+                | "intersection"
+                | "difference"
+                | "contains"
         )
     }
-    
+
     /// Generiert HTTP Client Methoden-Aufrufe
-    fn generate_http_client_call(&mut self, object: &Expression, method: &str, args: &[Expression]) {
+    fn generate_http_client_call(
+        &mut self,
+        object: &Expression,
+        method: &str,
+        args: &[Expression],
+    ) {
         // Check if object is HttpClient or response
         let is_client = if let Expression::Identifier(name) = object {
             name == "client" || name == "httpClient" || name == "http_client"
         } else {
             false
         };
-        
+
         // Extrahiere Client-Name für spätere Verwendung
         let client_name = if let Expression::Identifier(name) = object {
             name.clone()
         } else {
             "client".to_string()
         };
-        
+
         match method {
             "get" => {
                 if let Some(url) = args.first() {
@@ -3031,7 +3200,7 @@ where
                     let old_output = std::mem::replace(&mut self.output, url_str);
                     self.generate_expression(url);
                     url_str = std::mem::replace(&mut self.output, old_output);
-                    
+
                     let headers = args.get(1).map(|arg| {
                         let mut headers_str = String::new();
                         let old_output = std::mem::replace(&mut self.output, headers_str);
@@ -3039,7 +3208,7 @@ where
                         headers_str = std::mem::replace(&mut self.output, old_output);
                         headers_str
                     });
-                    
+
                     if is_client {
                         self.write(&format!("{}.get({})", client_name, url_str));
                         if let Some(h) = headers {
@@ -3048,7 +3217,10 @@ where
                         self.write(".send().await");
                     } else {
                         use crate::stdlib::http_client::HttpClientStdlib;
-                        self.write(&HttpClientStdlib::generate_get(&url_str, headers.as_deref()));
+                        self.write(&HttpClientStdlib::generate_get(
+                            &url_str,
+                            headers.as_deref(),
+                        ));
                     }
                 }
             }
@@ -3058,7 +3230,7 @@ where
                     let old_output = std::mem::replace(&mut self.output, url_str);
                     self.generate_expression(url);
                     url_str = std::mem::replace(&mut self.output, old_output);
-                    
+
                     let body = args.get(1).map(|arg| {
                         let mut body_str = String::new();
                         let old_output = std::mem::replace(&mut self.output, body_str);
@@ -3066,7 +3238,7 @@ where
                         body_str = std::mem::replace(&mut self.output, old_output);
                         body_str
                     });
-                    
+
                     let headers = args.get(2).map(|arg| {
                         let mut headers_str = String::new();
                         let old_output = std::mem::replace(&mut self.output, headers_str);
@@ -3074,7 +3246,7 @@ where
                         headers_str = std::mem::replace(&mut self.output, old_output);
                         headers_str
                     });
-                    
+
                     if is_client {
                         self.write(&format!("{}.post({})", client_name, url_str));
                         if let Some(b) = body {
@@ -3086,7 +3258,11 @@ where
                         self.write(".send().await");
                     } else {
                         use crate::stdlib::http_client::HttpClientStdlib;
-                        self.write(&HttpClientStdlib::generate_post(&url_str, body.as_deref(), headers.as_deref()));
+                        self.write(&HttpClientStdlib::generate_post(
+                            &url_str,
+                            body.as_deref(),
+                            headers.as_deref(),
+                        ));
                     }
                 }
             }
@@ -3096,7 +3272,7 @@ where
                     let old_output = std::mem::replace(&mut self.output, url_str);
                     self.generate_expression(url);
                     url_str = std::mem::replace(&mut self.output, old_output);
-                    
+
                     let body = args.get(1).map(|arg| {
                         let mut body_str = String::new();
                         let old_output = std::mem::replace(&mut self.output, body_str);
@@ -3104,7 +3280,7 @@ where
                         body_str = std::mem::replace(&mut self.output, old_output);
                         body_str
                     });
-                    
+
                     let headers = args.get(2).map(|arg| {
                         let mut headers_str = String::new();
                         let old_output = std::mem::replace(&mut self.output, headers_str);
@@ -3112,7 +3288,7 @@ where
                         headers_str = std::mem::replace(&mut self.output, old_output);
                         headers_str
                     });
-                    
+
                     if is_client {
                         self.write(&format!("{}.put({})", client_name, url_str));
                         if let Some(b) = body {
@@ -3124,7 +3300,11 @@ where
                         self.write(".send().await");
                     } else {
                         use crate::stdlib::http_client::HttpClientStdlib;
-                        self.write(&HttpClientStdlib::generate_put(&url_str, body.as_deref(), headers.as_deref()));
+                        self.write(&HttpClientStdlib::generate_put(
+                            &url_str,
+                            body.as_deref(),
+                            headers.as_deref(),
+                        ));
                     }
                 }
             }
@@ -3134,7 +3314,7 @@ where
                     let old_output = std::mem::replace(&mut self.output, url_str);
                     self.generate_expression(url);
                     url_str = std::mem::replace(&mut self.output, old_output);
-                    
+
                     let headers = args.get(1).map(|arg| {
                         let mut headers_str = String::new();
                         let old_output = std::mem::replace(&mut self.output, headers_str);
@@ -3142,7 +3322,7 @@ where
                         headers_str = std::mem::replace(&mut self.output, old_output);
                         headers_str
                     });
-                    
+
                     if is_client {
                         self.write(&format!("{}.delete({})", client_name, url_str));
                         if let Some(h) = headers {
@@ -3151,7 +3331,10 @@ where
                         self.write(".send().await");
                     } else {
                         use crate::stdlib::http_client::HttpClientStdlib;
-                        self.write(&HttpClientStdlib::generate_delete(&url_str, headers.as_deref()));
+                        self.write(&HttpClientStdlib::generate_delete(
+                            &url_str,
+                            headers.as_deref(),
+                        ));
                     }
                 }
             }
@@ -3161,7 +3344,7 @@ where
                     let old_output = std::mem::replace(&mut self.output, url_str);
                     self.generate_expression(url);
                     url_str = std::mem::replace(&mut self.output, old_output);
-                    
+
                     let body = args.get(1).map(|arg| {
                         let mut body_str = String::new();
                         let old_output = std::mem::replace(&mut self.output, body_str);
@@ -3169,7 +3352,7 @@ where
                         body_str = std::mem::replace(&mut self.output, old_output);
                         body_str
                     });
-                    
+
                     let headers = args.get(2).map(|arg| {
                         let mut headers_str = String::new();
                         let old_output = std::mem::replace(&mut self.output, headers_str);
@@ -3177,7 +3360,7 @@ where
                         headers_str = std::mem::replace(&mut self.output, old_output);
                         headers_str
                     });
-                    
+
                     if is_client {
                         self.write(&format!("{}.patch({})", client_name, url_str));
                         if let Some(b) = body {
@@ -3189,7 +3372,11 @@ where
                         self.write(".send().await");
                     } else {
                         use crate::stdlib::http_client::HttpClientStdlib;
-                        self.write(&HttpClientStdlib::generate_patch(&url_str, body.as_deref(), headers.as_deref()));
+                        self.write(&HttpClientStdlib::generate_patch(
+                            &url_str,
+                            body.as_deref(),
+                            headers.as_deref(),
+                        ));
                     }
                 }
             }
@@ -3224,17 +3411,23 @@ where
             }
         }
     }
-    
+
     /// Generiert Collections-Methoden-Aufrufe
-    fn generate_collections_call(&mut self, object: &Expression, method: &str, args: &[Expression], collection_type: &str) {
+    fn generate_collections_call(
+        &mut self,
+        object: &Expression,
+        method: &str,
+        args: &[Expression],
+        collection_type: &str,
+    ) {
         use crate::stdlib::collections::CollectionsStdlib;
-        
+
         // Generate object expression as string for collections methods
         let mut obj_str = String::new();
         let old_output = std::mem::replace(&mut self.output, obj_str);
         self.generate_expression(object);
         obj_str = std::mem::replace(&mut self.output, old_output);
-        
+
         match collection_type {
             "list" => {
                 match method {
@@ -3244,7 +3437,9 @@ where
                             let old_output = std::mem::replace(&mut self.output, pred_str);
                             self.generate_expression(predicate);
                             pred_str = std::mem::replace(&mut self.output, old_output);
-                            self.write(&CollectionsStdlib::generate_list_filter(&obj_str, &pred_str));
+                            self.write(&CollectionsStdlib::generate_list_filter(
+                                &obj_str, &pred_str,
+                            ));
                         }
                     }
                     "map" => {
@@ -3262,13 +3457,17 @@ where
                             let old_output = std::mem::replace(&mut self.output, reducer_str);
                             self.generate_expression(&args[0]);
                             reducer_str = std::mem::replace(&mut self.output, old_output);
-                            
+
                             let mut initial_str = String::new();
                             let old_output = std::mem::replace(&mut self.output, initial_str);
                             self.generate_expression(&args[1]);
                             initial_str = std::mem::replace(&mut self.output, old_output);
-                            
-                            self.write(&CollectionsStdlib::generate_list_reduce(&obj_str, &reducer_str, &initial_str));
+
+                            self.write(&CollectionsStdlib::generate_list_reduce(
+                                &obj_str,
+                                &reducer_str,
+                                &initial_str,
+                            ));
                         }
                     }
                     "find" => {
@@ -3286,7 +3485,9 @@ where
                             let old_output = std::mem::replace(&mut self.output, item_str);
                             self.generate_expression(item);
                             item_str = std::mem::replace(&mut self.output, old_output);
-                            self.write(&CollectionsStdlib::generate_list_contains(&obj_str, &item_str));
+                            self.write(&CollectionsStdlib::generate_list_contains(
+                                &obj_str, &item_str,
+                            ));
                         }
                     }
                     "indexOf" | "index_of" => {
@@ -3295,7 +3496,9 @@ where
                             let old_output = std::mem::replace(&mut self.output, item_str);
                             self.generate_expression(item);
                             item_str = std::mem::replace(&mut self.output, old_output);
-                            self.write(&CollectionsStdlib::generate_list_index_of(&obj_str, &item_str));
+                            self.write(&CollectionsStdlib::generate_list_index_of(
+                                &obj_str, &item_str,
+                            ));
                         }
                     }
                     "sort" => {
@@ -3306,7 +3509,10 @@ where
                             compare_str = std::mem::replace(&mut self.output, old_output);
                             compare_str
                         });
-                        self.write(&CollectionsStdlib::generate_list_sort(&obj_str, compare.as_deref()));
+                        self.write(&CollectionsStdlib::generate_list_sort(
+                            &obj_str,
+                            compare.as_deref(),
+                        ));
                     }
                     "reverse" => {
                         self.write(&CollectionsStdlib::generate_list_reverse(&obj_str));
@@ -3317,7 +3523,9 @@ where
                             let old_output = std::mem::replace(&mut self.output, size_str);
                             self.generate_expression(size);
                             size_str = std::mem::replace(&mut self.output, old_output);
-                            self.write(&CollectionsStdlib::generate_list_chunk(&obj_str, &size_str));
+                            self.write(&CollectionsStdlib::generate_list_chunk(
+                                &obj_str, &size_str,
+                            ));
                         }
                     }
                     "slice" => {
@@ -3326,13 +3534,15 @@ where
                             let old_output = std::mem::replace(&mut self.output, start_str);
                             self.generate_expression(&args[0]);
                             start_str = std::mem::replace(&mut self.output, old_output);
-                            
+
                             let mut end_str = String::new();
                             let old_output = std::mem::replace(&mut self.output, end_str);
                             self.generate_expression(&args[1]);
                             end_str = std::mem::replace(&mut self.output, old_output);
-                            
-                            self.write(&CollectionsStdlib::generate_list_slice(&obj_str, &start_str, &end_str));
+
+                            self.write(&CollectionsStdlib::generate_list_slice(
+                                &obj_str, &start_str, &end_str,
+                            ));
                         }
                     }
                     "push" => {
@@ -3390,13 +3600,15 @@ where
                             let old_output = std::mem::replace(&mut self.output, key_str);
                             self.generate_expression(&args[0]);
                             key_str = std::mem::replace(&mut self.output, old_output);
-                            
+
                             let mut value_str = String::new();
                             let old_output = std::mem::replace(&mut self.output, value_str);
                             self.generate_expression(&args[1]);
                             value_str = std::mem::replace(&mut self.output, old_output);
-                            
-                            self.write(&CollectionsStdlib::generate_map_set(&obj_str, &key_str, &value_str));
+
+                            self.write(&CollectionsStdlib::generate_map_set(
+                                &obj_str, &key_str, &value_str,
+                            ));
                         }
                     }
                     "delete" | "remove" => {
@@ -3453,7 +3665,9 @@ where
                             let old_output = std::mem::replace(&mut self.output, item_str);
                             self.generate_expression(item);
                             item_str = std::mem::replace(&mut self.output, old_output);
-                            self.write(&CollectionsStdlib::generate_set_remove(&obj_str, &item_str));
+                            self.write(&CollectionsStdlib::generate_set_remove(
+                                &obj_str, &item_str,
+                            ));
                         }
                     }
                     "has" | "contains" => {
@@ -3474,7 +3688,9 @@ where
                             let old_output = std::mem::replace(&mut self.output, other_str);
                             self.generate_expression(other);
                             other_str = std::mem::replace(&mut self.output, old_output);
-                            self.write(&CollectionsStdlib::generate_set_union(&obj_str, &other_str));
+                            self.write(&CollectionsStdlib::generate_set_union(
+                                &obj_str, &other_str,
+                            ));
                         }
                     }
                     "intersection" => {
@@ -3483,7 +3699,9 @@ where
                             let old_output = std::mem::replace(&mut self.output, other_str);
                             self.generate_expression(other);
                             other_str = std::mem::replace(&mut self.output, old_output);
-                            self.write(&CollectionsStdlib::generate_set_intersection(&obj_str, &other_str));
+                            self.write(&CollectionsStdlib::generate_set_intersection(
+                                &obj_str, &other_str,
+                            ));
                         }
                     }
                     "difference" => {
@@ -3492,7 +3710,9 @@ where
                             let old_output = std::mem::replace(&mut self.output, other_str);
                             self.generate_expression(other);
                             other_str = std::mem::replace(&mut self.output, old_output);
-                            self.write(&CollectionsStdlib::generate_set_difference(&obj_str, &other_str));
+                            self.write(&CollectionsStdlib::generate_set_difference(
+                                &obj_str, &other_str,
+                            ));
                         }
                     }
                     _ => {
@@ -3529,7 +3749,7 @@ where
     }
     fn generate_string_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::string::StringStdlib;
-        
+
         match method {
             "split" => {
                 if args.len() >= 2 {
@@ -3615,7 +3835,7 @@ where
 
     fn generate_math_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::math::MathStdlib;
-        
+
         match method {
             "clamp" => {
                 if args.len() >= 3 {
@@ -3685,7 +3905,7 @@ where
 
     fn generate_date_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::date::DateStdlib;
-        
+
         match method {
             "add_days" | "addDays" => {
                 if args.len() >= 2 {
@@ -3732,7 +3952,7 @@ where
 
     fn generate_fs_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::fs::FsStdlib;
-        
+
         match method {
             "read_json" | "readJson" => {
                 if let Some(arg) = args.first() {
@@ -3779,7 +3999,7 @@ where
 
     fn generate_llm_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::llm::LLMStdlib;
-        
+
         match method {
             "summarize" => {
                 if let Some(arg) = args.first() {
@@ -3791,13 +4011,20 @@ where
                 if args.len() >= 2 {
                     let text = self.capture_expression(&args[0]);
                     let cats = self.capture_expression(&args[1]);
-                    self.write(&LLMStdlib::generate_classify_code("llm_client", &text, &cats));
+                    self.write(&LLMStdlib::generate_classify_code(
+                        "llm_client",
+                        &text,
+                        &cats,
+                    ));
                 }
             }
             "extract_entities" | "extractEntities" => {
                 if let Some(arg) = args.first() {
                     let text = self.capture_expression(arg);
-                    self.write(&LLMStdlib::generate_extract_entities_code("llm_client", &text));
+                    self.write(&LLMStdlib::generate_extract_entities_code(
+                        "llm_client",
+                        &text,
+                    ));
                 }
             }
             "generate" => {
@@ -3808,14 +4035,22 @@ where
                     } else {
                         "\"default\"".to_string()
                     };
-                    self.write(&LLMStdlib::generate_generate_code("llm_client", &title, Some(&style)));
+                    self.write(&LLMStdlib::generate_generate_code(
+                        "llm_client",
+                        &title,
+                        Some(&style),
+                    ));
                 }
             }
             "translate" => {
                 if args.len() >= 2 {
                     let text = self.capture_expression(&args[0]);
                     let lang = self.capture_expression(&args[1]);
-                    self.write(&LLMStdlib::generate_translate_code("llm_client", &text, &lang));
+                    self.write(&LLMStdlib::generate_translate_code(
+                        "llm_client",
+                        &text,
+                        &lang,
+                    ));
                 }
             }
             "sentiment" => {
@@ -3832,7 +4067,11 @@ where
                     } else {
                         "100".to_string()
                     };
-                    self.write(&LLMStdlib::generate_complete_code("llm_client", &prompt, Some(&max_tokens)));
+                    self.write(&LLMStdlib::generate_complete_code(
+                        "llm_client",
+                        &prompt,
+                        Some(&max_tokens),
+                    ));
                 }
             }
             "embed" => {
@@ -3853,7 +4092,7 @@ where
 
     fn generate_embedding_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::embedding::EmbeddingStdlib;
-        
+
         match method {
             "compare" => {
                 if args.len() >= 2 {
@@ -3894,7 +4133,11 @@ where
                     let query = self.capture_expression(&args[0]);
                     let candidates = self.capture_expression(&args[1]);
                     let k = self.capture_expression(&args[2]);
-                    self.write(&EmbeddingStdlib::generate_find_nearest_code(&query, &candidates, &k));
+                    self.write(&EmbeddingStdlib::generate_find_nearest_code(
+                        &query,
+                        &candidates,
+                        &k,
+                    ));
                 }
             }
             "average" => {
@@ -3915,7 +4158,7 @@ where
 
     fn generate_agent_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::agent::AgentStdlib;
-        
+
         match method {
             "create" => {
                 if let Some(arg) = args.first() {
@@ -3935,68 +4178,64 @@ where
 
     fn generate_agent_nested_call(&mut self, module: &str, method: &str, args: &[Expression]) {
         use crate::stdlib::agent::AgentStdlib;
-        
+
         match module {
-            "memory" => {
-                match method {
-                    "store" => {
-                        if args.len() >= 2 {
-                            let key = self.capture_expression(&args[0]);
-                            let value = self.capture_expression(&args[1]);
-                            self.write(&AgentStdlib::generate_memory_store_code(&key, &value));
-                        }
+            "memory" => match method {
+                "store" => {
+                    if args.len() >= 2 {
+                        let key = self.capture_expression(&args[0]);
+                        let value = self.capture_expression(&args[1]);
+                        self.write(&AgentStdlib::generate_memory_store_code(&key, &value));
                     }
-                    "search" => {
-                        if let Some(arg) = args.first() {
-                            let query = self.capture_expression(arg);
-                            self.write(&AgentStdlib::generate_memory_search_code(&query));
-                        }
-                    }
-                    "get" => {
-                        if let Some(arg) = args.first() {
-                            let key = self.capture_expression(arg);
-                            self.write(&AgentStdlib::generate_memory_get_code(&key));
-                        }
-                    }
-                    "delete" => {
-                        if let Some(arg) = args.first() {
-                            let key = self.capture_expression(arg);
-                            self.write(&AgentStdlib::generate_memory_delete_code(&key));
-                        }
-                    }
-                    _ => self.write(&format!("// Unknown agent.memory method: {}", method)),
                 }
-            }
-            "task" => {
-                match method {
-                    "run" => {
-                        if let Some(arg) = args.first() {
-                            let desc = self.capture_expression(arg);
-                            self.write(&AgentStdlib::generate_task_run_code(&desc));
-                        }
+                "search" => {
+                    if let Some(arg) = args.first() {
+                        let query = self.capture_expression(arg);
+                        self.write(&AgentStdlib::generate_memory_search_code(&query));
                     }
-                    "plan" => {
-                        if let Some(arg) = args.first() {
-                            let goal = self.capture_expression(arg);
-                            self.write(&AgentStdlib::generate_task_plan_code(&goal));
-                        }
-                    }
-                    "execute" => {
-                        if let Some(arg) = args.first() {
-                            let plan = self.capture_expression(arg);
-                            self.write(&AgentStdlib::generate_task_execute_code(&plan));
-                        }
-                    }
-                    _ => self.write(&format!("// Unknown agent.task method: {}", method)),
                 }
-            }
+                "get" => {
+                    if let Some(arg) = args.first() {
+                        let key = self.capture_expression(arg);
+                        self.write(&AgentStdlib::generate_memory_get_code(&key));
+                    }
+                }
+                "delete" => {
+                    if let Some(arg) = args.first() {
+                        let key = self.capture_expression(arg);
+                        self.write(&AgentStdlib::generate_memory_delete_code(&key));
+                    }
+                }
+                _ => self.write(&format!("// Unknown agent.memory method: {}", method)),
+            },
+            "task" => match method {
+                "run" => {
+                    if let Some(arg) = args.first() {
+                        let desc = self.capture_expression(arg);
+                        self.write(&AgentStdlib::generate_task_run_code(&desc));
+                    }
+                }
+                "plan" => {
+                    if let Some(arg) = args.first() {
+                        let goal = self.capture_expression(arg);
+                        self.write(&AgentStdlib::generate_task_plan_code(&goal));
+                    }
+                }
+                "execute" => {
+                    if let Some(arg) = args.first() {
+                        let plan = self.capture_expression(arg);
+                        self.write(&AgentStdlib::generate_task_execute_code(&plan));
+                    }
+                }
+                _ => self.write(&format!("// Unknown agent.task method: {}", method)),
+            },
             _ => self.write(&format!("// Unknown agent module: {}", module)),
         }
     }
 
     fn generate_process_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::process::ProcessStdlib;
-        
+
         match method {
             "spawn" => {
                 if args.len() >= 2 {
@@ -4056,7 +4295,7 @@ where
 
     fn generate_sandbox_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::sandbox::SandboxStdlib;
-        
+
         match method {
             "build" => {
                 if let Some(arg) = args.first() {
@@ -4112,7 +4351,7 @@ where
 
     fn generate_websocket_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::websocket::WebSocketStdlib;
-        
+
         match method {
             "connect" => {
                 if let Some(arg) = args.first() {
@@ -4171,7 +4410,7 @@ where
 
     fn generate_utils_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::utils::UtilsStdlib;
-        
+
         match method {
             "uuid" => {
                 self.write(&UtilsStdlib::generate_uuid_code());
@@ -4235,7 +4474,7 @@ where
 
     fn generate_log_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::log::LogStdlib;
-        
+
         match method {
             "info" => {
                 if let Some(arg) = args.first() {
@@ -4300,7 +4539,7 @@ where
     #[allow(dead_code)]
     fn generate_config_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::config::ConfigStdlib;
-        
+
         match method {
             "get_env" | "getEnv" => {
                 if let Some(arg) = args.first() {
@@ -4325,7 +4564,7 @@ where
     #[allow(dead_code)]
     fn generate_path_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::path::PathStdlib;
-        
+
         match method {
             "join" => {
                 if let Some(arg) = args.first() {
@@ -4386,7 +4625,7 @@ where
     #[allow(dead_code)]
     fn generate_url_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::url::UrlStdlib;
-        
+
         match method {
             "parse" => {
                 if let Some(arg) = args.first() {
@@ -4455,7 +4694,7 @@ where
     #[allow(dead_code)]
     fn generate_stream_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::stream::StreamStdlib;
-        
+
         match method {
             "create" => {
                 self.write(&StreamStdlib::generate_create_code());
@@ -4479,7 +4718,9 @@ where
                     let stream = self.capture_expression(&args[0]);
                     let reducer = self.capture_expression(&args[1]);
                     let initial = self.capture_expression(&args[2]);
-                    self.write(&StreamStdlib::generate_reduce_code(&stream, &reducer, &initial));
+                    self.write(&StreamStdlib::generate_reduce_code(
+                        &stream, &reducer, &initial,
+                    ));
                 }
             }
             "batch" => {
@@ -4516,7 +4757,7 @@ where
 
     fn generate_redis_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::redis::RedisStdlib;
-        
+
         match method {
             "connect" => {
                 if let Some(arg) = args.first() {
@@ -4531,7 +4772,12 @@ where
                     let value = self.capture_expression(&args[2]);
                     if args.len() >= 4 {
                         let ttl = self.capture_expression(&args[3]);
-                        self.write(&RedisStdlib::generate_set_code(&client, &key, &value, Some(&ttl)));
+                        self.write(&RedisStdlib::generate_set_code(
+                            &client,
+                            &key,
+                            &value,
+                            Some(&ttl),
+                        ));
                     } else {
                         self.write(&RedisStdlib::generate_set_code(&client, &key, &value, None));
                     }
@@ -4557,7 +4803,9 @@ where
                     let hash = self.capture_expression(&args[1]);
                     let field = self.capture_expression(&args[2]);
                     let value = self.capture_expression(&args[3]);
-                    self.write(&RedisStdlib::generate_hset_code(&client, &hash, &field, &value));
+                    self.write(&RedisStdlib::generate_hset_code(
+                        &client, &hash, &field, &value,
+                    ));
                 }
             }
             "hget" => {
@@ -4618,7 +4866,9 @@ where
                     let client = self.capture_expression(&args[0]);
                     let set = self.capture_expression(&args[1]);
                     let member = self.capture_expression(&args[2]);
-                    self.write(&RedisStdlib::generate_sismember_code(&client, &set, &member));
+                    self.write(&RedisStdlib::generate_sismember_code(
+                        &client, &set, &member,
+                    ));
                 }
             }
             "smembers" => {
@@ -4633,7 +4883,9 @@ where
                     let client = self.capture_expression(&args[0]);
                     let channel = self.capture_expression(&args[1]);
                     let message = self.capture_expression(&args[2]);
-                    self.write(&RedisStdlib::generate_publish_code(&client, &channel, &message));
+                    self.write(&RedisStdlib::generate_publish_code(
+                        &client, &channel, &message,
+                    ));
                 }
             }
             _ => self.write(&format!("// Unknown redis method: {}", method)),
@@ -4643,7 +4895,7 @@ where
     #[allow(dead_code)]
     fn generate_tracing_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::tracing::TracingStdlib;
-        
+
         match method {
             "start_span" | "startSpan" => {
                 if let Some(arg) = args.first() {
@@ -4656,7 +4908,9 @@ where
                     let span = self.capture_expression(&args[0]);
                     let key = self.capture_expression(&args[1]);
                     let value = self.capture_expression(&args[2]);
-                    self.write(&TracingStdlib::generate_set_attribute_code(&span, &key, &value));
+                    self.write(&TracingStdlib::generate_set_attribute_code(
+                        &span, &key, &value,
+                    ));
                 }
             }
             "child_span" | "childSpan" => {
@@ -4847,29 +5101,47 @@ where
                     let collection = self.capture_expression(&args[0]);
                     let filter = self.capture_expression(&args[1]);
                     let update = self.capture_expression(&args[2]);
-                    self.write(&MongoDbStdlib::generate_update_one_code(&collection, &filter, &update));
+                    self.write(&MongoDbStdlib::generate_update_one_code(
+                        &collection,
+                        &filter,
+                        &update,
+                    ));
                 }
             }
             "delete_one" | "deleteOne" => {
                 if args.len() >= 2 {
                     let collection = self.capture_expression(&args[0]);
                     let filter = self.capture_expression(&args[1]);
-                    self.write(&MongoDbStdlib::generate_delete_one_code(&collection, &filter));
+                    self.write(&MongoDbStdlib::generate_delete_one_code(
+                        &collection,
+                        &filter,
+                    ));
                 }
             }
             "aggregate" => {
                 if args.len() >= 2 {
                     let collection = self.capture_expression(&args[0]);
                     let pipeline = self.capture_expression(&args[1]);
-                    self.write(&MongoDbStdlib::generate_aggregate_code(&collection, &pipeline));
+                    self.write(&MongoDbStdlib::generate_aggregate_code(
+                        &collection,
+                        &pipeline,
+                    ));
                 }
             }
             "create_index" | "createIndex" => {
                 if args.len() >= 3 {
                     let collection = self.capture_expression(&args[0]);
                     let keys = self.capture_expression(&args[1]);
-                    let unique = if let Expression::Boolean(b) = &args[2] { *b } else { false };
-                    self.write(&MongoDbStdlib::generate_create_index_code(&collection, &keys, unique));
+                    let unique = if let Expression::Boolean(b) = &args[2] {
+                        *b
+                    } else {
+                        false
+                    };
+                    self.write(&MongoDbStdlib::generate_create_index_code(
+                        &collection,
+                        &keys,
+                        unique,
+                    ));
                 }
             }
             _ => self.write(&format!("// Unknown mongodb method: {}", method)),
@@ -4920,7 +5192,11 @@ where
             "read" => {
                 if args.len() >= 2 {
                     let path = self.capture_expression(&args[0]);
-                    let has_header = if let Expression::Literal(Literal::Boolean(b)) = &args[1] { *b } else { false };
+                    let has_header = if let Expression::Literal(Literal::Boolean(b)) = &args[1] {
+                        *b
+                    } else {
+                        false
+                    };
                     self.write(&CsvStdlib::generate_read_code(&path, has_header));
                 }
             }
@@ -4929,7 +5205,11 @@ where
                     let path = self.capture_expression(&args[0]);
                     let rows = self.capture_expression(&args[1]);
                     let headers = args.get(2).map(|a| self.capture_expression(a));
-                    self.write(&CsvStdlib::generate_write_code(&path, &rows, headers.as_deref()));
+                    self.write(&CsvStdlib::generate_write_code(
+                        &path,
+                        &rows,
+                        headers.as_deref(),
+                    ));
                 }
             }
             "parse" => {
@@ -5036,7 +5316,9 @@ where
                 if args.len() >= 2 {
                     let encrypted = self.capture_expression(&args[0]);
                     let key = self.capture_expression(&args[1]);
-                    self.write(&EncryptionStdlib::generate_aes_decrypt_code(&encrypted, &key));
+                    self.write(&EncryptionStdlib::generate_aes_decrypt_code(
+                        &encrypted, &key,
+                    ));
                 }
             }
             "rsa_generate_keypair" | "rsaGenerateKeypair" => {
@@ -5049,14 +5331,20 @@ where
                 if args.len() >= 2 {
                     let data = self.capture_expression(&args[0]);
                     let public_key = self.capture_expression(&args[1]);
-                    self.write(&EncryptionStdlib::generate_rsa_encrypt_code(&data, &public_key));
+                    self.write(&EncryptionStdlib::generate_rsa_encrypt_code(
+                        &data,
+                        &public_key,
+                    ));
                 }
             }
             "rsa_decrypt" | "rsaDecrypt" => {
                 if args.len() >= 2 {
                     let encrypted = self.capture_expression(&args[0]);
                     let private_key = self.capture_expression(&args[1]);
-                    self.write(&EncryptionStdlib::generate_rsa_decrypt_code(&encrypted, &private_key));
+                    self.write(&EncryptionStdlib::generate_rsa_decrypt_code(
+                        &encrypted,
+                        &private_key,
+                    ));
                 }
             }
             "fernet_generate_key" | "fernetGenerateKey" => {
@@ -5073,7 +5361,9 @@ where
                 if args.len() >= 2 {
                     let encrypted = self.capture_expression(&args[0]);
                     let key = self.capture_expression(&args[1]);
-                    self.write(&EncryptionStdlib::generate_fernet_decrypt_code(&encrypted, &key));
+                    self.write(&EncryptionStdlib::generate_fernet_decrypt_code(
+                        &encrypted, &key,
+                    ));
                 }
             }
             "generate_key" | "generateKey" => {
@@ -5087,7 +5377,9 @@ where
                     let key_id = self.capture_expression(&args[0]);
                     let key = self.capture_expression(&args[1]);
                     let vault = self.capture_expression(&args[2]);
-                    self.write(&EncryptionStdlib::generate_store_key_code(&key_id, &key, &vault));
+                    self.write(&EncryptionStdlib::generate_store_key_code(
+                        &key_id, &key, &vault,
+                    ));
                 }
             }
             "retrieve_key" | "retrieveKey" => {
@@ -5114,7 +5406,9 @@ where
                     let metric = self.capture_expression(&args[0]);
                     let value = self.capture_expression(&args[1]);
                     let rules = self.capture_expression(&args[2]);
-                    self.write(&AlertingStdlib::generate_check_code(&metric, &value, &rules));
+                    self.write(&AlertingStdlib::generate_check_code(
+                        &metric, &value, &rules,
+                    ));
                 }
             }
             "trigger" => {
@@ -5198,7 +5492,9 @@ where
                 if args.len() >= 2 {
                     let workflow = self.capture_expression(&args[0]);
                     let step_id = self.capture_expression(&args[1]);
-                    self.write(&WorkflowStdlib::generate_execute_step_code(&workflow, &step_id));
+                    self.write(&WorkflowStdlib::generate_execute_step_code(
+                        &workflow, &step_id,
+                    ));
                 }
             }
             "get_status" | "getStatus" => {
@@ -5244,7 +5540,9 @@ where
                 if args.len() >= 2 {
                     let task = self.capture_expression(&args[0]);
                     let interval = self.capture_expression(&args[1]);
-                    self.write(&SchedulerStdlib::generate_schedule_interval_code(&task, &interval));
+                    self.write(&SchedulerStdlib::generate_schedule_interval_code(
+                        &task, &interval,
+                    ));
                 }
             }
             "cancel" => {
@@ -5310,7 +5608,9 @@ where
                     let bus = self.capture_expression(&args[0]);
                     let topic = self.capture_expression(&args[1]);
                     let limit = self.capture_expression(&args[2]);
-                    self.write(&EventBusStdlib::generate_get_history_code(&bus, &topic, &limit));
+                    self.write(&EventBusStdlib::generate_get_history_code(
+                        &bus, &topic, &limit,
+                    ));
                 }
             }
             _ => self.write(&format!("// Unknown event_bus method: {}", method)),
@@ -5330,7 +5630,9 @@ where
                 if args.len() >= 2 {
                     let template = self.capture_expression(&args[0]);
                     let count = self.capture_expression(&args[1]);
-                    self.write(&FixturesStdlib::generate_create_many_code(&template, &count));
+                    self.write(&FixturesStdlib::generate_create_many_code(
+                        &template, &count,
+                    ));
                 }
             }
             "factory" => {
@@ -5451,7 +5753,15 @@ where
             "get_bool" | "getBool" => {
                 if args.len() >= 2 {
                     let key = self.capture_expression(&args[0]);
-                    let default = if let Expression::Literal(Literal::Boolean(b)) = &args[1] { if *b { "true" } else { "false" } } else { "false" };
+                    let default = if let Expression::Literal(Literal::Boolean(b)) = &args[1] {
+                        if *b {
+                            "true"
+                        } else {
+                            "false"
+                        }
+                    } else {
+                        "false"
+                    };
                     self.write(&EnvStdlib::generate_get_bool_code(&key, default));
                 }
             }
@@ -5479,10 +5789,9 @@ where
         }
     }
 
-
     fn generate_test_module_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::test_module::TestModuleStdlib;
-        
+
         match method {
             "process_data" => {
                 if args.len() >= 1 {
@@ -5492,7 +5801,9 @@ where
                     } else {
                         String::new()
                     };
-                    self.write(&TestModuleStdlib::generate_process_data_code(&input, &options));
+                    self.write(&TestModuleStdlib::generate_process_data_code(
+                        &input, &options,
+                    ));
                 } else {
                     self.write("// Error: process_data requires at least 1 arguments");
                 }
@@ -5509,7 +5820,10 @@ where
                 if args.len() >= 2 {
                     let data = self.capture_expression(&args[0]);
                     let target_format = self.capture_expression(&args[1]);
-                    self.write(&TestModuleStdlib::generate_transform_format_code(&data, &target_format));
+                    self.write(&TestModuleStdlib::generate_transform_format_code(
+                        &data,
+                        &target_format,
+                    ));
                 } else {
                     self.write("// Error: transform_format requires at least 2 arguments");
                 }
@@ -5525,7 +5839,10 @@ where
                 if args.len() >= 1 {
                     let name = self.capture_expression(&args[0]);
                     let labels = args.get(1).map(|a| self.capture_expression(a));
-                    self.write(&MetricsStdlib::generate_increment_code(&name, labels.as_deref()));
+                    self.write(&MetricsStdlib::generate_increment_code(
+                        &name,
+                        labels.as_deref(),
+                    ));
                 }
             }
             "gauge" => {
@@ -5533,7 +5850,11 @@ where
                     let name = self.capture_expression(&args[0]);
                     let value = self.capture_expression(&args[1]);
                     let labels = args.get(2).map(|a| self.capture_expression(a));
-                    self.write(&MetricsStdlib::generate_gauge_code(&name, &value, labels.as_deref()));
+                    self.write(&MetricsStdlib::generate_gauge_code(
+                        &name,
+                        &value,
+                        labels.as_deref(),
+                    ));
                 }
             }
             "histogram" => {
@@ -5541,7 +5862,11 @@ where
                     let name = self.capture_expression(&args[0]);
                     let value = self.capture_expression(&args[1]);
                     let labels = args.get(2).map(|a| self.capture_expression(a));
-                    self.write(&MetricsStdlib::generate_histogram_code(&name, &value, labels.as_deref()));
+                    self.write(&MetricsStdlib::generate_histogram_code(
+                        &name,
+                        &value,
+                        labels.as_deref(),
+                    ));
                 }
             }
             _ => self.write(&format!("// Unknown metrics method: {}", method)),
@@ -5556,7 +5881,11 @@ where
                     let key = self.capture_expression(&args[0]);
                     let value = self.capture_expression(&args[1]);
                     let ttl = args.get(2).map(|a| self.capture_expression(a));
-                    self.write(&CacheStdlib::generate_set_code(&key, &value, ttl.as_deref()));
+                    self.write(&CacheStdlib::generate_set_code(
+                        &key,
+                        &value,
+                        ttl.as_deref(),
+                    ));
                 }
             }
             "get" => {
@@ -5634,7 +5963,9 @@ where
                     let validator = self.capture_expression(&args[0]);
                     let field = self.capture_expression(&args[1]);
                     let value = self.capture_expression(&args[2]);
-                    self.write(&ValidationStdlib::generate_required_code(&validator, &field, &value));
+                    self.write(&ValidationStdlib::generate_required_code(
+                        &validator, &field, &value,
+                    ));
                 }
             }
             "min_length" | "minLength" => {
@@ -5643,7 +5974,9 @@ where
                     let field = self.capture_expression(&args[1]);
                     let value = self.capture_expression(&args[2]);
                     let min = self.capture_expression(&args[3]);
-                    self.write(&ValidationStdlib::generate_min_length_code(&validator, &field, &value, &min));
+                    self.write(&ValidationStdlib::generate_min_length_code(
+                        &validator, &field, &value, &min,
+                    ));
                 }
             }
             "max_length" | "maxLength" => {
@@ -5652,7 +5985,9 @@ where
                     let field = self.capture_expression(&args[1]);
                     let value = self.capture_expression(&args[2]);
                     let max = self.capture_expression(&args[3]);
-                    self.write(&ValidationStdlib::generate_max_length_code(&validator, &field, &value, &max));
+                    self.write(&ValidationStdlib::generate_max_length_code(
+                        &validator, &field, &value, &max,
+                    ));
                 }
             }
             "email" => {
@@ -5660,7 +5995,9 @@ where
                     let validator = self.capture_expression(&args[0]);
                     let field = self.capture_expression(&args[1]);
                     let value = self.capture_expression(&args[2]);
-                    self.write(&ValidationStdlib::generate_email_code(&validator, &field, &value));
+                    self.write(&ValidationStdlib::generate_email_code(
+                        &validator, &field, &value,
+                    ));
                 }
             }
             "pattern" => {
@@ -5670,7 +6007,9 @@ where
                     let value = self.capture_expression(&args[2]);
                     let pattern = self.capture_expression(&args[3]);
                     let message = self.capture_expression(&args[4]);
-                    self.write(&ValidationStdlib::generate_pattern_code(&validator, &field, &value, &pattern, &message));
+                    self.write(&ValidationStdlib::generate_pattern_code(
+                        &validator, &field, &value, &pattern, &message,
+                    ));
                 }
             }
             "min" => {
@@ -5679,7 +6018,9 @@ where
                     let field = self.capture_expression(&args[1]);
                     let value = self.capture_expression(&args[2]);
                     let min = self.capture_expression(&args[3]);
-                    self.write(&ValidationStdlib::generate_min_code(&validator, &field, &value, &min));
+                    self.write(&ValidationStdlib::generate_min_code(
+                        &validator, &field, &value, &min,
+                    ));
                 }
             }
             "max" => {
@@ -5688,13 +6029,14 @@ where
                     let field = self.capture_expression(&args[1]);
                     let value = self.capture_expression(&args[2]);
                     let max = self.capture_expression(&args[3]);
-                    self.write(&ValidationStdlib::generate_max_code(&validator, &field, &value, &max));
+                    self.write(&ValidationStdlib::generate_max_code(
+                        &validator, &field, &value, &max,
+                    ));
                 }
             }
             _ => self.write(&format!("// Unknown validation method: {}", method)),
         }
     }
-
 
     fn generate_logger_call(&mut self, method: &str, args: &[Expression]) {
         self.generate_log_call(method, args);
@@ -5713,7 +6055,10 @@ where
                 if args.len() >= 2 {
                     let pattern = self.capture_expression(&args[0]);
                     let text = self.capture_expression(&args[1]);
-                    self.write(&format!("regex::Regex::new({}).unwrap().is_match({})", pattern, text));
+                    self.write(&format!(
+                        "regex::Regex::new({}).unwrap().is_match({})",
+                        pattern, text
+                    ));
                 }
             }
             "replace" => {
@@ -5721,7 +6066,10 @@ where
                     let pattern = self.capture_expression(&args[0]);
                     let text = self.capture_expression(&args[1]);
                     let replacement = self.capture_expression(&args[2]);
-                    self.write(&format!("regex::Regex::new({}).unwrap().replace_all({}, {}).to_string()", pattern, text, replacement));
+                    self.write(&format!(
+                        "regex::Regex::new({}).unwrap().replace_all({}, {}).to_string()",
+                        pattern, text, replacement
+                    ));
                 }
             }
             _ => self.write(&format!("// Unknown regex method: {}", method)),
@@ -5769,11 +6117,6 @@ where
             _ => self.write(&format!("// Unknown crypto method: {}", method)),
         }
     }
-
-
-
-
-
 
     fn generate_http_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::http::HttpStdlib;
@@ -5861,8 +6204,6 @@ where
         }
     }
 
-
-
     fn capture_expression(&mut self, expr: &Expression) -> String {
         let mut captured = String::new();
         let old_output = std::mem::replace(&mut self.output, captured);
@@ -5872,35 +6213,40 @@ where
     }
     fn is_route_handler(&self, decorators: &[Decorator]) -> Option<(String, String)> {
         for dec in decorators {
-             match dec.name.as_str() {
-                 "GET" | "POST" | "PUT" | "DELETE" | "PATCH" => {
-                     if let Some(arg) = dec.args.first() {
-                         if let DecoratorArg::String(path) = arg {
-                             return Some((dec.name.clone(), path.clone()));
-                         }
-                     }
-                 }
-                 _ => {}
-             }
+            match dec.name.as_str() {
+                "GET" | "POST" | "PUT" | "DELETE" | "PATCH" => {
+                    if let Some(arg) = dec.args.first() {
+                        if let DecoratorArg::String(path) = arg {
+                            return Some((dec.name.clone(), path.clone()));
+                        }
+                    }
+                }
+                _ => {}
+            }
         }
         None
     }
 
     fn is_complex_type(&self, t: &Type) -> bool {
         match t {
-            Type::Named(n) => n != "string" && n != "number" && n != "boolean" && n != "void" && n != "any",
+            Type::Named(n) => {
+                n != "string" && n != "number" && n != "boolean" && n != "void" && n != "any"
+            }
             Type::List(_) | Type::Map { .. } => true,
             _ => false,
         }
     }
 
     fn generate_analytics_call(&mut self, method: &str, args: &[Expression]) {
-         match method {
+        match method {
             "track" => {
                 if args.len() >= 2 {
                     let event = self.capture_expression(&args[0]);
                     let data = self.capture_expression(&args[1]);
-                    self.write(&format!("tracing::info!(\"Analytics Event: {{}} - {{:?}}\", {}, {})", event, data));
+                    self.write(&format!(
+                        "tracing::info!(\"Analytics Event: {{}} - {{:?}}\", {}, {})",
+                        event, data
+                    ));
                 }
             }
             _ => self.write(&format!("// Unknown analytics method: {}", method)),
@@ -5910,68 +6256,74 @@ where
     fn generate_compression_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "gzip" => {
-                 if let Some(arg) = args.first() {
+                if let Some(arg) = args.first() {
                     let input = self.capture_expression(arg);
                     // Hypothetical helper usage
                     self.write(&format!("velin_runtime::compression::gzip({})", input));
                 }
             }
-             _ => self.write(&format!("// Unknown compression method: {}", method)),
+            _ => self.write(&format!("// Unknown compression method: {}", method)),
         }
     }
 
     fn generate_geolocation_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "distance" => {
-                 if args.len() >= 4 {
+                if args.len() >= 4 {
                     let lat1 = self.capture_expression(&args[0]);
                     let lon1 = self.capture_expression(&args[1]);
                     let lat2 = self.capture_expression(&args[2]);
                     let lon2 = self.capture_expression(&args[3]);
                     // Haversine formula approximation or helper
-                    self.write(&format!("velin_runtime::geo::distance({}, {}, {}, {})", lat1, lon1, lat2, lon2));
+                    self.write(&format!(
+                        "velin_runtime::geo::distance({}, {}, {}, {})",
+                        lat1, lon1, lat2, lon2
+                    ));
                 }
             }
-             _ => self.write(&format!("// Unknown geolocation method: {}", method)),
+            _ => self.write(&format!("// Unknown geolocation method: {}", method)),
         }
     }
 
     fn generate_i18n_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "translate" | "t" => {
-                 if args.len() >= 2 {
+                if args.len() >= 2 {
                     let key = self.capture_expression(&args[0]);
                     let lang = self.capture_expression(&args[1]);
-                    self.write(&format!("velin_runtime::i18n::translate({}, {})", key, lang));
+                    self.write(&format!(
+                        "velin_runtime::i18n::translate({}, {})",
+                        key, lang
+                    ));
                 }
             }
-             _ => self.write(&format!("// Unknown i18n method: {}", method)),
+            _ => self.write(&format!("// Unknown i18n method: {}", method)),
         }
     }
 
     fn generate_jwt_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "sign" => {
-                 if args.len() >= 2 {
+                if args.len() >= 2 {
                     let payload = self.capture_expression(&args[0]);
                     let secret = self.capture_expression(&args[1]);
                     self.write(&format!("jsonwebtoken::encode(&jsonwebtoken::Header::default(), &{}, &jsonwebtoken::EncodingKey::from_secret({}.as_bytes())).unwrap()", payload, secret));
                 }
             }
             "verify" => {
-                 if args.len() >= 2 {
+                if args.len() >= 2 {
                     let token = self.capture_expression(&args[0]);
                     let secret = self.capture_expression(&args[1]);
                     self.write(&format!("jsonwebtoken::decode::<serde_json::Value>(&{}, &jsonwebtoken::DecodingKey::from_secret({}.as_bytes()), &jsonwebtoken::Validation::default()).is_ok()", token, secret));
                 }
             }
-             _ => self.write(&format!("// Unknown jwt method: {}", method)),
+            _ => self.write(&format!("// Unknown jwt method: {}", method)),
         }
     }
 
     fn generate_ml_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::ml::MlStdlib;
-        
+
         match method {
             "load_model" | "loadModel" => {
                 if args.len() >= 3 {
@@ -5996,7 +6348,7 @@ where
 
     fn generate_flow_call(&mut self, method: &str, args: &[Expression]) {
         use crate::stdlib::flow::FlowStdlib;
-        
+
         match method {
             "start" => {
                 let name = if let Some(arg) = args.first() {
@@ -6028,7 +6380,6 @@ where
 }
 
 impl Default for RustCodeGenerator {
-
     fn default() -> Self {
         Self::new()
     }

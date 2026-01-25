@@ -1,15 +1,15 @@
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
 use crate::compiler::config::CompilerConfig;
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use crate::optimizer::pipeline::PipelineOptimizer;
-use crate::stdlib::ml::{LLMClient, LLMProvider};
 use crate::parser::ast::*;
 use crate::prompt::sanitizer::PromptSanitizer;
+use crate::stdlib::ml::{LLMClient, LLMProvider};
 use anyhow::Result;
 use serde_json;
 
 /// KI-basierter Optimization Pass
-/// 
+///
 /// Optimiert Code automatisch mit KI:
 /// - Analysiert Optimierungs-Potenzial
 /// - Nutzt Profiling-Daten (falls vorhanden)
@@ -90,10 +90,10 @@ impl AIOptimizationPass {
             } else {
                 String::new()
             };
-            
+
             // Sanitize Code-Kontext
             let sanitized_code = self.prompt_sanitizer.sanitize_code_context(&code_summary);
-            
+
             let prompt = format!(
                 "Analyze the following VelinScript code for optimization opportunities.\n\
                 Provide a JSON array of optimizations with:\n\
@@ -108,7 +108,7 @@ impl AIOptimizationPass {
 
             // Sanitize Prompt vor dem Senden
             let sanitized_prompt = self.prompt_sanitizer.sanitize(&prompt);
-            
+
             if !self.prompt_sanitizer.is_safe(&sanitized_prompt) {
                 // Prompt enthält gefährliche Patterns, nutze Fallback
                 return Ok(self.heuristic_optimizations(program));
@@ -126,7 +126,7 @@ impl AIOptimizationPass {
     /// Extrahiert Code-Zusammenfassung für Optimierungs-Analyse
     fn extract_code_summary(&self, program: &Program) -> String {
         let mut summary = String::new();
-        
+
         for item in &program.items {
             if let Item::Function(f) = item {
                 summary.push_str(&format!("fn {}(", f.name));
@@ -141,29 +141,33 @@ impl AIOptimizationPass {
                     summary.push_str(&format!(" -> {:?}", rt));
                 }
                 summary.push_str("\n");
-                
+
                 // Body-Komplexität
                 let statement_count = f.body.statements.len();
                 summary.push_str(&format!("  // {} statements\n", statement_count));
-                
+
                 // Decorators
                 for decorator in &f.decorators {
                     summary.push_str(&format!("  @{}\n", decorator.name));
                 }
             }
         }
-        
+
         summary
     }
 
     /// Parst KI-Antwort in Optimierungs-Liste
     fn parse_optimization_response(&self, response: &str) -> Result<Vec<OptimizationOpportunity>> {
-        let cleaned = response.trim().trim_start_matches("```json").trim_end_matches("```").trim();
-        
+        let cleaned = response
+            .trim()
+            .trim_start_matches("```json")
+            .trim_end_matches("```")
+            .trim();
+
         match serde_json::from_str::<serde_json::Value>(cleaned) {
             Ok(json) => {
                 let mut opportunities = Vec::new();
-                
+
                 if let Some(array) = json.as_array() {
                     for opt_json in array {
                         if let (Some(opt_type_str), Some(location), Some(description)) = (
@@ -178,7 +182,7 @@ impl AIOptimizationPass {
                                 "readability" => OptimizationType::Readability,
                                 _ => OptimizationType::Performance,
                             };
-                            
+
                             opportunities.push(OptimizationOpportunity {
                                 optimization_type: opt_type,
                                 location: location.to_string(),
@@ -191,7 +195,7 @@ impl AIOptimizationPass {
                         }
                     }
                 }
-                
+
                 Ok(opportunities)
             }
             Err(_) => Ok(Vec::new()),
@@ -219,7 +223,8 @@ impl AIOptimizationPass {
                     opportunities.push(OptimizationOpportunity {
                         optimization_type: OptimizationType::Performance,
                         location: format!("function {}", f.name),
-                        description: "Async function could benefit from parallelization".to_string(),
+                        description: "Async function could benefit from parallelization"
+                            .to_string(),
                         estimated_improvement: "Potential 2-4x speedup".to_string(),
                     });
                 }
@@ -230,7 +235,10 @@ impl AIOptimizationPass {
     }
 
     /// Identifiziert Hot Paths aus Profiling-Daten
-    fn identify_hot_paths(&self, profiling: &ProfilingData) -> Result<Vec<OptimizationOpportunity>> {
+    fn identify_hot_paths(
+        &self,
+        profiling: &ProfilingData,
+    ) -> Result<Vec<OptimizationOpportunity>> {
         let mut opportunities = Vec::new();
 
         for hot_path in &profiling.hot_paths {
@@ -246,7 +254,11 @@ impl AIOptimizationPass {
     }
 
     /// Wendet Optimierung an
-    fn apply_optimization(&self, context: &mut CompilationContext, opportunity: &OptimizationOpportunity) -> Result<()> {
+    fn apply_optimization(
+        &self,
+        context: &mut CompilationContext,
+        opportunity: &OptimizationOpportunity,
+    ) -> Result<()> {
         match opportunity.optimization_type {
             OptimizationType::Performance => {
                 self.optimize_performance(context, opportunity)?;
@@ -265,19 +277,24 @@ impl AIOptimizationPass {
     }
 
     /// Optimiert Performance
-    fn optimize_performance(&self, context: &mut CompilationContext, opportunity: &OptimizationOpportunity) -> Result<()> {
+    fn optimize_performance(
+        &self,
+        context: &mut CompilationContext,
+        opportunity: &OptimizationOpportunity,
+    ) -> Result<()> {
         if let Some(ref mut program) = context.program {
             // Nutze PipelineOptimizer für Parallelisierung
             if opportunity.location.starts_with("function ") {
                 let func_name = opportunity.location.strip_prefix("function ").unwrap_or("");
-                
+
                 // Finde Funktion im Program
                 for item in &mut program.items {
                     if let crate::parser::ast::Item::Function(f) = item {
                         if f.name == func_name {
                             // Analysiere Block für Parallelisierungs-Möglichkeiten
-                            let parallel_groups = self.pipeline_optimizer.identify_parallel_groups(&f.body);
-                            
+                            let parallel_groups =
+                                self.pipeline_optimizer.identify_parallel_groups(&f.body);
+
                             if !parallel_groups.is_empty() {
                                 // Markiere Funktion für Parallelisierung
                                 // In Produktion würde hier der Code transformiert werden
@@ -295,18 +312,22 @@ impl AIOptimizationPass {
     }
 
     /// Optimiert Memory
-    fn optimize_memory(&self, context: &mut CompilationContext, opportunity: &OptimizationOpportunity) -> Result<()> {
+    fn optimize_memory(
+        &self,
+        context: &mut CompilationContext,
+        opportunity: &OptimizationOpportunity,
+    ) -> Result<()> {
         if let Some(ref mut program) = context.program {
             // Memory-Optimierungen: Identifiziere große Datenstrukturen
             if opportunity.location.starts_with("function ") {
                 let func_name = opportunity.location.strip_prefix("function ").unwrap_or("");
-                
+
                 for item in &mut program.items {
                     if let crate::parser::ast::Item::Function(f) = item {
                         if f.name == func_name {
                             // Prüfe auf große Listen/Map-Allokationen
                             let large_allocs = self.find_large_allocations(&f.body);
-                            
+
                             if !large_allocs.is_empty() {
                                 context.errors.push(crate::error::CompilerError::Info(
                                     format!("Memory optimization: Function {} has {} large allocations that could be optimized", 
@@ -324,7 +345,7 @@ impl AIOptimizationPass {
     /// Findet große Allokationen
     fn find_large_allocations(&self, block: &crate::parser::ast::Block) -> Vec<String> {
         let mut allocations = Vec::new();
-        
+
         for stmt in &block.statements {
             if let crate::parser::ast::Statement::Let(let_stmt) = stmt {
                 // Prüfe auf List/Map-Literale mit vielen Elementen
@@ -340,23 +361,27 @@ impl AIOptimizationPass {
                 }
             }
         }
-        
+
         allocations
     }
 
     /// Optimiert Security
-    fn optimize_security(&self, context: &mut CompilationContext, opportunity: &OptimizationOpportunity) -> Result<()> {
+    fn optimize_security(
+        &self,
+        context: &mut CompilationContext,
+        opportunity: &OptimizationOpportunity,
+    ) -> Result<()> {
         if let Some(ref mut program) = context.program {
             // Security-Optimierungen: Prüfe auf fehlende Validierung
             if opportunity.location.starts_with("function ") {
                 let func_name = opportunity.location.strip_prefix("function ").unwrap_or("");
-                
+
                 for item in &mut program.items {
                     if let crate::parser::ast::Item::Function(f) = item {
                         if f.name == func_name {
                             // Prüfe auf fehlende Input-Validierung
                             let needs_validation = self.needs_input_validation(f);
-                            
+
                             if needs_validation {
                                 context.errors.push(crate::error::CompilerError::Warning(
                                     format!("Security optimization: Function {} should validate input parameters", func_name)
@@ -398,28 +423,35 @@ impl AIOptimizationPass {
     fn is_validation_condition(&self, expr: &crate::parser::ast::Expression) -> bool {
         match expr {
             crate::parser::ast::Expression::BinaryOp { op, .. } => {
-                matches!(op, crate::parser::ast::BinaryOperator::NotEq | 
-                             crate::parser::ast::BinaryOperator::Eq |
-                             crate::parser::ast::BinaryOperator::Gt |
-                             crate::parser::ast::BinaryOperator::Lt)
+                matches!(
+                    op,
+                    crate::parser::ast::BinaryOperator::NotEq
+                        | crate::parser::ast::BinaryOperator::Eq
+                        | crate::parser::ast::BinaryOperator::Gt
+                        | crate::parser::ast::BinaryOperator::Lt
+                )
             }
-            _ => false
+            _ => false,
         }
     }
 
     /// Optimiert Readability
-    fn optimize_readability(&self, context: &mut CompilationContext, opportunity: &OptimizationOpportunity) -> Result<()> {
+    fn optimize_readability(
+        &self,
+        context: &mut CompilationContext,
+        opportunity: &OptimizationOpportunity,
+    ) -> Result<()> {
         if let Some(ref mut program) = context.program {
             // Readability-Optimierungen: Refactoring-Vorschläge
             if opportunity.location.starts_with("function ") {
                 let func_name = opportunity.location.strip_prefix("function ").unwrap_or("");
-                
+
                 for item in &mut program.items {
                     if let crate::parser::ast::Item::Function(f) = item {
                         if f.name == func_name {
                             // Prüfe Komplexität
                             let complexity = self.calculate_complexity(&f.body);
-                            
+
                             if complexity > 20 {
                                 context.errors.push(crate::error::CompilerError::Info(
                                     format!("Readability optimization: Function {} has high complexity ({}), consider refactoring", 
@@ -437,7 +469,7 @@ impl AIOptimizationPass {
     /// Berechnet Code-Komplexität
     fn calculate_complexity(&self, block: &crate::parser::ast::Block) -> usize {
         let mut complexity = block.statements.len();
-        
+
         for stmt in &block.statements {
             match stmt {
                 crate::parser::ast::Statement::If(if_stmt) => {
@@ -464,7 +496,7 @@ impl AIOptimizationPass {
                 _ => {}
             }
         }
-        
+
         complexity
     }
 }
@@ -492,9 +524,12 @@ impl Pass for AIOptimizationPass {
             // 3. Optimierungen anwenden
             for opportunity in optimization_opportunities {
                 if let Err(e) = self.apply_optimization(context, &opportunity) {
-                    context.errors.push(crate::error::CompilerError::Warning(
-                        format!("Failed to apply optimization for {}: {}", opportunity.location, e)
-                    ));
+                    context
+                        .errors
+                        .push(crate::error::CompilerError::Warning(format!(
+                            "Failed to apply optimization for {}: {}",
+                            opportunity.location, e
+                        )));
                 }
             }
         }

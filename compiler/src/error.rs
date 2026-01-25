@@ -19,7 +19,7 @@ impl ErrorLocation {
             file: None,
         }
     }
-    
+
     pub fn with_file(line: usize, column: usize, file: String) -> Self {
         ErrorLocation {
             line,
@@ -41,7 +41,7 @@ pub enum CompilerError {
         column: usize,
         source_context: Option<String>,
     },
-    
+
     #[error("Type error: {message} at line {line}, column {column}")]
     Type {
         message: String,
@@ -50,34 +50,31 @@ pub enum CompilerError {
         line: usize,
         column: usize,
     },
-    
-    #[error("Code generation error: {message}")]
+
+    #[error("Code generation error: {message} at line {line}, column {column}")]
     CodeGen {
         message: String,
+        location: ErrorLocation,
         context: Option<String>,
+        line: usize,
+        column: usize,
     },
-    
+
     #[error("IO error: {message}")]
-    Io {
-        message: String,
-    },
-    
+    Io { message: String },
+
     #[error("Validation error: {message}")]
     Validation {
         message: String,
         field: Option<String>,
     },
-    
+
     #[error("Configuration error: {message}")]
-    Config {
-        message: String,
-    },
-    
+    Config { message: String },
+
     #[error("Internal error: {message}")]
-    Internal {
-        message: String,
-    },
-    
+    Internal { message: String },
+
     #[error("Warning: {0}")]
     Warning(String),
 
@@ -103,7 +100,7 @@ impl CompilerError {
             source_context: None,
         }
     }
-    
+
     pub fn parse_error_with_context(
         message: String,
         location: ErrorLocation,
@@ -120,7 +117,7 @@ impl CompilerError {
             source_context: None,
         }
     }
-    
+
     pub fn type_error(message: String, location: ErrorLocation) -> Self {
         CompilerError::Type {
             message,
@@ -130,7 +127,7 @@ impl CompilerError {
             column: location.column,
         }
     }
-    
+
     pub fn type_error_with_kind(message: String, location: ErrorLocation, kind: String) -> Self {
         CompilerError::Type {
             message,
@@ -140,38 +137,53 @@ impl CompilerError {
             column: location.column,
         }
     }
-    
+
     pub fn codegen_error(message: String) -> Self {
         CompilerError::CodeGen {
             message,
+            location: ErrorLocation::new(0, 0),
             context: None,
+            line: 0,
+            column: 0,
         }
     }
-    
+
     pub fn codegen_error_with_context(message: String, context: String) -> Self {
         CompilerError::CodeGen {
             message,
+            location: ErrorLocation::new(0, 0),
             context: Some(context),
+            line: 0,
+            column: 0,
         }
     }
-    
+
+    pub fn codegen_error_with_location(
+        message: String,
+        location: ErrorLocation,
+        context: Option<String>,
+    ) -> Self {
+        CompilerError::CodeGen {
+            message,
+            location: location.clone(),
+            context,
+            line: location.line,
+            column: location.column,
+        }
+    }
+
     pub fn io_error(message: String) -> Self {
-        CompilerError::Io {
-            message,
-        }
+        CompilerError::Io { message }
     }
-    
+
     pub fn validation_error(message: String, field: Option<String>) -> Self {
-        CompilerError::Validation {
-            message,
-            field,
-        }
+        CompilerError::Validation { message, field }
     }
 
     pub fn warning(message: String) -> Self {
         CompilerError::Warning(message)
     }
-    
+
     /// Gibt eine verbesserte Fehlermeldung mit Vorschlägen zurück
     pub fn with_suggestions(&self) -> String {
         let engine = ErrorSuggestionEngine::new();

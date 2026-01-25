@@ -2,7 +2,7 @@ pub use crate::codegen::system_generator::{DeploymentConfig, DeploymentType, Req
 use anyhow::Result;
 
 /// Infrastructure-as-Code Generator
-/// 
+///
 /// Generiert Infrastructure-Code für Deployment:
 /// - Dockerfile
 /// - docker-compose.yml
@@ -47,13 +47,13 @@ impl InfrastructureGenerator {
         if plan.needs_database {
             code.add(self.generate_database(plan)?);
         }
-        
+
         // Validiere alle generierten Configs
         self.validate_infrastructure_code(&code)?;
 
         Ok(code)
     }
-    
+
     /// Validiert generierte Infrastructure-Configs
     fn validate_infrastructure_code(&self, code: &InfrastructureCode) -> Result<()> {
         for file in &code.files {
@@ -96,7 +96,8 @@ COPY --from=builder /app/target/release/velin-compiler /usr/local/bin/velin-comp
 EXPOSE 3000
 ENV RUST_LOG=info
 CMD ["velin-compiler"]
-"#.to_string(),
+"#
+            .to_string(),
         })
     }
 
@@ -110,7 +111,8 @@ services:
       - "3000:3000"
     environment:
       - RUST_LOG=info
-"#.to_string();
+"#
+        .to_string();
 
         if plan.needs_caching {
             compose.push_str("      - REDIS_URL=redis://redis:6379\n");
@@ -122,7 +124,9 @@ services:
         }
 
         if plan.needs_caching {
-            compose.push_str("\n  redis:\n    image: redis:alpine\n    ports:\n      - \"6379:6379\"\n");
+            compose.push_str(
+                "\n  redis:\n    image: redis:alpine\n    ports:\n      - \"6379:6379\"\n",
+            );
         }
         if plan.needs_database {
             compose.push_str("\n  postgres:\n    image: postgres:15\n    environment:\n      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}\n    ports:\n      - \"5432:5432\"\n");
@@ -137,12 +141,12 @@ services:
     /// Generiert Kubernetes Manifests
     fn generate_kubernetes(&self, plan: &DeploymentPlan) -> Result<InfrastructureFile> {
         let replicas = plan.replicas.unwrap_or(3);
-        
+
         let port = std::env::var("PORT")
             .ok()
             .and_then(|p| p.parse::<u16>().ok())
             .unwrap_or(3000);
-        
+
         let content = format!(
             r#"# Kubernetes Deployment Configuration
 # Port: {}
@@ -281,7 +285,13 @@ spec:
     interval: 30s
     scrapeTimeout: 10s
 "#,
-            port, replicas, replicas, port, port, port, port,
+            port,
+            replicas,
+            replicas,
+            port,
+            port,
+            port,
+            port,
             plan.memory_request.as_deref().unwrap_or("256Mi"),
             plan.cpu_request.as_deref().unwrap_or("100m"),
             plan.memory_limit.as_deref().unwrap_or("512Mi"),
@@ -326,7 +336,8 @@ spec:
         envFrom:
         - configMapRef:
             name: velin-api-config
-"#.to_string();
+"#
+        .to_string();
 
         Ok(InfrastructureFile {
             name: "helm-chart.yaml".to_string(),
@@ -347,7 +358,8 @@ spec:
     }
   }
 }
-"#.to_string();
+"#
+        .to_string();
 
         Ok(InfrastructureFile {
             name: "lambda-config.json".to_string(),
@@ -358,14 +370,14 @@ spec:
     /// Generiert API Gateway Config
     fn generate_api_gateway(&self, _plan: &DeploymentPlan) -> Result<InfrastructureFile> {
         // Ersetze Platzhalter durch Umgebungsvariablen oder Config-Werte
-        let account_id = std::env::var("AWS_ACCOUNT_ID")
-            .unwrap_or_else(|_| "${AWS_ACCOUNT_ID}".to_string());
-        let region = std::env::var("AWS_REGION")
-            .unwrap_or_else(|_| "us-east-1".to_string());
-        let function_name = std::env::var("LAMBDA_FUNCTION_NAME")
-            .unwrap_or_else(|_| "velin-api".to_string());
-        
-        let content = format!(r#"{{
+        let account_id =
+            std::env::var("AWS_ACCOUNT_ID").unwrap_or_else(|_| "${AWS_ACCOUNT_ID}".to_string());
+        let region = std::env::var("AWS_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+        let function_name =
+            std::env::var("LAMBDA_FUNCTION_NAME").unwrap_or_else(|_| "velin-api".to_string());
+
+        let content = format!(
+            r#"{{
   "openapi": "3.0.0",
   "info": {{
     "title": "VelinScript API",
@@ -383,7 +395,9 @@ spec:
     }}
   }}
 }}
-"#, region, region, account_id, function_name);
+"#,
+            region, region, account_id, function_name
+        );
 
         Ok(InfrastructureFile {
             name: "api-gateway.json".to_string(),
@@ -424,7 +438,8 @@ spec:
         image: redis:alpine
         ports:
         - containerPort: 6379
-"#.to_string();
+"#
+        .to_string();
 
         Ok(InfrastructureFile {
             name: "redis.yaml".to_string(),
@@ -470,7 +485,8 @@ spec:
             secretKeyRef:
               name: postgres-secret
               key: password
-"#.to_string();
+"#
+        .to_string();
 
         Ok(InfrastructureFile {
             name: "postgres.yaml".to_string(),
@@ -500,9 +516,7 @@ pub struct InfrastructureCode {
 
 impl InfrastructureCode {
     pub fn new() -> Self {
-        Self {
-            files: Vec::new(),
-        }
+        Self { files: Vec::new() }
     }
 
     pub fn add(&mut self, file: InfrastructureFile) {

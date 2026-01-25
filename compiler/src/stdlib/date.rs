@@ -1,4 +1,3 @@
-
 pub struct DateStdlib;
 
 impl DateStdlib {
@@ -7,7 +6,10 @@ impl DateStdlib {
     }
 
     pub fn generate_format_code(timestamp: &str, format: &str) -> String {
-        format!("crate::stdlib::datetime::DateTimeStdlib::format_custom({}, {})", timestamp, format)
+        format!(
+            "crate::stdlib::datetime::DateTimeStdlib::format_custom({}, {})",
+            timestamp, format
+        )
     }
 
     pub fn generate_add_days_code(timestamp: &str, days: &str) -> String {

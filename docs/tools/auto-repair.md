@@ -1,5 +1,9 @@
 # Auto-Repair & Self-Healing Builds
 
+**Version:** 3.1.0  
+**Letzte Aktualisierung:** 2026-02-02  
+**Status:** ✅ Erweitert um proaktive Parse-Fehler-Erkennung
+
 VelinScript geht einen Schritt weiter als klassische Compiler: Es sagt Ihnen nicht nur, was falsch ist, sondern versucht aktiv, es zu reparieren. Die **AutoFix Engine** ist tief in den Kompilierungsprozess integriert und kann eine Vielzahl von Syntax- und Flüchtigkeitsfehlern vollautomatisch beheben.
 
 ## Wofür ist AutoFix ideal?
@@ -93,10 +97,95 @@ Die Engine konzentriert sich auf eindeutige, mechanische Fehler:
 *   **Satzzeichen:**
     *   Fehlende Semikolons (wo sie syntaktisch zwingend sind).
     *   Falsche Kommas in Listen oder Maps.
+*   **Parse-Fehler (Neu in 3.1.0):**
+    *   **"Expected '=' (found: Semicolon)"**: `let x;` -> `let x = null;`
+    *   **"Expected ';'"**: Fügt fehlende Semikolons nach Expression-Statements ein.
+    *   **"Expected ':'"**: Fügt fehlende Doppelpunkte in Funktions-Parametern ein: `fn test(x number)` -> `fn test(x: number)`
+    *   **"Expected ')'"**: Behebt unbalancierte Klammern in Funktions-Parametern oder Ausdrücken.
+    *   **"Expected '}'"**: Behebt unbalancierte geschweifte Klammern in Block-Strukturen.
+    *   **"Expected '=>'"**: Fügt fehlende `=>` in Match-Patterns ein.
+    *   **"Expected type (found: Number/String/Boolean)"**: Ersetzt Literale durch passende Typen: `let x: 0.0` -> `let x: number`, `let x: "test"` -> `let x: string`
+    *   **"Expected expression"**: Fügt fehlende Ausdrücke ein: `return;` -> `return null;`
+    *   **Keyword-Tippfehler**: Korrigiert häufige Tippfehler in Keywords: `funtion` -> `fn`, `retrun` -> `return`, `iff` -> `if`
+    *   **Fehlende Kommas in Struct-Literalen**: `Struct { a: 1 b: 2 }` -> `Struct { a: 1, b: 2 }`
+    *   **Fehlende Doppelpunkte in Struct-Literalen**: `Struct { a 1, b 2 }` -> `Struct { a: 1, b: 2 }`
+    *   **Operator-Verwechslungen**: `if (x = y)` -> `if (x == y)` (in Bedingungen)
+    *   **Fehlende Parameter-Typen**: `fn test(x, y)` -> `fn test(x: any, y: any)`
+    *   **Unbalancierte Strings/Kommentare**: Fügt fehlende schließende Anführungszeichen oder Kommentar-Enden ein
 *   **Typos (Experimentell):**
     *   Erkennt Buchstabendreher bei Keywords (`funtion` -> `fn`, `retrun` -> `return`).
 *   **Imports:**
     *   (Via LSP) Schlägt vor, fehlende Module automatisch zu importieren, wenn der Typname eindeutig ist.
+
+### Beispiele für neue Parse-Fehler-Fixes
+
+**1. Fehlendes '=' in let/const Statements:**
+```velin
+// Vorher:
+let x;
+const y: number;
+
+// Nachher:
+let x = null;
+const y: number = null;
+```
+
+**2. Fehlender Doppelpunkt in Funktions-Parametern:**
+```velin
+// Vorher:
+fn test(x number, y string) {}
+
+// Nachher:
+fn test(x: number, y: string) {}
+```
+
+**3. Fehlendes Semikolon:**
+```velin
+// Vorher:
+let x = 42
+let y = 10
+
+// Nachher:
+let x = 42;
+let y = 10;
+```
+
+**4. Fehlende '=>' in Match-Patterns:**
+```velin
+// Vorher:
+match x {
+    1,
+    2,
+}
+
+// Nachher:
+match x {
+    1 => {},
+    2 => {},
+}
+```
+
+**5. Literal statt Typ in Typ-Annotationen:**
+```velin
+// Vorher:
+let x: 0.0;
+let y: "test";
+let z: true;
+
+// Nachher:
+let x: number;
+let y: string;
+let z: boolean;
+```
+
+**6. Fehlender Ausdruck nach return:**
+```velin
+// Vorher:
+return;
+
+// Nachher:
+return null;
+```
 
 ---
 

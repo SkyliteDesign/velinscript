@@ -1,4 +1,3 @@
-
 use crate::parser::ast::*;
 use std::collections::HashSet;
 
@@ -15,7 +14,7 @@ impl PipelineOptimizer {
             if let Item::Struct(s) = i {
                 s.decorators.iter().any(|d| d.name == "VelinPipeline")
             } else if let Item::Function(f) = i {
-                 f.decorators.iter().any(|d| d.name == "VelinPipeline")
+                f.decorators.iter().any(|d| d.name == "VelinPipeline")
             } else {
                 false
             }
@@ -45,15 +44,16 @@ impl PipelineOptimizer {
                 // Extract variables used in the expression
                 let expr_used_vars = self.extract_used_variables(&let_stmt.value);
                 used_vars.extend(expr_used_vars.clone());
-                
+
                 // Check if this let statement depends on any currently "pending" parallel group
                 // For MVP, we use a simple heuristic:
                 // If it's an async call (await), it's a candidate for parallelization
                 if let Expression::Await { expr } = &let_stmt.value {
                     if let Expression::Call { .. } = expr.as_ref() {
                         // Check if this statement depends on variables defined in current group
-                        let has_dependency = expr_used_vars.iter().any(|var| defined_vars.contains(var));
-                        
+                        let has_dependency =
+                            expr_used_vars.iter().any(|var| defined_vars.contains(var));
+
                         if !has_dependency {
                             // It's an async call without dependencies on current group.
                             current_group.push(idx);
@@ -75,7 +75,7 @@ impl PipelineOptimizer {
                 defined_vars.clear();
             }
         }
-        
+
         if current_group.len() > 1 {
             parallel_groups.push(current_group);
         }
@@ -115,7 +115,11 @@ impl PipelineOptimizer {
             Expression::UnaryOp { expr, .. } => {
                 self.collect_variables(expr, vars);
             }
-            Expression::If { condition, then_expr, else_expr } => {
+            Expression::If {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
                 self.collect_variables(condition, vars);
                 self.collect_variables(then_expr, vars);
                 self.collect_variables(else_expr, vars);

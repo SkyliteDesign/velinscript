@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 
 /// Learning System für Selbstoptimierung
-/// 
+///
 /// Analysiert Optimierungs-Historie und lernt daraus:
 /// - Analysiert Optimierungs-Historie
 /// - Extrahiert Patterns
@@ -99,7 +99,8 @@ impl LearningSystem {
         let mut by_type: HashMap<String, Vec<&OptimizationRecord>> = HashMap::new();
         for record in &self.optimization_history.optimizations {
             if record.success {
-                by_type.entry(record.optimization_type.clone())
+                by_type
+                    .entry(record.optimization_type.clone())
                     .or_insert_with(Vec::new)
                     .push(record);
             }
@@ -109,33 +110,39 @@ impl LearningSystem {
         for (opt_type, records) in by_type {
             if records.len() >= 3 {
                 // Mindestens 3 erfolgreiche Optimierungen für Pattern
-                let improvements: Vec<f64> = records.iter()
+                let improvements: Vec<f64> = records
+                    .iter()
                     .map(|r| r.after_performance - r.before_performance)
                     .collect();
-                
+
                 let avg_improvement = improvements.iter().sum::<f64>() / improvements.len() as f64;
-                
+
                 // Berechne Standardabweichung für Confidence
-                let variance = improvements.iter()
+                let variance = improvements
+                    .iter()
                     .map(|x| (x - avg_improvement).powi(2))
-                    .sum::<f64>() / improvements.len() as f64;
+                    .sum::<f64>()
+                    / improvements.len() as f64;
                 let std_dev = variance.sqrt();
-                
+
                 // Confidence basierend auf Konsistenz (niedrige Standardabweichung = hohe Confidence)
                 let consistency = if std_dev > 0.0 {
                     (avg_improvement / std_dev.max(0.1)).min(1.0)
                 } else {
                     1.0
                 };
-                
-                let success_rate = records.len() as f64 / 
-                    self.optimization_history.optimizations.iter()
+
+                let success_rate = records.len() as f64
+                    / self
+                        .optimization_history
+                        .optimizations
+                        .iter()
                         .filter(|r| r.optimization_type == opt_type)
                         .count() as f64;
-                
+
                 // Kombiniere Success Rate und Consistency für finale Confidence
                 let confidence = (success_rate * 0.6 + consistency * 0.4).min(1.0);
-                
+
                 if confidence > 0.5 {
                     let pattern = OptimizationPattern {
                         optimization_type: opt_type.clone(),
@@ -159,7 +166,8 @@ impl LearningSystem {
             *location_counts.entry(record.location.clone()).or_insert(0) += 1;
         }
 
-        location_counts.iter()
+        location_counts
+            .iter()
             .max_by_key(|(_, count)| *count)
             .map(|(location, _)| location.clone())
             .unwrap_or_else(|| "unknown".to_string())
@@ -172,7 +180,10 @@ impl LearningSystem {
         for pattern in patterns {
             // Generiere Regel basierend auf Pattern
             let rule = OptimizationRule {
-                pattern: format!("Apply {} to {}", pattern.optimization_type, pattern.common_location),
+                pattern: format!(
+                    "Apply {} to {}",
+                    pattern.optimization_type, pattern.common_location
+                ),
                 condition: self.infer_condition(pattern),
                 action: self.infer_action(&pattern.optimization_type),
                 confidence: pattern.success_rate,
@@ -188,9 +199,9 @@ impl LearningSystem {
         // Einfache Heuristik basierend auf Pattern-Typ
         match pattern.optimization_type.as_str() {
             "parallelize" => RuleCondition::ExecutionTime(0.1), // > 100ms
-            "inline" => RuleCondition::FunctionComplexity(10), // < 10 statements
-            "cache" => RuleCondition::CallFrequency(100), // > 100 calls
-            _ => RuleCondition::ExecutionTime(0.5), // Default
+            "inline" => RuleCondition::FunctionComplexity(10),  // < 10 statements
+            "cache" => RuleCondition::CallFrequency(100),       // > 100 calls
+            _ => RuleCondition::ExecutionTime(0.5),             // Default
         }
     }
 
@@ -207,28 +218,28 @@ impl LearningSystem {
     /// Validiert Regeln mit Test-Validierung
     fn validate_rules(&self, rules: OptimizationRules) -> Result<OptimizationRules> {
         let mut validated_rules = Vec::new();
-        
+
         for rule in rules.rules {
             // Basis-Validierung: Confidence > 0.5
             if rule.confidence <= 0.5 {
                 continue;
             }
-            
+
             // Zusätzliche Validierung: Prüfe ob Regel in Historie erfolgreich war
-            let matching_records: Vec<&OptimizationRecord> = self.optimization_history.optimizations
+            let matching_records: Vec<&OptimizationRecord> = self
+                .optimization_history
+                .optimizations
                 .iter()
                 .filter(|r| {
-                    r.optimization_type == self.rule_action_to_type(&rule.action) &&
-                    r.location.contains(&rule.pattern)
+                    r.optimization_type == self.rule_action_to_type(&rule.action)
+                        && r.location.contains(&rule.pattern)
                 })
                 .collect();
-            
+
             if !matching_records.is_empty() {
-                let success_count = matching_records.iter()
-                    .filter(|r| r.success)
-                    .count();
+                let success_count = matching_records.iter().filter(|r| r.success).count();
                 let success_rate = success_count as f64 / matching_records.len() as f64;
-                
+
                 // Nur akzeptieren wenn Success Rate > 60%
                 if success_rate > 0.6 {
                     validated_rules.push(rule);
@@ -241,9 +252,11 @@ impl LearningSystem {
             }
         }
 
-        Ok(OptimizationRules { rules: validated_rules })
+        Ok(OptimizationRules {
+            rules: validated_rules,
+        })
     }
-    
+
     /// Konvertiert RuleAction zu Optimization Type String
     fn rule_action_to_type(&self, action: &RuleAction) -> String {
         match action {
@@ -253,45 +266,50 @@ impl LearningSystem {
             RuleAction::Optimize => "optimize".to_string(),
         }
     }
-    
+
     /// Rollback-Mechanismus für fehlgeschlagene Optimierungen
     pub fn should_rollback(&self, opt_type: &str, location: &str) -> bool {
         // Prüfe Historie für diese Optimierung
-        let recent_records: Vec<&OptimizationRecord> = self.optimization_history.optimizations
+        let recent_records: Vec<&OptimizationRecord> = self
+            .optimization_history
+            .optimizations
             .iter()
-            .filter(|r| {
-                r.optimization_type == opt_type &&
-                r.location == location
-            })
+            .filter(|r| r.optimization_type == opt_type && r.location == location)
             .rev()
             .take(5) // Letzte 5 Versuche
             .collect();
-        
+
         if recent_records.is_empty() {
             return false;
         }
-        
+
         // Rollback wenn mehr als 60% der letzten Versuche fehlgeschlagen sind
-        let failure_count = recent_records.iter()
-            .filter(|r| !r.success)
-            .count();
+        let failure_count = recent_records.iter().filter(|r| !r.success).count();
         let failure_rate = failure_count as f64 / recent_records.len() as f64;
-        
+
         failure_rate > 0.6
     }
 
     /// Registriert Optimierung
-    pub fn record_optimization(&mut self, opt_type: String, location: String, before: f64, after: f64) {
+    pub fn record_optimization(
+        &mut self,
+        opt_type: String,
+        location: String,
+        before: f64,
+        after: f64,
+    ) {
         let success = after > before; // Bessere Performance = Erfolg
         let improvement = after - before;
 
-        self.optimization_history.optimizations.push(OptimizationRecord {
-            optimization_type: opt_type,
-            location,
-            before_performance: before,
-            after_performance: after,
-            success,
-        });
+        self.optimization_history
+            .optimizations
+            .push(OptimizationRecord {
+                optimization_type: opt_type,
+                location,
+                before_performance: before,
+                after_performance: after,
+                success,
+            });
 
         self.success_metrics.total_optimizations += 1;
         if success {
@@ -299,11 +317,11 @@ impl LearningSystem {
         }
 
         // Update average improvement
-        let total_improvement = self.success_metrics.average_improvement 
+        let total_improvement = self.success_metrics.average_improvement
             * (self.success_metrics.total_optimizations - 1) as f64
             + improvement;
-        self.success_metrics.average_improvement = total_improvement 
-            / self.success_metrics.total_optimizations as f64;
+        self.success_metrics.average_improvement =
+            total_improvement / self.success_metrics.total_optimizations as f64;
     }
 
     /// Gibt Success Metrics zurück

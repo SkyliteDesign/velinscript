@@ -554,36 +554,58 @@ async fn get_users() -> Result<Json<Vec<User>>, AppError> {
 
 ---
 
-## Fehlerbehandlung
+## Fehlerbehandlung ✅ (Verbessert in 3.1.0)
 
 ### Pass-Fehler
 
 Wenn ein Pass fehlschlägt:
 
 1. **AutoFixPass:** Fehler werden ignoriert (AutoFix ist optional)
-2. **ParserPass:** Compiler stoppt (kritischer Fehler)
-3. **Andere Passes:** Fehler werden gesammelt, Compiler läuft weiter (außer bei kritischen Fehlern)
+2. **ParserPass:** Compiler stoppt (kritischer Fehler) ✅
+3. **TypeCheckPass:** Compiler stoppt (kritischer Fehler) ✅ (Neu in 3.1.0)
+4. **CodegenPass:** Compiler stoppt (kritischer Fehler) ✅ (Neu in 3.1.0)
+5. **Andere Passes:** Fehler werden gesammelt, Compiler läuft weiter (außer bei kritischen Fehlern)
 
 ### Fehler-Aggregation
 
 Alle Fehler werden im `CompilationContext` gesammelt:
 
 ```rust
-context.errors  // Alle Fehler
-context.warnings  // Alle Warnungen
+context.errors      // Alle Fehler
+context.warnings    // Alle Warnungen (separat) ✅ (Neu in 3.1.0)
 ```
 
-### Fehler-Reporting
+**Zentrale API:**
+```rust
+context.add_error(CompilerError::parse_error(...));  // ✅ Neu
+context.add_warning("Deprecated function".to_string());  // ✅ Neu
+context.add_info("Optimization applied".to_string());  // ✅ Neu
+```
 
-Am Ende der Kompilierung werden alle Fehler ausgegeben:
+### Fehler-Reporting mit Lösungsvorschlägen ✅ (Neu in 3.1.0)
+
+Am Ende der Kompilierung werden alle Fehler mit intelligenten Lösungsvorschlägen ausgegeben:
 
 ```
-Error: Type mismatch
-  at main.velin:12: let x: number = "hello";
-  
-Warning: Unused variable 'y'
+❌ Type error: Type mismatch at line 12, column 15
+📁 Datei: main.velin
+📍 Position: Zeile 12, Spalte 15
+
+💡 Did you mean: 'length'?
+💡 Beispiel für explizite Typ-Annotation:
+   let x: number = 42;
+   let name: string = "John";
+
+🔧 Lösungsvorschläge:
+   - Prüfe die Typen deiner Variablen
+   - Nutze explizite Typ-Annotationen bei Unsicherheit
+   - Siehe: docs/guides/tutorial-1-basics.md
+
+⚠️  Warning: Deprecated function
   at main.velin:15: let y = 42;
 ```
+
+**Siehe auch:** [Fehlerbehandlung & Lösungsvorschläge](error-handling.md) ✅ (Neu in 3.1.0)
 
 ---
 
@@ -646,5 +668,5 @@ Die Pass-Reihenfolge ist kritisch:
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
+**Letzte Aktualisierung:** 2026-02-02  
 **Version:** 3.1.0

@@ -1,27 +1,26 @@
+use crate::compiler::config::CompilerConfig;
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
+use crate::parser::ast::*;
 /// AI Code Sandbox - Isoliert AI-generierten Code
-/// 
+///
 /// Dieses Modul implementiert eine Sandbox für AI-generierten Code:
 /// - Isoliert Code-Execution
 /// - Verhindert Zugriff auf gefährliche Ressourcen
 /// - Validiert Code vor Execution
-/// 
+///
 /// # Beispiel
-/// 
+///
 /// ```rust
 /// use velin_compiler::passes::ai_sandbox::AICodeSandbox;
-/// 
+///
 /// let sandbox = AICodeSandbox::new();
 /// match sandbox.execute_safely(code) {
 ///     Ok(result) => println!("Execution successful: {}", result),
 ///     Err(e) => println!("Execution failed: {}", e),
 /// }
 /// ```
-
 use crate::parser::parser::Parser;
-use crate::parser::ast::*;
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
-use crate::compiler::config::CompilerConfig;
 use anyhow::Result;
 use std::collections::HashSet;
 
@@ -120,7 +119,12 @@ impl AICodeSandbox {
     }
 
     /// Validiert Code
-    fn validate_code(&self, program: &Program, errors: &mut Vec<String>, warnings: &mut Vec<String>) -> Result<()> {
+    fn validate_code(
+        &self,
+        program: &Program,
+        errors: &mut Vec<String>,
+        warnings: &mut Vec<String>,
+    ) -> Result<()> {
         // Prüfe auf undefinierte Funktionen
         let defined_functions: HashSet<String> = program
             .items
@@ -154,7 +158,7 @@ impl AICodeSandbox {
     ) -> Result<()> {
         // Vereinfachte Implementierung: Durchsuche Statements nach Funktions-Aufrufen
         // In einer vollständigen Implementierung würde hier der AST rekursiv durchsucht werden
-        
+
         // Prüfe auf verbotene Funktionen
         // In einer vollständigen Implementierung würde hier nach Funktions-Aufrufen gesucht werden
         // Für jetzt: Prüfe ob Code-String die Funktion enthält
@@ -164,7 +168,12 @@ impl AICodeSandbox {
     }
 
     /// Prüft auf gefährliche Operationen
-    fn check_dangerous_operations(&self, program: &Program, errors: &mut Vec<String>, warnings: &mut Vec<String>) -> Result<()> {
+    fn check_dangerous_operations(
+        &self,
+        program: &Program,
+        errors: &mut Vec<String>,
+        warnings: &mut Vec<String>,
+    ) -> Result<()> {
         for item in &program.items {
             if let Item::Function(f) = item {
                 // Prüfe Funktionsname auf gefährliche Patterns
@@ -179,14 +188,14 @@ impl AICodeSandbox {
 
                 // Prüfe auf File-Operationen
                 if f.name.contains("file") || f.name.contains("File") {
-                    warnings.push(format!(
-                        "Function '{}' may perform file operations",
-                        f.name
-                    ));
+                    warnings.push(format!("Function '{}' may perform file operations", f.name));
                 }
 
                 // Prüfe auf Network-Operationen
-                if f.name.contains("network") || f.name.contains("http") || f.name.contains("request") {
+                if f.name.contains("network")
+                    || f.name.contains("http")
+                    || f.name.contains("request")
+                {
                     errors.push(format!(
                         "Function '{}' may perform network operations (not allowed in sandbox)",
                         f.name
@@ -214,7 +223,7 @@ impl Default for AICodeSandbox {
 }
 
 /// AI Sandbox Pass
-/// 
+///
 /// Validiert AI-generierten Code in isolierter Sandbox
 pub struct AISandboxPass {
     sandbox: AICodeSandbox,
@@ -245,7 +254,7 @@ impl Pass for AISandboxPass {
             // Validiere AI-generierte Funktionen/Structs in Sandbox
             // Vereinfachte Implementierung: Validiere das gesamte Programm
             let code = format!("{:?}", program); // Vereinfacht - sollte echten Code-String verwenden
-            
+
             match self.sandbox.execute_safely(&code) {
                 Ok(result) => {
                     if !result.success {

@@ -1,19 +1,12 @@
-
 pub struct TracingStdlib;
 
 impl TracingStdlib {
     pub fn generate_start_span_code(name: &str) -> String {
-        format!(
-            "tracing::span!(tracing::Level::INFO, \"{}\")",
-            name
-        )
+        format!("tracing::span!(tracing::Level::INFO, \"{}\")", name)
     }
 
     pub fn generate_set_attribute_code(span: &str, key: &str, value: &str) -> String {
-        format!(
-            "{}.record(\"{}\", {});",
-            span, key, value
-        )
+        format!("{}.record(\"{}\", {});", span, key, value)
     }
 
     pub fn generate_child_span_code(parent: &str, name: &str) -> String {
@@ -24,10 +17,7 @@ impl TracingStdlib {
     }
 
     pub fn generate_end_span_code(span: &str) -> String {
-        format!(
-            "drop({})",
-            span
-        )
+        format!("drop({})", span)
     }
 
     pub fn generate_export_code(format: &str) -> String {
@@ -43,9 +33,6 @@ impl TracingStdlib {
     }
 
     pub fn generate_span_enter_code(span: &str) -> String {
-        format!(
-            "let _guard = {}.enter();",
-            span
-        )
+        format!("let _guard = {}.enter();", span)
     }
 }

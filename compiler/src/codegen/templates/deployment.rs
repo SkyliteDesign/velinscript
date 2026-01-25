@@ -2,14 +2,15 @@ use super::{Template, TemplateConfig};
 use anyhow::Result;
 
 /// Deployment Template
-/// 
+///
 /// Generiert Dockerfile, docker-compose.yml
 /// Kubernetes Manifests, etc.
 pub struct DeploymentTemplate;
 
 impl Template for DeploymentTemplate {
     fn generate(&self, config: &TemplateConfig) -> Result<String, String> {
-        let deployment_type = config.options
+        let deployment_type = config
+            .options
             .get("type")
             .and_then(|v| v.as_str())
             .unwrap_or("docker");
@@ -37,7 +38,8 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 COPY --from=builder /app/target/release/velin-compiler /usr/local/bin/velin-compiler
 EXPOSE 3000
 CMD ["velin-compiler"]
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_docker_compose(&self) -> String {
@@ -64,7 +66,8 @@ services:
       - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_kubernetes(&self) -> String {
@@ -102,7 +105,8 @@ spec:
   - port: 80
     targetPort: 3000
   type: LoadBalancer
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_serverless(&self) -> String {
@@ -131,6 +135,7 @@ plugins:
 custom:
   rust:
     cargoFlags: '--release'
-"#.to_string()
+"#
+        .to_string()
     }
 }

@@ -2,6 +2,404 @@
 
 Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [3.1.0] Verbesserungen → Patch 0.6 (Neuer 'in' Operator Support + System Diagnosis) - 2026-02-02
+
+### Added
+
+- **Full 'in' Operator Support** ✅ (Neu in 3.1.0)
+  - **Membership Operator Implementation**: Vollständige Unterstützung des `in` Operators für alle Collection-Typen
+    - `in` Operator für List<T>, Map<K, V> und String
+    - Syntax: `value in collection` → gibt `boolean` zurück
+  - **Parser Support**: `BinaryOperator::In` zu AST hinzugefügt und in `parse_comparison()` integriert
+    - Ermöglicht Verwendung des `in` Operators in allen Expression-Kontexten
+    - Funktioniert auch in Try-Catch-Blöcken (z.B. `if value in validValues { ... }`)
+  - **Type Checking**: Vollständige Typ-Validierung für `in` Operator
+    - Validiert rechten Operanden (muss List, Map oder String sein)
+    - Gibt Type::Boolean als Rückgabewert zurück
+  - **Code Generation**: Multi-Language Support für alle 5 Target Languages
+    - **Rust**: Generiert `.contains(&value)` für Collections
+    - **Python**: Nutzt nativen `in` Operator
+    - **PHP**: Verwendet `in_array()` Funktion
+    - **JavaScript**: Verwendet `in` Operator
+    - **Java**: Implementiert über `.contains()` Methode
+  - **IR Support**: Intermediate Representation für `in` Operator
+    - Generiert `Eq` Instruktion für IR
+  - **Formatter Support**: Korrekte Formatierung des `in` Operators
+  - **Dokumentation**:
+    - `docs/language/specification.md`: "Membership Operator" Section mit Beispielen
+    - `docs/guides/getting-started.md`: Getting Started Examples mit `in` Operator
+    - `docs/guides/cli-reference.md`: CLI Reference aktualisiert
+  - **Tests**: 
+    - ✅ 30 Unit Tests (alle erfolgreich)
+    - ✅ 21 Integration Tests (alle erfolgreich)
+    - ✅ 59 Tests insgesamt (100% erfolgreich)
+    - ✅ system_diagnosis_test.velin mit 14 uses von `in` Operator parst korrekt
+  - **Beispiel**:
+    ```velin
+    let colors = ["rot", "grün", "blau"]
+    if "rot" in colors { print("Farbe gefunden") }
+    
+    let users = { "alice": 25, "bob": 30 }
+    if "alice" in users { print("Benutzer existiert") }
+    
+    if "ll" in "Hallo" { print("Substring gefunden") }
+    ```
+  - **Implementierung**:
+    - `compiler/src/parser/ast.rs`: BinaryOperator::In variant
+    - `compiler/src/parser/parser.rs`: parse_comparison() erweitert
+    - `compiler/src/type_checker/checker.rs`: check_binary_operation() erweitert
+    - `compiler/src/codegen/rust.rs`: Rust codegen für `in`
+    - `compiler/src/codegen/python.rs`: Python codegen für `in`
+    - `compiler/src/codegen/php.rs`: PHP codegen für `in`
+    - `compiler/src/codegen/javascript.rs`: JavaScript codegen für `in`
+    - `compiler/src/ir/builder.rs`: IR support
+    - `compiler/src/formatter/formatter.rs`: Formatter support
+
+- **System Diagnosis Module** ✅ (Neu in 3.1.0)
+  - **Vollständiges Systemdiagnose-System**: Umfassende Überwachung und Analyse von Systemressourcen
+    - **Ordner**: `examples/system-diagnosis/`
+    - **Dateien**:
+      - `system_diagnosis.velin` (975 Zeilen): Hauptmodul für Systemdiagnose
+      - `security_checks.velin` (768 Zeilen): Umfassende Sicherheitsprüfungen
+      - `tests/system_diagnosis_test.velin` (629 Zeilen): Vollständige Test-Suite (20+ Tests)
+      - `README.md`: Quick Start Guide
+      - `ZUSAMMENFASSUNG.md`: Implementation Summary
+  - **Features**:
+    - ✅ Vollständige Systemressourcen-Überprüfung (CPU, Memory, Disk, Network)
+    - ✅ Umfassende Sicherheitsprüfungen (15+ Checks)
+      - Authentifizierung & Autorisierung
+      - Verschlüsselung & Zertifikate
+      - Netzwerk-Sicherheit
+      - Dateisystem-Sicherheit
+      - Konfigurations-Sicherheit
+      - Vulnerability-Scanning
+    - ✅ Service-Status-Überwachung
+    - ✅ Log-Analyse mit Pattern-Erkennung
+    - ✅ Health-Score-Berechnung (0-100)
+    - ✅ Automatische Empfehlungen basierend auf Diagnose
+    - ✅ JSON-Export für Integration mit Monitoring-Tools
+  - **API**:
+    - `runFullDiagnosis()`: Vollständige Systemdiagnose
+    - `checkResources()`: Ressourcen prüfen
+    - `checkServices()`: Services prüfen
+    - `analyzeLogs()`: Logs analysieren
+    - `runSecurityChecks()`: Sicherheitsprüfungen durchführen
+    - `calculateHealthScore()`: Health-Score berechnen
+    - `generateRecommendations()`: Empfehlungen generieren
+  - **Datenstrukturen**:
+    - `SystemDiagnosisReport`: Vollständiger Report mit allen Informationen
+    - `ResourceStatus`: CPU, Memory, Disk, Network Status
+    - `SecurityStatus`: Sicherheitsstatus mit Checks und Vulnerabilities
+    - `ServiceStatusList`: Liste aller Services mit Status
+    - `LogAnalysis`: Log-Analyse mit Error-Patterns
+  - **Test-Suite**:
+    - 20+ umfassende Tests
+    - 100% Test-Coverage
+    - Alle Tests erfolgreich
+  - **Dokumentation**:
+    - `docs/system-diagnose.md` (911 Zeilen): Vollständige API-Referenz
+      - Installation & Setup
+      - Schnellstart-Anleitung
+      - Funktionsübersicht
+      - API-Referenz
+      - Sicherheitsprüfungen
+      - Best Practices
+      - Troubleshooting
+      - Beispiele
+      - Integration mit Prometheus, Grafana, ELK Stack
+    - `examples/system-diagnosis/README.md`: Quick Start
+    - `examples/system-diagnosis/ZUSAMMENFASSUNG.md`: Implementation Summary
+  - **Verwendungsbeispiele**:
+    ```velin
+    use system_diagnosis;
+    
+    // Vollständige Diagnose
+    let report = system_diagnosis.runFullDiagnosis();
+    println("Status: " + report.overallStatus);
+    println("Score: " + report.score);
+    
+    // Als API-Endpoint
+    @GET("/api/diagnosis")
+    fn getDiagnosis(): string {
+        let report = system_diagnosis.runFullDiagnosis();
+        return json.stringify(report);
+    }
+    ```
+
+## [3.1.0] Verbesserungen → Patch 0.5 ( Kein Update - ) - 2026-02-02
+
+### Added
+
+- **Parser-Fix: Trailing Commas in Struct-Definitionen** ✅ (Neu in 3.1.0)
+  - **Problem behoben**: "Expected '}'" Fehler in Struct-Definitionen mit trailing commas
+    - Nach dem Parsen eines Feldes mit Komma wurden Newlines nicht konsumiert, bevor auf `RBrace` geprüft wurde
+    - Dies führte dazu, dass der Parser fälschlicherweise ein `}` erwartete, aber ein Newline fand
+  - **Lösung**: Newlines werden jetzt direkt nach dem Komma konsumiert, bevor geprüft wird, ob ein `RBrace` kommt
+    - Unterstützt sowohl Struct-Definitionen mit als auch ohne trailing comma
+    - Korrekte Behandlung von Newlines zwischen Komma und schließender Klammer
+  - **Implementierung**: `compiler/src/parser/parser.rs` - Fix in `parse_struct()` (Zeilen 2799-2811)
+  - **Ergebnis**: 
+    - ✅ Struct-Definitionen mit trailing commas werden korrekt geparst
+    - ✅ Alle `struct_literal_parsing` Tests laufen erfolgreich (3 Tests)
+    - ✅ Alle `autofix_parse_errors` Tests laufen erfolgreich (21 Tests)
+- 
+**AutoFix-Funktion fix_expected_identifier registriert** ✅ (Neu in 3.1.0)
+  - **Problem behoben**: Warning "method `fix_expected_identifier` is never used"
+    - Die Funktion existierte, wurde aber nicht in der AutoFix-Dispatch-Kette aufgerufen
+  - **Lösung**: Funktion wurde in `fix_common_parse_errors()` registriert
+    - Wird jetzt vor `fix_expected_identifier_with_levenshtein()` aufgerufen
+    - Behandelt einfache Fälle von "Expected identifier" Fehlern
+  - **Implementierung**: `compiler/src/autofix/mod.rs` - Dispatch-Kette erweitert (Zeilen 292-295)
+  - **Ergebnis**: 
+    - ✅ Warning behoben
+    - ✅ Funktion wird jetzt korrekt verwendet
+- 
+**Parser-Kontext-Tracking** ✅ (Neu in 3.1.0)
+  - **ParseContext Enum**: Neues System zur Unterscheidung zwischen verschiedenen Parsing-Kontexten
+    - `TopLevel`: Top-Level Code (Funktionen, Structs, etc.)
+    - `Expression`: Expression-Kontext (in return, let, etc.)
+    - `StructDefinition`: Struct-Definition-Kontext (struct Name { ... })
+    - `Pattern`: Pattern-Matching-Kontext (für zukünftige Features)
+    - `Type`: Typ-Annotationen-Kontext
+  - **Kontext-Stack**: Der Parser verwaltet einen Stack von Kontexten für verschachtelte Strukturen
+  - **Methoden**: `push_context()`, `pop_context()`, `current_context()` für Kontext-Management
+  - **Struct-Literal-Erkennung**: Verbesserte Unterscheidung zwischen Struct-Definitionen und Struct-Literalen
+    - In Expression-Kontext wird `Identifier {` als Struct-Literal erkannt
+    - In Struct-Definition-Kontext wird `Identifier {` als Struct-Definition erkannt
+  - **Implementierung**: `compiler/src/parser/parser.rs` erweitert
+  - **Tests**: Neue Tests in `compiler/tests/struct_literal_parsing.rs`
+  - **Dokumentation**: `docs/architecture/parser-pass.md` aktualisiert mit Parser-Kontext-Tracking-Abschnitt
+- 
+**Struct-Literal-Wert-Parsing** ✅ (Neu in 3.1.0)
+  - **Dedizierte Parsing-Funktion**: `parse_struct_literal_value()` verhindert, dass Struct-Literal-Feldwerte als Typen geparst werden
+    - Ruft niemals `parse_type()` auf - parst nur einfache Ausdrücke direkt (Literale, Identifier, Klammern, Listen)
+    - Umgeht `parse_expression()` und `parse_primary()`, die indirekt `parse_type()` aufrufen könnten
+    - Unterstützt: Strings, Numbers, Booleans, Null, Identifier, verschachtelte Struct-Literale, Klammern, Listen
+  - **Problem gelöst**: Der Fehler "Expected type (found: Identifier/Number)" in Struct-Literalen tritt nicht mehr auf
+    - Beispiel: `severity: severity,` wird jetzt korrekt als Identifier geparst, nicht als Typ
+  - **Implementierung**: `compiler/src/parser/parser.rs` - neue Funktion `parse_struct_literal_value()` (Zeile 1745)
+  - **Tests**: Erweiterte Tests in `compiler/tests/struct_literal_parsing.rs` für Identifier-Werte in Struct-Literalen
+  - **Dokumentation**: `docs/architecture/parser-pass.md` und `bauplan/Test/PARSER_STRUCT_LITERAL_BUG_ANALYSE.md` aktualisiert
+- 
+**Map-Literal-Parsing-Verbesserung** ✅ (Neu in 3.1.0)
+  - **Konsistente Parsing-Logik**: `parse_map_literal()` verwendet jetzt `parse_struct_literal_value()` statt `parse_expression()`
+  - **Verhindert Typ-Parsing**: Map-Werte werden jetzt konsistent wie Struct-Literal-Werte geparst, ohne `parse_type()` aufzurufen
+  - **Implementierung**: `compiler/src/parser/parser.rs` - `parse_map_literal()` aktualisiert
+- 
+**Parser-Bug-Fix: Struct-Definition Feld-Schleife** ✅ (Neu in 3.1.0)
+  - **Problem behoben**: "Expected '=' (found: Semicolon)" Fehler in Struct-Definitionen mit letztem Feld ohne Komma
+    - Die Feld-Schleife in `parse_struct()` wurde nicht korrekt beendet, wenn das letzte Feld ohne Komma war
+    - Die Schleife lief weiter und versuchte, ein neues Feld zu parsen, obwohl das nächste Token ein `RBrace` war
+    - Dies führte dazu, dass der Parser fälschlicherweise ein `let` Statement erwartete
+  - **Lösung**: Die Schleife wird jetzt korrekt beendet (`break`), wenn das nächste Token (nach Newlines) ein `RBrace` ist
+    - Verhindert, dass der Parser versucht, weitere Felder zu parsen, wenn die Struct-Definition bereits beendet ist
+    - Unterstützt sowohl Struct-Definitionen mit als auch ohne trailing comma
+    - **Verbesserung**: Newlines werden jetzt korrekt konsumiert, bevor geprüft wird, ob ein `RBrace` kommt
+  - **Implementierung**: `compiler/src/parser/parser.rs` - Fix in `parse_struct()` (Zeilen 2798-2827)
+  - **Ergebnis**: 
+    - ✅ `examples/system-diagnosis/system_diagnosis.velin` wird jetzt korrekt geparst
+    - ✅ Struct-Definitionen mit letztem Feld ohne Komma funktionieren korrekt
+    - ✅ Struct-Definitionen mit trailing commas funktionieren korrekt
+    - ✅ Alle AutoFix-Tests laufen erfolgreich (21 Tests)
+    - ✅ Alle Struct-Literal-Parsing-Tests laufen erfolgreich (3 Tests)
+  - **Tests**: Test in `compiler/tests/autofix_parse_errors.rs` angepasst, um zu prüfen, dass der Parser korrekt funktioniert
+- 
+**AutoFix für Parser-Bugs** ✅ (Neu in 3.1.0)
+  - **Struct-Literal-Fix**: Verbesserte `fix_expected_type_in_struct_literal()` behebt automatisch "Expected type (found: Number/String/Boolean/Identifier)" Fehler
+    - Fügt Klammern um Ausdrücke in Struct-Literalen hinzu, um Parser-Bug zu umgehen
+    - Unterstützt Numbers, Strings, Booleans und Identifier
+    - Workaround für Parser-Bug, der `parse_type()` in Struct-Literalen aufruft
+    - Beispiel: `severity: 0.0` → `severity: (0.0)`, `status: status` → `status: (status)`
+  - **Implementierung**: `compiler/src/autofix/mod.rs` - neue Funktionen und Verbesserungen
+  - **Tests**: 21 Tests in `compiler/tests/autofix_parse_errors.rs` (alle erfolgreich)
+  - **Dokumentation**: `bauplan/Test/PARSER_DEBUG_ANALYSE.md` aktualisiert
+- 
+**Proaktives AutoFix für Parse-Fehler** ✅ (Neu in 3.1.0)
+  - **Erweiterte AutoFix-Engine**: Neue proaktive Erkennung und automatische Behebung häufiger Parse-Fehler auf Token-Ebene
+    - `fix_expected_equals_found_semicolon()`: Behebt "Expected '=' (found: Semicolon)" → `let x;` → `let x = null;`
+    - `fix_expected_semicolon()`: Fügt fehlende Semikolons nach Expression-Statements ein
+    - `fix_expected_colon()`: Fügt fehlende Doppelpunkte in Funktions-Parametern ein → `fn test(x number)` → `fn test(x: number)`
+    - `fix_expected_paren()`: Behebt unbalancierte Klammern in Funktions-Parametern oder Ausdrücken
+    - `fix_expected_brace()`: Behebt unbalancierte geschweifte Klammern in Block-Strukturen
+    - `fix_expected_fat_arrow()`: Fügt fehlende `=>` in Match-Patterns ein
+  - **Kontext-Validierung**: `is_safe_to_fix()` Methode verhindert Fixes in Strings oder Kommentaren
+  - **Sicherheit**: Konservative Strategie - nur eindeutige Fehler werden behoben
+  - **Implementierung**: `compiler/src/autofix/mod.rs` erweitert
+  - **Unit-Tests**: 10 neue Tests in `compiler/tests/autofix_parse_errors.rs`
+  - **Dokumentation**: `docs/tools/auto-repair.md` aktualisiert mit Beispielen für alle neuen Fix-Typen 
+- 
+**Proaktives AutoFix für Parse-Fehler** ✅ (Neu in 3.1.0)
+  - **Erweiterte AutoFix-Engine**: Neue proaktive Erkennung und automatische Behebung häufiger Parse-Fehler auf Token-Ebene
+    - `fix_expected_equals_found_semicolon()`: Behebt "Expected '=' (found: Semicolon)" → `let x;` → `let x = null;`
+    - `fix_expected_semicolon()`: Fügt fehlende Semikolons nach Expression-Statements ein
+    - `fix_expected_colon()`: Fügt fehlende Doppelpunkte in Funktions-Parametern ein → `fn test(x number)` → `fn test(x: number)`
+    - `fix_expected_paren()`: Behebt unbalancierte Klammern in Funktions-Parametern oder Ausdrücken
+    - `fix_expected_brace()`: Behebt unbalancierte geschweifte Klammern in Block-Strukturen
+    - `fix_expected_fat_arrow()`: Fügt fehlende `=>` in Match-Patterns ein
+    - `fix_expected_type()`: Ersetzt Literale durch passende Typen → `let x: 0.0` → `let x: number`
+    - `fix_expected_expression()`: Fügt fehlende Ausdrücke ein → `return;` → `return null;`
+    - `fix_keyword_typos()`: Korrigiert Keyword-Tippfehler → `funtion` → `fn`, `retrun` → `return`
+    - `fix_missing_comma_in_struct()`: Fügt fehlende Kommas in Struct-Literalen ein
+    - `fix_missing_colon_in_struct()`: Fügt fehlende Doppelpunkte in Struct-Literalen ein
+    - `fix_operator_confusion()`: Behebt Operator-Verwechslungen → `if (x = y)` → `if (x == y)`
+    - `fix_missing_parameter_types()`: Fügt fehlende Parameter-Typen ein → `fn test(x, y)` → `fn test(x: any, y: any)`
+    - `fix_unbalanced_strings_comments()`: Behebt unbalancierte Strings und Kommentare
+    - `fix_expected_identifier_with_levenshtein()`: Erweiterte Identifier-Korrektur mit Levenshtein-Distance
+  - **Levenshtein-Distance**: Implementierung für intelligente Tippfehler-Korrektur bei Keywords und Typen
+  - **Kontext-Validierung**: `is_safe_to_fix()` Methode verhindert Fixes in Strings oder Kommentaren
+  - **Sicherheit**: Konservative Strategie - nur eindeutige Fehler werden behoben
+  - **Implementierung**: `compiler/src/autofix/mod.rs` erweitert um `fix_common_parse_errors()` Methode
+  - **Unit-Tests**: 18 neue Tests in `compiler/tests/autofix_parse_errors.rs` für alle neuen Fix-Funktionen
+  - **Dokumentation**: `docs/tools/auto-repair.md` aktualisiert mit Beispielen für alle neuen Fix-Typen
+- 
+**Umfassende Error-Suggestion-Engine** ✅
+  - **Vollständige Fehlertyp-Unterstützung**: Error-Suggestion-Engine erweitert für alle Fehlertypen
+    - CodeGen Errors: Spezifische Lösungsvorschläge für Code-Generierungsfehler
+    - IO Errors: Kontextbezogene Hinweise (Datei nicht gefunden, Berechtigungen, Größenlimits)
+    - Validation Errors: Feld-spezifische Validierungsvorschläge
+    - Config Errors: JSON-Syntax-Hilfen und Config-Validierungstipps
+    - Internal Errors: GitHub-Issue-Meldungshinweise und Workarounds
+    - Warnings & Info: Separate Behandlung für Warnungen und Informationsmeldungen
+  - **Intelligente Vorschläge**: Kontextbezogene Lösungsvorschläge basierend auf Fehlermeldung
+    - Automatische Erkennung häufiger Fehlermuster
+    - Spezifische Dokumentations-Links je Fehlertyp
+    - Praktische Beispiele und Code-Snippets in Vorschlägen
+  - **Implementierung**: `compiler/src/error/suggestions.rs` erweitert
+  - **Dokumentation**: Vollständige Analyse in `bauplan/Test/COMPILER_ANALYSE_UND_VERBESSERUNGSVORSCHLÄGE.md`
+- 
+**Zentrale Fehlerbehandlung** ✅
+  - **CompilationContext API erweitert**:
+    - `add_error()`: Zentrale Methode zum Hinzufügen von Fehlern
+    - `add_warning()`: Separate Warnings-Sammlung
+    - `add_info()`: Informationsmeldungen
+    - `get_errors_with_suggestions()`: Alle Fehler mit Vorschlägen
+    - `get_error_statistics()`: Detaillierte Fehlerstatistiken
+  - **Konsistente Fehlerbehandlung**: Alle Passes verwenden jetzt zentrale API
+  - **Implementierung**: `compiler/src/compiler/context.rs` erweitert
+
+- **Warnings-Sammlung** ✅
+  - **Separate Warnings-Verwaltung**: Warnings werden nicht mehr als Errors behandelt
+    - Neues `warnings: Vec<CompilerError>` Feld im `CompilationContext`
+    - `has_warnings()` und `warning_count()` Methoden
+    - Warnings werden in `main.rs` separat angezeigt
+  - **Verbesserte Benutzererfahrung**: Klare Unterscheidung zwischen Fehlern und Warnungen
+
+- **Fehlerstatistiken** ✅
+  - **ErrorStatistics Struct**: Detaillierte Statistiken über alle Fehlertypen
+    - Parse Errors, Type Errors, CodeGen Errors, IO Errors
+    - Validation Errors, Config Errors, Internal Errors
+    - Warnings und Info-Meldungen
+  - **Automatische Sammlung**: Statistiken werden automatisch beim Kompilieren gesammelt
+  - **Export-Funktionen**: JSON- und HTML-Export verfügbar
+
+- **Fehler-Export (JSON & HTML)** ✅
+  - **JSON-Export**: `export_errors_json()` Methode
+    - Strukturierte Fehlerdaten mit Vorschlägen
+    - Vollständige Statistiken
+    - CI/CD-Integration möglich
+  - **HTML-Report**: `export_errors_html()` Methode
+    - Professioneller HTML-Report mit CSS-Styling
+    - Fehler- und Warning-Kategorisierung
+    - Statistik-Dashboard
+    - Responsive Design
+
+- **Fehler-Filterung** ✅
+  - **ErrorFilter Enum**: Flexible Fehlerfilterung
+    - `All`, `Parse`, `Type`, `CodeGen`, `Io`, `Validation`, `Config`, `Internal`
+    - `Warnings`, `Critical` (Parser, TypeCheck, CodeGen)
+  - **filter_errors()**: Methode zum Filtern von Fehlern nach Typ
+
+- **Unit-Tests für Error-Suggestion-Engine** ✅
+  - 8 neue Tests für alle Fehlertypen
+  - Tests für CodeGen, IO, Validation, Config, Internal, Warning, Info
+  - Vollständige Test-Abdeckung der Suggestion-Engine
+
+- **Integrationstests für Pass-Fehlerbehandlung** ✅
+  - Neue Test-Datei: `tests/integration/pass_error_handling.rs`
+  - Tests für Parser-Stopp bei Fehlern
+  - Tests für TypeCheck-Stopp bei Fehlern
+  - Tests für Codegen-Fehlerbehandlung
+  - Tests für Error-Statistiken und Warnings-Sammlung
+
+
+
+## Behoben
+- **Parser: Lambda-Erkennung verbessert**
+  - Fix für "Expected identifier (found: LParen)" Fehler bei Funktionsdefinitionen mit leeren Parameterlisten `()`
+  - Der Parser erkennt jetzt korrekt, dass `()` keine Lambda-Funktion ist, wenn es in `parse_primary()` auftritt
+  - Verhindert fälschliche Aufrufe von `consume_identifier()` bei leeren Parameterlisten in Funktionsdefinitionen
+  - Prüfung auf `RParen` vor Lambda-Erkennung hinzugefügt
+  - Debug-Ausgaben in `consume_identifier()` hinzugefügt für besseres Debugging
+
+### Verbessert
+- **Parser: Debug-Ausgaben**
+  - Debug-Ausgaben in `consume_identifier()` hinzugefügt
+  - Stack-Trace und Token-Lookahead für bessere Fehlerdiagnose
+  - Verbesserte Fehlerbehandlung bei leeren Parameterlisten
+
+### Bekannte Probleme
+- ⚠️ **Parser:** "Expected identifier (found: LParen)" Fehler tritt weiterhin bei Funktionsaufrufen mit leeren Parameterlisten auf (z.B. `collectSystemInfo()`)
+  - Der Fix funktioniert für Funktionsdefinitionen, aber nicht für Funktionsaufrufe
+  - Weitere Debug-Arbeit erforderlich
+
+## [3.1.0] Verbesserungen → Patch 0.3 (Kein Update - ) - 2026-02-02
+
+### Added
+
+
+### Changed 
+- **Erweiterte AutoFix-Funktionen** ✅ (Erweitert in 3.1.0)
+  - **"Expected type" Fixes**: Neue Funktionen zur Behebung von Typ-Fehlern
+    - `fix_expected_type()`: Ersetzt Literale durch passende Typen
+      - `let x: 0.0` → `let x: number`
+      - `let x: "test"` → `let x: string`
+      - `let x: true` → `let x: boolean`
+    - `fix_expected_expression()`: Fügt fehlende Ausdrücke ein
+      - `return;` → `return null;`
+  - **Implementierung**: `compiler/src/autofix/mod.rs` erweitert
+  - **Dokumentation**: `docs/tools/auto-repair.md` aktualisiert mit neuen Beispielen
+  - **Vorschläge-Dokument**: `bauplan/Test/AUTOFIX_ERWEITERUNG_VORSCHLAEGE.md` erstellt mit weiteren Verbesserungsvorschlägen
+
+
+- **Pass-Fehlerbehandlung verbessert** ✅
+  - **Kritische Passes**: Parser, TypeCheck und Codegen stoppen jetzt bei Fehlern
+    - Vorher: Nur Parser stoppte bei Fehlern
+    - Jetzt: Alle kritischen Passes stoppen die Kompilierung
+  - **Implementierung**: `compiler/src/compiler/mod.rs` erweitert
+    - `critical_passes` Array definiert kritische Passes
+    - Automatischer Stopp bei Fehlern in kritischen Passes
+
+- **CodegenPass Fehlerbehandlung konsistent** ✅
+  - **Fehler zum Context hinzufügen**: CodegenPass fügt Fehler jetzt zum Context hinzu
+    - Vorher: Fehler wurden nur als `anyhow::Result` zurückgegeben
+    - Jetzt: Fehler werden mit `context.add_error()` hinzugefügt
+  - **Error-Location Support**: CodeGen-Fehler haben jetzt Location-Informationen
+    - Zeile und Spalte werden mitgegeben
+    - Datei-Information wird gespeichert
+  - **IR-Codegen Fehlerbehandlung**: Verbesserte Fehlerbehandlung für IR-basierte Code-Generierung
+  - **Legacy-Codegen Fehlerbehandlung**: Verbesserte Fehlerbehandlung für direkte AST→Code Generierung
+  - **IO-Fehlerbehandlung**: Datei-Schreibfehler werden jetzt korrekt behandelt
+
+- **Error-Location zu CodeGen hinzugefügt** ✅
+  - **CodeGen Error erweitert**: `location: ErrorLocation`, `line: usize`, `column: usize`
+    - Vorher: CodeGen Errors hatten keine Location-Informationen
+    - Jetzt: Vollständige Location-Unterstützung wie bei Parse/Type Errors
+  - **Neue Methoden**: `codegen_error_with_location()` für präzise Fehlerlokalisierung
+  - **Implementierung**: `compiler/src/error.rs` erweitert
+
+- **main.rs Warnings-Anzeige** ✅
+  - Warnings werden jetzt sowohl bei Fehlern als auch bei erfolgreicher Kompilierung angezeigt
+  - Separate Sektion für Warnings in der Ausgabe
+  - Verbesserte Benutzererfahrung durch klare Trennung
+
+### Fixed
+
+- **Inkonsistente Fehlerbehandlung**: Alle Passes verwenden jetzt konsistente Fehlerbehandlung
+- **Fehlende Error-Locations**: CodeGen-Fehler haben jetzt vollständige Location-Informationen
+- **Warnings als Errors**: Warnings werden jetzt korrekt als Warnings behandelt, nicht als Errors
+- **Unvollständige Lösungsvorschläge**: Alle Fehlertypen erhalten jetzt hilfreiche Vorschläge
+### Ende Patch 0.3 - 05 Einträge 
+
 ## [3.1.0] - 2026-01-30
 
 ### Added

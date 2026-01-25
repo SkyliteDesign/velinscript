@@ -26,7 +26,9 @@ Der `VelinCompiler` ist das Herzstück des Compilers und orchestriert alle Compi
 - Pass-basierte Architektur
 - Konfigurierbare Feature Flags
 - Globaler Compilation Context
-- Fehler-Aggregation
+- Fehler-Aggregation mit intelligenten Lösungsvorschlägen ✅ (Verbessert in 3.1.0)
+- Separate Warnings-Sammlung ✅ (Neu in 3.1.0)
+- Fehlerstatistiken und Export-Funktionen ✅ (Neu in 3.1.0)
 
 ### Pass-System
 
@@ -67,6 +69,7 @@ Der Compiler verwendet ein Pass-System, bei dem jeder Pass eine spezifische Aufg
 
 **Siehe auch:** 
 - [Pass-Verlauf & Funktionsweise](./pass-verlauf.md) ✅ (Neu in 3.1.0) - Detaillierte Erklärung aller Passes
+- [Fehlerbehandlung & Lösungsvorschläge](./error-handling.md) ✅ (Neu in 3.1.0) - Umfassendes Fehlerbehandlungssystem
 - [ParserPass](./parser-pass.md) ✅ (Neu in 3.1.0) - Parsing & Modul-Auflösung
 - [DesugaringPass](./desugaring-pass.md) ✅ (Neu in 3.1.0) - Syntaktischer Zucker Transformation
 - [CodeOrderingPass](./code-ordering-pass.md) ✅ (Neu in 3.1.0) - Automatische Code-Sortierung
@@ -197,7 +200,21 @@ Der Compiler generiert automatisch:
 
 ---
 
-## Error Handling & Observability
+## Error Handling & Observability ✅ (Verbessert in 3.1.0)
+
+**Siehe:** [Fehlerbehandlung & Lösungsvorschläge](./error-handling.md) ✅ (Neu in 3.1.0) für vollständige Dokumentation.
+
+### Compiler-Fehlerbehandlung
+
+Der Compiler verfügt über ein umfassendes Fehlerbehandlungssystem:
+
+- **Intelligente Lösungsvorschläge:** Alle Fehlertypen erhalten kontextbezogene Vorschläge
+- **Separate Warnings:** Warnings werden nicht mehr als Errors behandelt
+- **Fehlerstatistiken:** Detaillierte Statistiken über alle Fehlertypen
+- **Export-Funktionen:** JSON- und HTML-Export verfügbar
+- **Zentrale API:** `context.add_error()`, `context.add_warning()`, `context.add_info()`
+
+### Runtime Error Handling
 
 **Status:** ✅ Vollständig implementiert
 
@@ -640,5 +657,5 @@ let response = await @llm.analyze(text);
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
+**Letzte Aktualisierung:** 2026-02-02  
 **Version:** 3.1.0

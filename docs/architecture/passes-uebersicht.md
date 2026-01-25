@@ -239,5 +239,19 @@ Diese Übersicht zeigt alle Passes im VelinScript Compiler und ihren Dokumentati
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
+## Fehlerbehandlung ✅ (Neu in 3.1.0)
+
+Alle Passes verwenden jetzt ein konsistentes Fehlerbehandlungssystem:
+
+- **Zentrale API:** `context.add_error()`, `context.add_warning()`, `context.add_info()`
+- **Intelligente Lösungsvorschläge:** Alle Fehlertypen erhalten kontextbezogene Vorschläge
+- **Separate Warnings:** Warnings werden nicht mehr als Errors behandelt
+- **Fehlerstatistiken:** Detaillierte Statistiken über alle Fehlertypen
+- **Export-Funktionen:** JSON- und HTML-Export verfügbar
+
+**Siehe:** [Fehlerbehandlung & Lösungsvorschläge](./error-handling.md) ✅ (Neu in 3.1.0)
+
+---
+
+**Letzte Aktualisierung:** 2026-02-02  
 **Version:** 3.1.0

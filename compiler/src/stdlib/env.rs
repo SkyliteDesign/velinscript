@@ -1,4 +1,3 @@
-
 pub struct EnvStdlib;
 
 impl EnvStdlib {
@@ -33,10 +32,7 @@ impl EnvStdlib {
                 key, def
             )
         } else {
-            format!(
-                "std::env::var({}).map_err(|e| e.to_string())",
-                key
-            )
+            format!("std::env::var({}).map_err(|e| e.to_string())", key)
         }
     }
 

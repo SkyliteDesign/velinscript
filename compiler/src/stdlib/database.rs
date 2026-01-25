@@ -30,7 +30,7 @@ impl DatabaseStdlib {
             }
         }
     }
-    
+
     /// Transformiert VelinScript db.findAll() zu Rust-Code
     pub fn generate_find_all_code(entity: &str, orm: ORMType) -> String {
         match orm {
@@ -49,7 +49,7 @@ impl DatabaseStdlib {
             }
         }
     }
-    
+
     /// Transformiert VelinScript db.save() zu Rust-Code
     #[allow(unused_variables)]
     pub fn generate_save_code(entity: &str, var_name: &str, orm: ORMType) -> String {
@@ -72,7 +72,7 @@ impl DatabaseStdlib {
             }
         }
     }
-    
+
     /// Transformiert VelinScript db.update() zu Rust-Code
     #[allow(unused_variables)]
     pub fn generate_update_code(entity: &str, id: &str, var_name: &str, orm: ORMType) -> String {
@@ -95,7 +95,7 @@ impl DatabaseStdlib {
             }
         }
     }
-    
+
     /// Transformiert VelinScript db.delete() zu Rust-Code
     pub fn generate_delete_code(entity: &str, id: &str, orm: ORMType) -> String {
         match orm {
@@ -114,7 +114,7 @@ impl DatabaseStdlib {
             }
         }
     }
-    
+
     /// Generiert Database Connection Setup basierend auf ORM
     pub fn generate_db_setup(database_url: &str, orm: ORMType) -> String {
         match orm {
@@ -131,12 +131,10 @@ impl DatabaseStdlib {
                     Self::generate_sqlx_setup(database_url)
                 }
             }
-            ORMType::Sqlx => {
-                Self::generate_sqlx_setup(database_url)
-            }
+            ORMType::Sqlx => Self::generate_sqlx_setup(database_url),
         }
     }
-    
+
     fn generate_sqlx_setup(database_url: &str) -> String {
         format!(
             r#"use sqlx::{{PgPool, MySqlPool, SqlitePool}};
@@ -147,7 +145,7 @@ pub async fn create_db_connection() -> Result<PgPool, sqlx::Error> {{
             database_url
         )
     }
-    
+
     /// Transformiert VelinScript db.query() zu Rust-Code (Query Builder)
     pub fn generate_query_code(query: &str, orm: ORMType) -> String {
         match orm {
@@ -166,7 +164,7 @@ pub async fn create_db_connection() -> Result<PgPool, sqlx::Error> {{
             }
         }
     }
-    
+
     /// Transformiert VelinScript db.transaction() zu Rust-Code
     pub fn generate_transaction_code(block: &str, orm: ORMType) -> String {
         match orm {
@@ -184,14 +182,22 @@ pub async fn create_db_connection() -> Result<PgPool, sqlx::Error> {{
                 }
             }
             ORMType::Sqlx => {
-                format!("let mut tx = db.begin().await?;\n    {}\n    tx.commit().await?", block)
+                format!(
+                    "let mut tx = db.begin().await?;\n    {}\n    tx.commit().await?",
+                    block
+                )
             }
         }
     }
-    
+
     /// Verbesserte save() Methode - unterscheidet Insert vs Update
     #[allow(unused_variables)]
-    pub fn generate_save_code_improved(entity: &str, var_name: &str, id_field: &str, orm: ORMType) -> String {
+    pub fn generate_save_code_improved(
+        entity: &str,
+        var_name: &str,
+        id_field: &str,
+        orm: ORMType,
+    ) -> String {
         match orm {
             ORMType::SeaORM => {
                 #[cfg(feature = "sea-orm")]
@@ -211,7 +217,7 @@ pub async fn create_db_connection() -> Result<PgPool, sqlx::Error> {{
             }
         }
     }
-    
+
     /// Generiert Entity-Code für SeaORM
     pub fn generate_seaorm_entity(struct_name: &str, fields: &[(String, String)]) -> String {
         let mut entity_code = format!(
@@ -221,7 +227,7 @@ pub struct Model {{
 "#,
             struct_name.to_lowercase()
         );
-        
+
         for (field_name, field_type) in fields {
             let rust_type = match field_type.as_str() {
                 "string" => "String",
@@ -230,24 +236,21 @@ pub struct Model {{
                 "boolean" | "bool" => "bool",
                 _ => field_type,
             };
-            
+
             if field_name == "id" {
                 entity_code.push_str(&format!(
                     "    #[sea_orm(primary_key)]\n    pub {}: {},\n",
                     field_name, rust_type
                 ));
             } else {
-                entity_code.push_str(&format!(
-                    "    pub {}: {},\n",
-                    field_name, rust_type
-                ));
+                entity_code.push_str(&format!("    pub {}: {},\n", field_name, rust_type));
             }
         }
-        
+
         entity_code.push_str("}\n");
         entity_code
     }
-    
+
     /// Erkennt ORM-Type aus Config oder verwendet Default
     pub fn detect_orm(config_orm: Option<&str>) -> ORMType {
         match config_orm {

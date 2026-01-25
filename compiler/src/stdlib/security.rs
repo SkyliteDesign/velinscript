@@ -14,7 +14,7 @@ impl SecurityStdlib {
             "Auth" | "Role" | "JWT" | "OAuth2" | "APIKey"
         )
     }
-    
+
     /// Generiert Rust-Code für @Auth Decorator
     pub fn generate_auth_middleware() -> String {
         r#"#[derive(Clone)]
@@ -99,9 +99,10 @@ impl actix_web::dev::Service<actix_web::dev::ServiceRequest> for AuthMiddlewareS
             }
         }
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
-    
+
     /// Generiert Rust-Code für @Role Decorator
     #[allow(unused_variables)]
     pub fn generate_role_middleware(role: &str) -> String {
@@ -215,7 +216,7 @@ impl actix_web::dev::Service<actix_web::dev::ServiceRequest> for RoleMiddlewareS
 }}"#
         )
     }
-    
+
     /// Generiert JWT Validation Code
     pub fn generate_jwt_validation() -> String {
         r#"// JWT Validation Helper
@@ -243,6 +244,7 @@ pub fn validate_jwt_with_public_key(token: &str, public_key: &str) -> Result<Val
         Ok(token_data) => Ok(token_data.claims),
         Err(e) => Err(format!("JWT validation failed: {}", e)),
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
 }

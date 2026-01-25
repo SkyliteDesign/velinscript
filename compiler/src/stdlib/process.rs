@@ -1,4 +1,3 @@
-
 pub struct ProcessStdlib;
 
 impl ProcessStdlib {
@@ -34,7 +33,7 @@ impl ProcessStdlib {
     }
 
     pub fn generate_restart_code(_pid: &str) -> String {
-        // Restart logic is complex without knowing the original command. 
+        // Restart logic is complex without knowing the original command.
         // For now, we'll return an error or implement a mock.
         format!("Err(\"Restart not supported directly via PID. Use spawn again.\".to_string())")
     }
@@ -105,11 +104,11 @@ impl ProcessStdlib {
     }
 
     pub fn generate_get_output_code(_pid: &str) -> String {
-         format!("Err(\"Cannot get output from arbitrary PID\".to_string())")
+        format!("Err(\"Cannot get output from arbitrary PID\".to_string())")
     }
 
     pub fn generate_is_running_code(pid: &str) -> String {
-         format!(
+        format!(
              "{{
                 #[cfg(unix)]
                 {{
@@ -129,7 +128,7 @@ impl ProcessStdlib {
     }
 
     pub fn generate_get_memory_code(pid: &str) -> String {
-         format!(
+        format!(
              "{{
                 #[cfg(unix)]
                 {{

@@ -8,7 +8,7 @@ impl HttpClientStdlib {
     pub fn generate_http_client_new() -> String {
         "reqwest::Client::new()".to_string()
     }
-    
+
     /// Generiert Rust-Code für client.get(url)
     pub fn generate_get(url: &str, headers: Option<&str>) -> String {
         if let Some(headers_expr) = headers {
@@ -17,45 +17,42 @@ impl HttpClientStdlib {
                 url, headers_expr
             )
         } else {
-            format!(
-                "reqwest::Client::new().get({}).send().await",
-                url
-            )
+            format!("reqwest::Client::new().get({}).send().await", url)
         }
     }
-    
+
     /// Generiert Rust-Code für client.post(url, body)
     pub fn generate_post(url: &str, body: Option<&str>, headers: Option<&str>) -> String {
         let mut code = format!("reqwest::Client::new().post({})", url);
-        
+
         if let Some(body_expr) = body {
             code.push_str(&format!(".json(&{})", body_expr));
         }
-        
+
         if let Some(headers_expr) = headers {
             code.push_str(&format!(".headers({})", headers_expr));
         }
-        
+
         code.push_str(".send().await");
         code
     }
-    
+
     /// Generiert Rust-Code für client.put(url, body)
     pub fn generate_put(url: &str, body: Option<&str>, headers: Option<&str>) -> String {
         let mut code = format!("reqwest::Client::new().put({})", url);
-        
+
         if let Some(body_expr) = body {
             code.push_str(&format!(".json(&{})", body_expr));
         }
-        
+
         if let Some(headers_expr) = headers {
             code.push_str(&format!(".headers({})", headers_expr));
         }
-        
+
         code.push_str(".send().await");
         code
     }
-    
+
     /// Generiert Rust-Code für client.delete(url)
     pub fn generate_delete(url: &str, headers: Option<&str>) -> String {
         if let Some(headers_expr) = headers {
@@ -64,44 +61,41 @@ impl HttpClientStdlib {
                 url, headers_expr
             )
         } else {
-            format!(
-                "reqwest::Client::new().delete({}).send().await",
-                url
-            )
+            format!("reqwest::Client::new().delete({}).send().await", url)
         }
     }
-    
+
     /// Generiert Rust-Code für client.patch(url, body)
     pub fn generate_patch(url: &str, body: Option<&str>, headers: Option<&str>) -> String {
         let mut code = format!("reqwest::Client::new().patch({})", url);
-        
+
         if let Some(body_expr) = body {
             code.push_str(&format!(".json(&{})", body_expr));
         }
-        
+
         if let Some(headers_expr) = headers {
             code.push_str(&format!(".headers({})", headers_expr));
         }
-        
+
         code.push_str(".send().await");
         code
     }
-    
+
     /// Generiert Rust-Code für response.json()
     pub fn generate_response_json(response: &str) -> String {
         format!("{}.json::<serde_json::Value>().await", response)
     }
-    
+
     /// Generiert Rust-Code für response.text()
     pub fn generate_response_text(response: &str) -> String {
         format!("{}.text().await", response)
     }
-    
+
     /// Generiert Rust-Code für response.status()
     pub fn generate_response_status(response: &str) -> String {
         format!("{}.status()", response)
     }
-    
+
     /// Generiert Rust-Code für Error Handling mit Retry
     pub fn generate_error_handling_with_retry(
         request: &str,
@@ -128,7 +122,7 @@ impl HttpClientStdlib {
             request, max_retries, max_retries, retry_delay_ms
         )
     }
-    
+
     /// Generiert Rust-Code für Request Headers
     pub fn generate_headers(headers_map: &str) -> String {
         format!(

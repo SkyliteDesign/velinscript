@@ -1,6 +1,5 @@
-
-use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 /// Represents the state of a Flow execution
@@ -72,7 +71,10 @@ impl FlowManager {
             status: StepStatus::Success,
             duration_ms,
         });
-        println!("[Flow:{}] Step '{}' succeeded ({}ms)", state.id, name, duration_ms);
+        println!(
+            "[Flow:{}] Step '{}' succeeded ({}ms)",
+            state.id, name, duration_ms
+        );
     }
 
     /// Records a failed step and triggers compensation logic
@@ -85,7 +87,7 @@ impl FlowManager {
         });
         state.status = FlowStatus::Failed;
         println!("[Flow:{}] Step '{}' failed: {}", state.id, name, error);
-        
+
         // In a real implementation, this would trigger rollback logic
         self.compensate(&mut state);
     }
@@ -95,7 +97,10 @@ impl FlowManager {
         let mut state = self.state.lock().unwrap();
         state.status = FlowStatus::Completed;
         let duration = state.start_time.elapsed().unwrap().as_millis();
-        println!("[Flow:{}] Completed successfully in {}ms", state.id, duration);
+        println!(
+            "[Flow:{}] Completed successfully in {}ms",
+            state.id, duration
+        );
     }
 
     /// Rolls back the flow (failure)
@@ -109,7 +114,7 @@ impl FlowManager {
     fn compensate(&self, state: &mut FlowState) {
         println!("[Flow:{}] Initiating compensation sequence...", state.id);
         state.status = FlowStatus::Compensating;
-        
+
         // Reverse iterate through successful steps
         for step in state.steps.iter().rev() {
             if step.status == StepStatus::Success {
@@ -117,7 +122,7 @@ impl FlowManager {
                 // Here we would call registered compensation hooks
             }
         }
-        
+
         state.status = FlowStatus::Compensated;
         println!("[Flow:{}] Compensation completed.", state.id);
     }
@@ -126,9 +131,7 @@ impl FlowManager {
 // Global instance for generated code usage
 use once_cell::sync::Lazy;
 
-pub static GLOBAL_FLOW_MANAGER: Lazy<FlowManager> = Lazy::new(|| {
-    FlowManager::new("GlobalFlow")
-});
+pub static GLOBAL_FLOW_MANAGER: Lazy<FlowManager> = Lazy::new(|| FlowManager::new("GlobalFlow"));
 
 pub struct FlowStdlib;
 
@@ -145,25 +148,25 @@ impl FlowStdlib {
             "crate::stdlib::flow::GLOBAL_FLOW_MANAGER.start()".to_string()
         }
     }
-    
+
     pub fn generate_checkpoint_code(step_name: &str) -> String {
         format!(
             "crate::stdlib::flow::GLOBAL_FLOW_MANAGER.step_success({}, 0)",
             step_name
         )
     }
-    
+
     pub fn generate_fail_code(step_name: &str, error: &str) -> String {
         format!(
             "crate::stdlib::flow::GLOBAL_FLOW_MANAGER.step_failed({}, {})",
             step_name, error
         )
     }
-    
+
     pub fn generate_commit_code() -> String {
         "crate::stdlib::flow::GLOBAL_FLOW_MANAGER.commit()".to_string()
     }
-    
+
     pub fn generate_flow_runtime_code() -> String {
         r#"
         // --- VelinFlow Runtime ---
@@ -260,6 +263,7 @@ impl FlowStdlib {
         pub static GLOBAL_FLOW_MANAGER: Lazy<FlowManager> = Lazy::new(|| {
             FlowManager::new("GlobalFlow")
         });
-        "#.to_string()
+        "#
+        .to_string()
     }
 }

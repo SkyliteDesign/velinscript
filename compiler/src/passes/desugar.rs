@@ -1,5 +1,5 @@
-use crate::compiler::pass::Pass;
 use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use crate::parser::ast::*;
 use anyhow::Result;
 
@@ -42,7 +42,7 @@ impl DesugaringPass {
 
     fn desugar_block(&self, block: &mut Block) {
         let mut new_statements = Vec::new();
-        
+
         for statement in block.statements.drain(..) {
             match statement {
                 Statement::Try(try_stmt) => {
@@ -75,56 +75,54 @@ impl DesugaringPass {
                 }
             }
         }
-        
+
         block.statements = new_statements;
     }
 
     fn desugar_try_statement(&self, try_stmt: TryStatement) -> Vec<Statement> {
         let mut result = Vec::new();
-        
+
         // 1. Transform try-block: First desugar nested try-catch, then wrap returns in Result.ok()
         let mut try_block = try_stmt.try_block;
         // Desugar any nested try-catch blocks first
         self.desugar_block(&mut try_block);
         // Then wrap returns in Result.ok()
         self.wrap_returns_in_try_block(&mut try_block);
-        
+
         // 2. Create lambda expression for try-block
         let try_lambda = Expression::Lambda {
             params: Vec::new(),
             return_type: None, // Will be inferred by type checker
             body: Box::new(Expression::Block(try_block)),
         };
-        
+
         // 3. Call lambda and store result
         let try_result_var = "__try_result".to_string();
         let try_result_expr = Expression::Call {
             callee: Box::new(try_lambda),
             args: Vec::new(),
         };
-        
+
         result.push(Statement::Let(LetStatement {
             name: try_result_var.clone(),
             var_type: None, // Will be inferred
             value: try_result_expr,
             mutable: false,
         }));
-        
+
         // 4. Handle catch blocks
         if !try_stmt.catch_blocks.is_empty() {
-            let catch_statements = self.create_catch_dispatch(
-                &try_result_var,
-                &try_stmt.catch_blocks,
-            );
+            let catch_statements =
+                self.create_catch_dispatch(&try_result_var, &try_stmt.catch_blocks);
             result.extend(catch_statements);
         }
-        
+
         // 5. Handle finally block
         if let Some(finally_block) = try_stmt.finally_block {
             let finally_statements = self.create_finally_block(finally_block);
             result.extend(finally_statements);
         }
-        
+
         result
     }
 
@@ -184,7 +182,7 @@ impl DesugaringPass {
         catch_blocks: &[CatchBlock],
     ) -> Vec<Statement> {
         let mut result = Vec::new();
-        
+
         // Check if result is error
         let is_err_check = Expression::Call {
             callee: Box::new(Expression::Member {
@@ -193,7 +191,7 @@ impl DesugaringPass {
             }),
             args: Vec::new(),
         };
-        
+
         // Get error value
         let error_var = "__error".to_string();
         let get_error = Expression::Call {
@@ -210,19 +208,19 @@ impl DesugaringPass {
             }),
             args: Vec::new(),
         };
-        
+
         // If we have multiple catch blocks with types, use match
         let has_typed_catches = catch_blocks.iter().any(|cb| cb.error_type.is_some());
-        
+
         if has_typed_catches && catch_blocks.len() > 1 {
             // Multiple typed catch blocks: use match
             let mut match_arms = Vec::new();
-            
+
             for catch_block in catch_blocks {
                 // Desugar nested try-catch in catch blocks
                 let mut catch_body = catch_block.body.clone();
                 self.desugar_block(&mut catch_body);
-                
+
                 if let Some(ref error_type) = catch_block.error_type {
                     // Typed catch: match on error type
                     let pattern = Pattern::EnumVariant {
@@ -232,21 +230,24 @@ impl DesugaringPass {
                         },
                         data: catch_block.error_var.as_ref().map(|_| {
                             vec![Pattern::Identifier(
-                                catch_block.error_var.clone().unwrap_or("err".to_string())
+                                catch_block.error_var.clone().unwrap_or("err".to_string()),
                             )]
                         }),
                     };
-                    
+
                     // If error_var is specified, bind it
                     if let Some(ref var_name) = catch_block.error_var {
-                        catch_body.statements.insert(0, Statement::Let(LetStatement {
-                            name: var_name.clone(),
-                            var_type: None,
-                            value: Expression::Identifier(error_var.clone()),
-                            mutable: false,
-                        }));
+                        catch_body.statements.insert(
+                            0,
+                            Statement::Let(LetStatement {
+                                name: var_name.clone(),
+                                var_type: None,
+                                value: Expression::Identifier(error_var.clone()),
+                                mutable: false,
+                            }),
+                        );
                     }
-                    
+
                     match_arms.push(MatchArm {
                         pattern,
                         guard: None,
@@ -255,14 +256,17 @@ impl DesugaringPass {
                 } else {
                     // Generic catch: wildcard pattern
                     if let Some(ref var_name) = catch_block.error_var {
-                        catch_body.statements.insert(0, Statement::Let(LetStatement {
-                            name: var_name.clone(),
-                            var_type: None,
-                            value: Expression::Identifier(error_var.clone()),
-                            mutable: false,
-                        }));
+                        catch_body.statements.insert(
+                            0,
+                            Statement::Let(LetStatement {
+                                name: var_name.clone(),
+                                var_type: None,
+                                value: Expression::Identifier(error_var.clone()),
+                                mutable: false,
+                            }),
+                        );
                     }
-                    
+
                     match_arms.push(MatchArm {
                         pattern: Pattern::Wildcard,
                         guard: None,
@@ -270,13 +274,13 @@ impl DesugaringPass {
                     });
                 }
             }
-            
+
             // Create if statement with match
             let match_stmt = Statement::Match(MatchStatement {
                 expression: Expression::Identifier(error_var.clone()),
                 arms: match_arms,
             });
-            
+
             let catch_block = Block {
                 statements: vec![
                     Statement::Let(LetStatement {
@@ -288,7 +292,7 @@ impl DesugaringPass {
                     match_stmt,
                 ],
             };
-            
+
             result.push(Statement::If(IfStatement {
                 condition: is_err_check,
                 then_block: catch_block,
@@ -298,27 +302,30 @@ impl DesugaringPass {
             // Single catch block or no typed catches: simple if
             let catch_block = &catch_blocks[0];
             let mut catch_body = catch_block.body.clone();
-            
+
             // Desugar nested try-catch in catch block
             self.desugar_block(&mut catch_body);
-            
+
             // Bind error variable if specified
             if let Some(ref var_name) = catch_block.error_var {
-                catch_body.statements.insert(0, Statement::Let(LetStatement {
-                    name: var_name.clone(),
-                    var_type: None,
-                    value: unwrap_error,
-                    mutable: false,
-                }));
+                catch_body.statements.insert(
+                    0,
+                    Statement::Let(LetStatement {
+                        name: var_name.clone(),
+                        var_type: None,
+                        value: unwrap_error,
+                        mutable: false,
+                    }),
+                );
             }
-            
+
             result.push(Statement::If(IfStatement {
                 condition: is_err_check,
                 then_block: catch_body,
                 else_block: None,
             }));
         }
-        
+
         result
     }
 
@@ -326,26 +333,26 @@ impl DesugaringPass {
         // Desugar nested try-catch in finally block
         let mut finally_block = finally_block;
         self.desugar_block(&mut finally_block);
-        
+
         // Create lambda for finally block
         let finally_lambda = Expression::Lambda {
             params: Vec::new(),
             return_type: None,
             body: Box::new(Expression::Block(finally_block)),
         };
-        
+
         // Call lambda
         let finally_call = Expression::Call {
             callee: Box::new(finally_lambda),
             args: Vec::new(),
         };
-        
+
         // Execute finally
         vec![Statement::Expression(ExpressionStatement {
             expression: finally_call,
         })]
     }
-    
+
     fn desugar_expression(&self, expr: &mut Expression) {
         match expr {
             Expression::Block(block) => {
@@ -378,7 +385,11 @@ impl DesugaringPass {
             Expression::UnaryOp { expr, .. } => {
                 self.desugar_expression(expr);
             }
-            Expression::If { condition, then_expr, else_expr } => {
+            Expression::If {
+                condition,
+                then_expr,
+                else_expr,
+            } => {
                 self.desugar_expression(condition);
                 self.desugar_expression(then_expr);
                 self.desugar_expression(else_expr);
@@ -440,8 +451,8 @@ impl Pass for DesugaringPass {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::parser::Parser;
     use crate::compiler::context::CompilationContext;
+    use crate::parser::parser::Parser;
 
     #[test]
     fn test_desugar_simple_try_catch() {
@@ -454,14 +465,14 @@ mod tests {
             }
         }
         "#;
-        
+
         let program = Parser::parse(source).unwrap();
         let mut context = CompilationContext::new("test.velin".to_string(), source.to_string());
         context.program = Some(program);
-        
+
         let pass = DesugaringPass::new();
         pass.run(&mut context).unwrap();
-        
+
         // Verify that Try statements are desugared
         if let Some(ref program) = context.program {
             for item in &program.items {
@@ -490,14 +501,14 @@ mod tests {
             }
         }
         "#;
-        
+
         let program = Parser::parse(source).unwrap();
         let mut context = CompilationContext::new("test.velin".to_string(), source.to_string());
         context.program = Some(program);
-        
+
         let pass = DesugaringPass::new();
         pass.run(&mut context).unwrap();
-        
+
         // Verify desugaring
         if let Some(ref program) = context.program {
             for item in &program.items {
@@ -523,14 +534,14 @@ mod tests {
             }
         }
         "#;
-        
+
         let program = Parser::parse(source).unwrap();
         let mut context = CompilationContext::new("test.velin".to_string(), source.to_string());
         context.program = Some(program);
-        
+
         let pass = DesugaringPass::new();
         pass.run(&mut context).unwrap();
-        
+
         // Verify desugaring
         if let Some(ref program) = context.program {
             for item in &program.items {

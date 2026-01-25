@@ -11,39 +11,27 @@ impl CollectionsStdlib {
             list, predicate
         )
     }
-    
+
     /// Generiert Rust-Code für List.map()
     pub fn generate_list_map(list: &str, mapper: &str) -> String {
-        format!(
-            "{}.into_iter().map({}).collect::<Vec<_>>()",
-            list, mapper
-        )
+        format!("{}.into_iter().map({}).collect::<Vec<_>>()", list, mapper)
     }
-    
+
     /// Generiert Rust-Code für List.reduce()
     pub fn generate_list_reduce(list: &str, reducer: &str, initial: &str) -> String {
-        format!(
-            "{}.into_iter().fold({}, {})",
-            list, initial, reducer
-        )
+        format!("{}.into_iter().fold({}, {})", list, initial, reducer)
     }
-    
+
     /// Generiert Rust-Code für List.find()
     pub fn generate_list_find(list: &str, predicate: &str) -> String {
-        format!(
-            "{}.into_iter().find({})",
-            list, predicate
-        )
+        format!("{}.into_iter().find({})", list, predicate)
     }
-    
+
     /// Generiert Rust-Code für List.contains()
     pub fn generate_list_contains(list: &str, item: &str) -> String {
-        format!(
-            "{}.contains(&{})",
-            list, item
-        )
+        format!("{}.contains(&{})", list, item)
     }
-    
+
     /// Generiert Rust-Code für List.indexOf()
     pub fn generate_list_index_of(list: &str, item: &str) -> String {
         format!(
@@ -51,7 +39,7 @@ impl CollectionsStdlib {
             list, item
         )
     }
-    
+
     /// Generiert Rust-Code für List.sort()
     pub fn generate_list_sort(list: &str, compare: Option<&str>) -> String {
         if let Some(compare_fn) = compare {
@@ -60,21 +48,15 @@ impl CollectionsStdlib {
                 list, compare_fn
             )
         } else {
-            format!(
-                "{{ let mut v = {}.clone(); v.sort(); v }}",
-                list
-            )
+            format!("{{ let mut v = {}.clone(); v.sort(); v }}", list)
         }
     }
-    
+
     /// Generiert Rust-Code für List.reverse()
     pub fn generate_list_reverse(list: &str) -> String {
-        format!(
-            "{{ let mut v = {}.clone(); v.reverse(); v }}",
-            list
-        )
+        format!("{{ let mut v = {}.clone(); v.reverse(); v }}", list)
     }
-    
+
     /// Generiert Rust-Code für List.chunk()
     pub fn generate_list_chunk(list: &str, size: &str) -> String {
         format!(
@@ -82,7 +64,7 @@ impl CollectionsStdlib {
             list, size
         )
     }
-    
+
     /// Generiert Rust-Code für List.slice()
     pub fn generate_list_slice(list: &str, start: &str, end: &str) -> String {
         format!(
@@ -90,23 +72,17 @@ impl CollectionsStdlib {
             list, start, end
         )
     }
-    
+
     /// Generiert Rust-Code für Map.keys()
     pub fn generate_map_keys(map: &str) -> String {
-        format!(
-            "{}.keys().cloned().collect::<Vec<_>>()",
-            map
-        )
+        format!("{}.keys().cloned().collect::<Vec<_>>()", map)
     }
-    
+
     /// Generiert Rust-Code für Map.values()
     pub fn generate_map_values(map: &str) -> String {
-        format!(
-            "{}.values().cloned().collect::<Vec<_>>()",
-            map
-        )
+        format!("{}.values().cloned().collect::<Vec<_>>()", map)
     }
-    
+
     /// Generiert Rust-Code für Map.entries()
     pub fn generate_map_entries(map: &str) -> String {
         format!(
@@ -114,79 +90,52 @@ impl CollectionsStdlib {
             map
         )
     }
-    
+
     /// Generiert Rust-Code für Map.get()
     pub fn generate_map_get(map: &str, key: &str) -> String {
-        format!(
-            "{}.get(&{}).cloned()",
-            map, key
-        )
+        format!("{}.get(&{}).cloned()", map, key)
     }
-    
+
     /// Generiert Rust-Code für Map.set()
     pub fn generate_map_set(map: &str, key: &str, value: &str) -> String {
-        format!(
-            "{{ {}.insert({}.clone(), {}.clone()); }}",
-            map, key, value
-        )
+        format!("{{ {}.insert({}.clone(), {}.clone()); }}", map, key, value)
     }
-    
+
     /// Generiert Rust-Code für Map.delete()
     pub fn generate_map_delete(map: &str, key: &str) -> String {
-        format!(
-            "{}.remove(&{})",
-            map, key
-        )
+        format!("{}.remove(&{})", map, key)
     }
-    
+
     /// Generiert Rust-Code für Map.has()
     pub fn generate_map_has(map: &str, key: &str) -> String {
-        format!(
-            "{}.contains_key(&{})",
-            map, key
-        )
+        format!("{}.contains_key(&{})", map, key)
     }
-    
+
     /// Generiert Rust-Code für Map.size()
     pub fn generate_map_size(map: &str) -> String {
-        format!(
-            "{}.len()",
-            map
-        )
+        format!("{}.len()", map)
     }
-    
+
     /// Generiert Rust-Code für Set.add()
     pub fn generate_set_add(set: &str, item: &str) -> String {
-        format!(
-            "{{ {}.insert({}.clone()); }}",
-            set, item
-        )
+        format!("{{ {}.insert({}.clone()); }}", set, item)
     }
-    
+
     /// Generiert Rust-Code für Set.remove()
     pub fn generate_set_remove(set: &str, item: &str) -> String {
-        format!(
-            "{}.remove(&{})",
-            set, item
-        )
+        format!("{}.remove(&{})", set, item)
     }
-    
+
     /// Generiert Rust-Code für Set.has()
     pub fn generate_set_has(set: &str, item: &str) -> String {
-        format!(
-            "{}.contains(&{})",
-            set, item
-        )
+        format!("{}.contains(&{})", set, item)
     }
-    
+
     /// Generiert Rust-Code für Set.size()
     pub fn generate_set_size(set: &str) -> String {
-        format!(
-            "{}.len()",
-            set
-        )
+        format!("{}.len()", set)
     }
-    
+
     /// Generiert Rust-Code für Set.union()
     pub fn generate_set_union(set1: &str, set2: &str) -> String {
         format!(
@@ -194,7 +143,7 @@ impl CollectionsStdlib {
             set1, set2
         )
     }
-    
+
     /// Generiert Rust-Code für Set.intersection()
     pub fn generate_set_intersection(set1: &str, set2: &str) -> String {
         format!(
@@ -202,7 +151,7 @@ impl CollectionsStdlib {
             set1, set2
         )
     }
-    
+
     /// Generiert Rust-Code für Set.difference()
     pub fn generate_set_difference(set1: &str, set2: &str) -> String {
         format!(
@@ -222,8 +171,5 @@ pub const PARALLEL_THRESHOLD: usize = 1000;
 
 /// Generiert parallelen Code für große Listen
 pub fn generate_parallel_map(list: &str, mapper: &str) -> String {
-    format!(
-        "{}.par_iter().map({}).collect::<Vec<_>>()",
-        list, mapper
-    )
+    format!("{}.par_iter().map({}).collect::<Vec<_>>()", list, mapper)
 }

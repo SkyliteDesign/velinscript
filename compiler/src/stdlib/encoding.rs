@@ -1,9 +1,11 @@
-
 pub struct EncodingStdlib;
 
 impl EncodingStdlib {
     pub fn generate_base64_encode_code(input: &str) -> String {
-        format!("base64::engine::general_purpose::STANDARD.encode({}.as_bytes())", input)
+        format!(
+            "base64::engine::general_purpose::STANDARD.encode({}.as_bytes())",
+            input
+        )
     }
 
     pub fn generate_base64_decode_code(input: &str) -> String {
@@ -36,10 +38,7 @@ impl EncodingStdlib {
     }
 
     pub fn generate_is_valid_utf8_code(bytes: &str) -> String {
-        format!(
-            "String::from_utf8({}.clone()).is_ok()",
-            bytes
-        )
+        format!("String::from_utf8({}.clone()).is_ok()", bytes)
     }
 
     pub fn generate_fix_utf8_code(bytes: &str) -> String {

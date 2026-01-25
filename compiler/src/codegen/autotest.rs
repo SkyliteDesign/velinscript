@@ -1,4 +1,3 @@
-
 use crate::parser::ast::*;
 
 pub struct AutoTestGenerator;
@@ -10,7 +9,7 @@ impl AutoTestGenerator {
 
     pub fn generate(&self, program: &Program) -> String {
         let mut tests = String::new();
-        
+
         for item in &program.items {
             if let Item::Function(f) = item {
                 if f.decorators.iter().any(|d| d.name == "VelinAutoTest") {
@@ -19,7 +18,7 @@ impl AutoTestGenerator {
                 }
             }
         }
-        
+
         if !tests.is_empty() {
             format!(
                 "#[cfg(test)]\nmod autotests {{\n    use super::*;\n    use crate::*;\n\n{}\n}}",
@@ -33,9 +32,12 @@ impl AutoTestGenerator {
     fn generate_test_for_function(&self, func: &Function) -> String {
         let mut test_code = String::new();
         let test_name = format!("test_auto_{}", func.name);
-        
-        test_code.push_str(&format!("    #[tokio::test]\n    async fn {}() {{\n", test_name));
-        
+
+        test_code.push_str(&format!(
+            "    #[tokio::test]\n    async fn {}() {{\n",
+            test_name
+        ));
+
         // Generate Mock Data for arguments
         let mut args_list = Vec::new();
         for param in &func.params {
@@ -43,7 +45,7 @@ impl AutoTestGenerator {
             test_code.push_str(&format!("        let {} = {};\n", param.name, mock_val));
             args_list.push(param.name.clone());
         }
-        
+
         // Call function
         let args_str = args_list.join(", ");
         let call = if func.is_async {
@@ -51,13 +53,13 @@ impl AutoTestGenerator {
         } else {
             format!("{}({})", func.name, args_str)
         };
-        
+
         test_code.push_str(&format!("        let result = {};\n", call));
-        
+
         // Basic Assertions
         test_code.push_str("        assert!(result.is_ok(), \"Function execution failed\");\n");
         test_code.push_str("    }");
-        
+
         test_code
     }
 

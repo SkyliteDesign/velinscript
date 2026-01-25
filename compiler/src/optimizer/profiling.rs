@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 
 /// Profiling Collector für Laufzeit-Analyse
-/// 
+///
 /// Sammelt Laufzeitdaten für Selbstoptimierung:
 /// - Identifiziert Hot Paths
 /// - Findet Bottlenecks
@@ -76,7 +76,7 @@ impl ProfilingCollector {
     pub fn new() -> Self {
         Self::with_config(ProfilingConfig::default())
     }
-    
+
     pub fn with_config(config: ProfilingConfig) -> Self {
         Self {
             runtime_profiler: RuntimeProfiler {
@@ -89,32 +89,34 @@ impl ProfilingCollector {
             config,
         }
     }
-    
+
     /// Lädt Profiling-Daten aus Datei
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let _content = fs::read_to_string(path)?;
         let _data: ProfilingData = serde_json::from_str(&_content)?;
-        
+
         let collector = Self::new();
         // Rekonstruiere Daten aus ProfilingData
         // (vereinfacht - in Produktion würde man alle Daten laden)
         Ok(collector)
     }
-    
+
     /// Speichert Profiling-Daten in Datei
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let data = self.collect(&CompiledProgram { name: "current".to_string() })?;
+        let data = self.collect(&CompiledProgram {
+            name: "current".to_string(),
+        })?;
         let json = serde_json::to_string_pretty(&data)?;
-        
+
         // Erstelle Verzeichnis falls nötig
         if let Some(parent) = path.as_ref().parent() {
             fs::create_dir_all(parent)?;
         }
-        
+
         fs::write(path, json)?;
         Ok(())
     }
-    
+
     /// Speichert Profiling-Daten (automatisch wenn persist_path gesetzt)
     pub fn persist(&self) -> Result<()> {
         if let Some(ref path) = self.config.persist_path {
@@ -162,8 +164,9 @@ impl ProfilingCollector {
             };
 
             // Hot Path wenn: > threshold Calls oder > threshold ms avg time
-            if stats.count > self.config.hot_path_threshold_calls || 
-               avg_time > (self.config.hot_path_threshold_time_ms / 1000.0) {
+            if stats.count > self.config.hot_path_threshold_calls
+                || avg_time > (self.config.hot_path_threshold_time_ms / 1000.0)
+            {
                 hot_paths.push(func_name.clone());
             }
         }
@@ -172,9 +175,13 @@ impl ProfilingCollector {
         hot_paths.sort_by(|a, b| {
             let stats_a = &self.runtime_profiler.function_calls[a];
             let stats_b = &self.runtime_profiler.function_calls[b];
-            let importance_a = stats_a.count as f64 * (stats_a.total_time / stats_a.count.max(1) as f64);
-            let importance_b = stats_b.count as f64 * (stats_b.total_time / stats_b.count.max(1) as f64);
-            importance_b.partial_cmp(&importance_a).unwrap_or(std::cmp::Ordering::Equal)
+            let importance_a =
+                stats_a.count as f64 * (stats_a.total_time / stats_a.count.max(1) as f64);
+            let importance_b =
+                stats_b.count as f64 * (stats_b.total_time / stats_b.count.max(1) as f64);
+            importance_b
+                .partial_cmp(&importance_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(hot_paths)
@@ -192,8 +199,9 @@ impl ProfilingCollector {
             };
 
             // Bottleneck wenn: > threshold ms avg time oder sehr hohe max time
-            if avg_time > (self.config.bottleneck_threshold_ms / 1000.0) || 
-               stats.max_time > (self.config.bottleneck_max_time_ms / 1000.0) {
+            if avg_time > (self.config.bottleneck_threshold_ms / 1000.0)
+                || stats.max_time > (self.config.bottleneck_max_time_ms / 1000.0)
+            {
                 bottlenecks.push(func_name.clone());
             }
         }
@@ -208,10 +216,13 @@ impl ProfilingCollector {
         }
 
         // Berechne durchschnittliche Memory-Usage
-        let total: u64 = self.metrics.memory_samples.iter()
+        let total: u64 = self
+            .metrics
+            .memory_samples
+            .iter()
             .map(|s| s.memory_bytes)
             .sum();
-        
+
         Ok(total / self.metrics.memory_samples.len() as u64)
     }
 
@@ -222,10 +233,8 @@ impl ProfilingCollector {
         }
 
         // Berechne durchschnittliche CPU-Usage
-        let total: f64 = self.metrics.cpu_samples.iter()
-            .map(|s| s.cpu_percent)
-            .sum();
-        
+        let total: f64 = self.metrics.cpu_samples.iter().map(|s| s.cpu_percent).sum();
+
         Ok(total / self.metrics.cpu_samples.len() as f64)
     }
 
@@ -247,7 +256,9 @@ impl ProfilingCollector {
 
     /// Registriert Function Call
     pub fn record_function_call(&mut self, func_name: String, duration: f64) {
-        let stats = self.runtime_profiler.function_calls
+        let stats = self
+            .runtime_profiler
+            .function_calls
             .entry(func_name)
             .or_insert_with(|| FunctionCallStats {
                 count: 0,

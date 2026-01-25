@@ -1,4 +1,3 @@
-
 pub struct RedisStdlib;
 
 impl RedisStdlib {

@@ -1,7 +1,6 @@
 /// Error Suggestions - Bietet hilfreiche Vorschläge für Fehler
-/// 
+///
 /// Dieses Modul implementiert "Did you mean?" Vorschläge und andere hilfreiche Fehler-Hinweise.
-
 use crate::error::CompilerError;
 use std::collections::HashSet;
 
@@ -70,90 +69,125 @@ impl ErrorSuggestionEngine {
     /// Verbessert eine Fehlermeldung mit Vorschlägen
     pub fn enhance_error(&self, error: &CompilerError) -> String {
         let base_message = error.to_string();
-        
+
         match error {
-            CompilerError::Parse { expected, found, message, location, .. } => {
+            CompilerError::Parse {
+                expected,
+                found,
+                message,
+                location,
+                ..
+            } => {
                 let mut enhanced = format!("❌ {}\n", base_message);
-                
+
                 // Zeige Datei und Position
                 if let Some(file) = &location.file {
                     enhanced.push_str(&format!("📁 Datei: {}\n", file));
                 }
-                enhanced.push_str(&format!("📍 Position: Zeile {}, Spalte {}\n\n", location.line, location.column));
-                
+                enhanced.push_str(&format!(
+                    "📍 Position: Zeile {}, Spalte {}\n\n",
+                    location.line, location.column
+                ));
+
                 if let (Some(exp), Some(fnd)) = (expected, found) {
                     // Prüfe auf Tippfehler
                     if let Some(suggestion) = self.suggest_correction(fnd, &self.common_keywords) {
                         enhanced.push_str(&format!("💡 Did you mean: '{}'?\n", suggestion));
                     }
-                    
+
                     // Prüfe auf häufige Fehler
                     if exp.contains("function") && fnd.contains("fn") {
-                        enhanced.push_str("💡 Tip: Function declarations use 'fn', not 'function'\n");
-                        enhanced.push_str("   Beispiel: fn myFunction(): string { return \"hello\"; }\n");
+                        enhanced
+                            .push_str("💡 Tip: Function declarations use 'fn', not 'function'\n");
+                        enhanced.push_str(
+                            "   Beispiel: fn myFunction(): string { return \"hello\"; }\n",
+                        );
                     }
                     if exp.contains("struct") && fnd.contains("class") {
                         enhanced.push_str("💡 Tip: VelinScript uses 'struct', not 'class'\n");
-                        enhanced.push_str("   Beispiel: struct User { id: string, name: string }\n");
+                        enhanced
+                            .push_str("   Beispiel: struct User { id: string, name: string }\n");
                     }
                     if exp.contains("string") && fnd.contains("str") {
                         enhanced.push_str("💡 Tip: Use 'string' type, not 'str'\n");
                         enhanced.push_str("   Beispiel: let name: string = \"John\";\n");
                     }
                 }
-                
-                enhanced.push_str(&format!("\n📖 Erwartet: {}\n", expected.as_deref().unwrap_or("unbekannt")));
-                enhanced.push_str(&format!("🔍 Gefunden: {}\n", found.as_deref().unwrap_or("unbekannt")));
-                
+
+                enhanced.push_str(&format!(
+                    "\n📖 Erwartet: {}\n",
+                    expected.as_deref().unwrap_or("unbekannt")
+                ));
+                enhanced.push_str(&format!(
+                    "🔍 Gefunden: {}\n",
+                    found.as_deref().unwrap_or("unbekannt")
+                ));
+
                 // Füge Lösungsvorschläge hinzu
                 enhanced.push_str("\n🔧 Lösungsvorschläge:\n");
                 if message.contains("unexpected token") {
                     enhanced.push_str("   - Prüfe auf fehlende oder überflüssige Klammern\n");
-                    enhanced.push_str("   - Nutze 'velin check --autofix' für automatische Korrekturen\n");
+                    enhanced.push_str(
+                        "   - Nutze 'velin check --autofix' für automatische Korrekturen\n",
+                    );
                 }
                 if message.contains("expected") && message.contains("found") {
                     enhanced.push_str("   - Prüfe die Syntax in der Dokumentation\n");
                     enhanced.push_str("   - Siehe: docs/language/specification.md\n");
                 }
-                
+
                 enhanced
             }
-            CompilerError::Type { message, kind, location, .. } => {
+            CompilerError::Type {
+                message,
+                kind,
+                location,
+                ..
+            } => {
                 let mut enhanced = format!("❌ {}\n", base_message);
-                
+
                 // Zeige Datei und Position
                 if let Some(file) = &location.file {
                     enhanced.push_str(&format!("📁 Datei: {}\n", file));
                 }
-                enhanced.push_str(&format!("📍 Position: Zeile {}, Spalte {}\n\n", location.line, location.column));
-                
+                enhanced.push_str(&format!(
+                    "📍 Position: Zeile {}, Spalte {}\n\n",
+                    location.line, location.column
+                ));
+
                 // Prüfe auf häufige Type-Fehler
                 if message.contains("undefined") {
                     if let Some(name) = self.extract_name_from_message(message) {
-                        if let Some(suggestion) = self.suggest_correction(&name, &self.common_functions) {
+                        if let Some(suggestion) =
+                            self.suggest_correction(&name, &self.common_functions)
+                        {
                             enhanced.push_str(&format!("💡 Did you mean: '{}'?\n", suggestion));
                         }
-                        if let Some(suggestion) = self.suggest_correction(&name, &self.common_types) {
-                            enhanced.push_str(&format!("💡 Did you mean type: '{}'?\n", suggestion));
+                        if let Some(suggestion) = self.suggest_correction(&name, &self.common_types)
+                        {
+                            enhanced
+                                .push_str(&format!("💡 Did you mean type: '{}'?\n", suggestion));
                         }
                     }
                 }
-                
+
                 if let Some(k) = kind {
                     enhanced.push_str(&format!("📋 Fehler-Typ: {}\n", k));
                 }
-                
+
                 // Füge Beispiele hinzu
                 if message.contains("type mismatch") {
                     enhanced.push_str("\n💡 Beispiel für explizite Typ-Annotation:\n");
                     enhanced.push_str("   let x: number = 42;\n");
                     enhanced.push_str("   let name: string = \"John\";\n");
                 }
-                
+
                 // Prüfe auf undefined variable
                 if message.contains("undefined variable") {
                     if let Some(name) = self.extract_name_from_message(message) {
-                        if let Some(suggestion) = self.suggest_correction(&name, &self.common_functions) {
+                        if let Some(suggestion) =
+                            self.suggest_correction(&name, &self.common_functions)
+                        {
                             enhanced.push_str(&format!("💡 Did you mean: '{}'?\n", suggestion));
                         }
                     }
@@ -162,7 +196,7 @@ impl ErrorSuggestionEngine {
                     enhanced.push_str("   let x = 10;  // Deklaration\n");
                     enhanced.push_str("   let y = x + 5;  // Verwendung\n");
                 }
-                
+
                 // Prüfe auf type mismatch
                 if message.contains("expected") && message.contains("found") {
                     enhanced.push_str("\n🔧 Lösungsvorschläge:\n");
@@ -170,10 +204,138 @@ impl ErrorSuggestionEngine {
                     enhanced.push_str("   - Nutze explizite Typ-Annotationen bei Unsicherheit\n");
                     enhanced.push_str("   - Siehe: docs/guides/tutorial-1-basics.md\n");
                 }
-                
+
                 enhanced
             }
-            _ => base_message,
+            CompilerError::CodeGen {
+                message,
+                context,
+                location,
+                ..
+            } => {
+                let mut enhanced = format!("❌ Code Generation Error: {}\n", message);
+
+                // Zeige Datei und Position
+                if let Some(file) = &location.file {
+                    enhanced.push_str(&format!("📁 Datei: {}\n", file));
+                }
+                if location.line > 0 || location.column > 0 {
+                    enhanced.push_str(&format!(
+                        "📍 Position: Zeile {}, Spalte {}\n",
+                        location.line, location.column
+                    ));
+                }
+
+                if let Some(ctx) = context {
+                    enhanced.push_str(&format!("📋 Context: {}\n", ctx));
+                }
+
+                enhanced.push_str("\n🔧 Lösungsvorschläge:\n");
+                enhanced.push_str("   - Prüfe die Syntax des generierten Codes\n");
+                enhanced.push_str("   - Stelle sicher, dass alle Dependencies verfügbar sind\n");
+                enhanced.push_str("   - Prüfe die IR-Repräsentation auf Korrektheit\n");
+                enhanced.push_str("   - Siehe: docs/architecture/code-generation.md\n");
+
+                if message.contains("IR") || message.contains("ir") {
+                    enhanced.push_str("   - Prüfe die IR-Validierung\n");
+                    enhanced.push_str("   - Nutze 'velin check' zur Diagnose\n");
+                }
+
+                enhanced
+            }
+
+            CompilerError::Io { message } => {
+                let mut enhanced = format!("❌ IO Error: {}\n", message);
+                enhanced.push_str("\n🔧 Lösungsvorschläge:\n");
+
+                if message.contains("not found") || message.contains("No such file") {
+                    enhanced.push_str("   - Prüfe ob die Datei existiert\n");
+                    enhanced.push_str("   - Prüfe den Dateipfad auf Tippfehler\n");
+                    enhanced.push_str("   - Prüfe die Dateiberechtigungen\n");
+                } else if message.contains("permission") || message.contains("denied") {
+                    enhanced.push_str("   - Prüfe Dateiberechtigungen\n");
+                    enhanced.push_str("   - Führe mit entsprechenden Rechten aus\n");
+                    enhanced.push_str("   - Prüfe ob die Datei schreibgeschützt ist\n");
+                } else if message.contains("too large") {
+                    enhanced.push_str("   - Datei überschreitet das Größenlimit (5MB)\n");
+                    enhanced.push_str("   - Teile große Dateien in Module auf\n");
+                } else {
+                    enhanced.push_str("   - Prüfe die Dateisystem-Berechtigungen\n");
+                    enhanced
+                        .push_str("   - Stelle sicher, dass genug Speicherplatz vorhanden ist\n");
+                }
+
+                enhanced
+            }
+
+            CompilerError::Validation { message, field } => {
+                let mut enhanced = format!("❌ Validation Error: {}\n", message);
+
+                if let Some(f) = field {
+                    enhanced.push_str(&format!("📋 Feld: {}\n", f));
+                }
+
+                enhanced.push_str("\n🔧 Lösungsvorschläge:\n");
+                enhanced.push_str("   - Prüfe die Validierungsregeln\n");
+                enhanced.push_str(
+                    "   - Stelle sicher, dass alle erforderlichen Felder vorhanden sind\n",
+                );
+                enhanced.push_str("   - Siehe: docs/guides/validation.md\n");
+
+                if message.contains("required") {
+                    enhanced
+                        .push_str("   - Stelle sicher, dass alle Pflichtfelder ausgefüllt sind\n");
+                }
+                if message.contains("format") || message.contains("invalid") {
+                    enhanced.push_str("   - Prüfe das Format der Eingabedaten\n");
+                }
+
+                enhanced
+            }
+
+            CompilerError::Config { message } => {
+                let mut enhanced = format!("❌ Configuration Error: {}\n", message);
+                enhanced.push_str("\n🔧 Lösungsvorschläge:\n");
+                enhanced.push_str("   - Prüfe velin.config.json auf Syntax-Fehler\n");
+                enhanced.push_str("   - Nutze 'velin config validate' zur Validierung\n");
+                enhanced.push_str("   - Siehe: docs/guides/configuration.md\n");
+
+                if message.contains("JSON") || message.contains("json") {
+                    enhanced.push_str("   - Prüfe die JSON-Syntax (Kommas, Anführungszeichen)\n");
+                    enhanced.push_str("   - Nutze einen JSON-Validator\n");
+                }
+                if message.contains("missing") {
+                    enhanced.push_str("   - Stelle sicher, dass alle erforderlichen Konfigurationsfelder vorhanden sind\n");
+                }
+
+                enhanced
+            }
+
+            CompilerError::Internal { message } => {
+                let mut enhanced = format!("❌ Internal Compiler Error: {}\n", message);
+                enhanced
+                    .push_str("\n⚠️  Dies ist ein interner Fehler. Bitte melde diesen Fehler:\n");
+                enhanced.push_str(
+                    "   - GitHub Issues: https://github.com/velinscript/velinscript/issues\n",
+                );
+                enhanced.push_str("   - Include: Compiler-Version, Fehlermeldung, Code-Beispiel\n");
+                enhanced.push_str("   - Minimales Reproduktionsbeispiel wäre hilfreich\n");
+                enhanced.push_str("\n💡 Mögliche Workarounds:\n");
+                enhanced.push_str("   - Versuche den Code zu vereinfachen\n");
+                enhanced
+                    .push_str("   - Prüfe ob der Fehler mit anderen Dateien reproduzierbar ist\n");
+                enhanced.push_str("   - Nutze 'velin check' zur Diagnose\n");
+
+                enhanced
+            }
+
+            CompilerError::Warning(msg) => {
+                format!("⚠️  Warning: {}\n", msg)
+            }
+
+            CompilerError::Info(msg) => {
+                format!("ℹ️  Info: {}\n", msg)
+            }
         }
     }
 
@@ -223,7 +385,11 @@ impl ErrorSuggestionEngine {
 
         for i in 1..=a_len {
             for j in 1..=b_len {
-                let cost = if a_chars[i - 1] == b_chars[j - 1] { 0 } else { 1 };
+                let cost = if a_chars[i - 1] == b_chars[j - 1] {
+                    0
+                } else {
+                    1
+                };
                 matrix[i][j] = (matrix[i - 1][j] + 1)
                     .min(matrix[i][j - 1] + 1)
                     .min(matrix[i - 1][j - 1] + cost);
@@ -258,7 +424,6 @@ impl Default for ErrorSuggestionEngine {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -285,5 +450,73 @@ mod tests {
         };
         let enhanced = engine.enhance_error(&error);
         assert!(enhanced.contains("Did you mean"));
+    }
+
+    #[test]
+    fn test_codegen_error_suggestions() {
+        let engine = ErrorSuggestionEngine::new();
+        let error = CompilerError::codegen_error("Failed to generate code".to_string());
+        let enhanced = engine.enhance_error(&error);
+        assert!(enhanced.contains("Code Generation Error"));
+        assert!(enhanced.contains("Lösungsvorschläge"));
+    }
+
+    #[test]
+    fn test_io_error_suggestions() {
+        let engine = ErrorSuggestionEngine::new();
+        let error = CompilerError::io_error("File not found: test.velin".to_string());
+        let enhanced = engine.enhance_error(&error);
+        assert!(enhanced.contains("IO Error"));
+        assert!(enhanced.contains("Prüfe ob die Datei existiert"));
+    }
+
+    #[test]
+    fn test_validation_error_suggestions() {
+        let engine = ErrorSuggestionEngine::new();
+        let error = CompilerError::validation_error(
+            "Field is required".to_string(),
+            Some("name".to_string()),
+        );
+        let enhanced = engine.enhance_error(&error);
+        assert!(enhanced.contains("Validation Error"));
+        assert!(enhanced.contains("Feld: name"));
+    }
+
+    #[test]
+    fn test_config_error_suggestions() {
+        let engine = ErrorSuggestionEngine::new();
+        let error = CompilerError::Config {
+            message: "Invalid JSON".to_string(),
+        };
+        let enhanced = engine.enhance_error(&error);
+        assert!(enhanced.contains("Configuration Error"));
+        assert!(enhanced.contains("velin.config.json"));
+    }
+
+    #[test]
+    fn test_internal_error_suggestions() {
+        let engine = ErrorSuggestionEngine::new();
+        let error = CompilerError::Internal {
+            message: "Unexpected error".to_string(),
+        };
+        let enhanced = engine.enhance_error(&error);
+        assert!(enhanced.contains("Internal Compiler Error"));
+        assert!(enhanced.contains("GitHub Issues"));
+    }
+
+    #[test]
+    fn test_warning_suggestions() {
+        let engine = ErrorSuggestionEngine::new();
+        let error = CompilerError::Warning("Deprecated function".to_string());
+        let enhanced = engine.enhance_error(&error);
+        assert!(enhanced.contains("Warning"));
+    }
+
+    #[test]
+    fn test_info_suggestions() {
+        let engine = ErrorSuggestionEngine::new();
+        let error = CompilerError::Info("Optimization applied".to_string());
+        let enhanced = engine.enhance_error(&error);
+        assert!(enhanced.contains("Info"));
     }
 }

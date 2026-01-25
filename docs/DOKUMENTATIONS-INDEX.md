@@ -1,7 +1,7 @@
 # Vollständiger Dokumentations-Index
 
 **Version:** 3.1.0  
-**Letzte Aktualisierung:** 2026-01-30
+**Letzte Aktualisierung:** 2026-02-02
 
 ---
 
@@ -16,6 +16,7 @@ Dieser Index listet alle Dokumentationen nach Themenbereichen auf.
 ### Core-Architektur
 - ✅ **[Compiler Architecture](architecture/compiler-architecture.md)** - Pass-System und Core
 - ✅ **[Pass-Verlauf](architecture/pass-verlauf.md)** - Detaillierte Erklärung aller Passes
+- ✅ **[Fehlerbehandlung & Lösungsvorschläge](architecture/error-handling.md)** ✅ (Neu in 3.1.0) - Umfassendes Fehlerbehandlungssystem
 - ✅ **[Passes-Übersicht](architecture/passes-uebersicht.md)** - Vollständige Übersicht aller Passes
 - ✅ **[Pass-Dokumentation Mapping](architecture/pass-dokumentation-mapping.md)** - Welche Doku für welchen Pass
 
@@ -284,7 +285,29 @@ docs/
 
 ---
 
-## 📝 Empfehlungen
+## � Beispiel-Projekte & Beispiele
+
+### System-Verwaltung
+- ✅ **[System Diagnosis](../examples/system-diagnosis/)** ✅ (Neu in 3.1.0) - Vollständiges System-Diagnose-Tool
+  - **API-Dokumentation**: [System-Diagnose-Dokumentation](system-diagnose.md) (911 Zeilen)
+  - **Features**:
+    - Systemressourcen-Überwachung (CPU, Memory, Disk, Network)
+    - Umfassende Sicherheitsprüfungen (15+ Checks)
+    - Health-Score-Berechnung (0-100)
+    - Automatische Empfehlungen
+    - Service-Status-Überwachung
+    - Log-Analyse mit Pattern-Erkennung
+  - **Module**:
+    - `system_diagnosis.velin` - Hauptmodul (975 Zeilen)
+    - `security_checks.velin` - Sicherheitsprüfungen (768 Zeilen)
+    - `tests/system_diagnosis_test.velin` - Test-Suite (629 Zeilen, 20+ Tests)
+  - **Dokumentation**:
+    - [README.md](../examples/system-diagnosis/README.md) - Quick Start
+    - [ZUSAMMENFASSUNG.md](../examples/system-diagnosis/ZUSAMMENFASSUNG.md) - Implementation Summary
+
+---
+
+## �📝 Empfehlungen
 
 ### Fehlende Dokumentationen erstellen
 
@@ -293,5 +316,5 @@ docs/
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
+**Letzte Aktualisierung:** 2026-02-02  
 **Version:** 3.1.0

@@ -1,11 +1,10 @@
 /// Lifetime-System für VelinScript
-/// 
+///
 /// Definiert Lifetime-Information für Referenzen ähnlich Rust.
-
 use std::fmt;
 
 /// Lifetime-Information
-/// 
+///
 /// Definiert die Lifetime einer Referenz.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Lifetime {
@@ -26,7 +25,7 @@ impl fmt::Display for Lifetime {
 }
 
 /// Lifetime-ID
-/// 
+///
 /// Eindeutige ID für eine Lifetime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct LifetimeId(pub usize);
@@ -38,7 +37,7 @@ impl LifetimeId {
 }
 
 /// Scope-ID
-/// 
+///
 /// Eindeutige ID für einen Scope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ScopeId(pub usize);
@@ -50,7 +49,7 @@ impl ScopeId {
 }
 
 /// Lifetime-Analyzer
-/// 
+///
 /// Analysiert Lifetimes in IR-Code.
 pub struct LifetimeAnalyzer {
     lifetime_counter: usize,
@@ -68,7 +67,7 @@ impl LifetimeAnalyzer {
             scopes: Vec::new(),
         }
     }
-    
+
     /// Erstellt eine neue Lifetime
     pub fn create_lifetime(&mut self, scope: ScopeId) -> Lifetime {
         let id = LifetimeId::new(self.lifetime_counter);
@@ -77,7 +76,7 @@ impl LifetimeAnalyzer {
         self.lifetimes.push(lifetime);
         lifetime
     }
-    
+
     /// Erstellt einen neuen Scope
     pub fn create_scope(&mut self) -> ScopeId {
         let scope = ScopeId::new(self.scope_counter);
@@ -85,7 +84,7 @@ impl LifetimeAnalyzer {
         self.scopes.push(scope);
         scope
     }
-    
+
     /// Prüft ob eine Lifetime einen Scope überlebt
     pub fn outlives(&self, lifetime: &Lifetime, scope: ScopeId) -> bool {
         // Lifetime überlebt Scope wenn Scope-ID kleiner ist

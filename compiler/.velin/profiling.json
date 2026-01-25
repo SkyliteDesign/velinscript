@@ -1,0 +1,13 @@
+{
+  "hot_paths": [],
+  "bottlenecks": [],
+  "memory_usage": 0,
+  "cpu_usage": 0.0,
+  "function_times": {
+    "ir_validate": 0.0000117,
+    "ir_optimize": 0.0000958,
+    "ir_codegen": 0.0001008,
+    "codegen_total": 0.000376,
+    "ir_build": 0.0001433
+  }
+}

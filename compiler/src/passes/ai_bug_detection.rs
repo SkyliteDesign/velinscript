@@ -1,15 +1,15 @@
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
 use crate::compiler::config::CompilerConfig;
-use crate::stdlib::ml::{LLMClient, LLMProvider};
-use crate::parser::ast::*;
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use crate::error::CompilerError;
+use crate::parser::ast::*;
 use crate::prompt::sanitizer::PromptSanitizer;
+use crate::stdlib::ml::{LLMClient, LLMProvider};
 use anyhow::Result;
 use serde_json;
 
 /// KI-basierter Bug Detection Pass
-/// 
+///
 /// Erkennt Bugs proaktiv vor der Ausführung:
 /// - Pattern-basierte Bug-Erkennung
 /// - KI-basierte semantische Bug-Erkennung
@@ -68,7 +68,7 @@ struct DetectedBug {
 impl BugPatternDatabase {
     fn new() -> Self {
         let mut patterns = Vec::new();
-        
+
         // Pattern 1: Fehlende Error Handling
         patterns.push(BugPattern {
             name: "missing_error_handling".to_string(),
@@ -77,7 +77,7 @@ impl BugPatternDatabase {
             severity: BugSeverity::Medium,
             auto_fixable: false,
         });
-        
+
         // Pattern 2: Potenzielle Null-Pointer
         patterns.push(BugPattern {
             name: "potential_null_pointer".to_string(),
@@ -86,7 +86,7 @@ impl BugPatternDatabase {
             severity: BugSeverity::High,
             auto_fixable: false,
         });
-        
+
         // Pattern 3: Fehlende Auth bei sensiblen Operationen
         patterns.push(BugPattern {
             name: "missing_auth".to_string(),
@@ -95,7 +95,7 @@ impl BugPatternDatabase {
             severity: BugSeverity::Critical,
             auto_fixable: true,
         });
-        
+
         Self { patterns }
     }
 }
@@ -158,12 +158,8 @@ impl AIBugDetectionPass {
     /// Prüft ob Funktion Pattern matcht
     fn matches_pattern(&self, func: &Function, pattern: &BugPattern) -> bool {
         match &pattern.matcher {
-            PatternMatcher::FunctionNameContains(substring) => {
-                func.name.contains(substring)
-            }
-            PatternMatcher::DecoratorName(name) => {
-                func.decorators.iter().any(|d| d.name == *name)
-            }
+            PatternMatcher::FunctionNameContains(substring) => func.name.contains(substring),
+            PatternMatcher::DecoratorName(name) => func.decorators.iter().any(|d| d.name == *name),
             PatternMatcher::ExpressionPattern(_) => {
                 // Einfache Implementierung - würde in Produktion AST durchsuchen
                 false
@@ -174,10 +170,8 @@ impl AIBugDetectionPass {
     /// Schlägt Fix für Pattern vor
     fn suggest_fix(&self, func: &Function, pattern: &BugPattern) -> Option<String> {
         match pattern.name.as_str() {
-            "missing_auth" => {
-                Some(format!("Add @Auth decorator to function {}", func.name))
-            }
-            _ => None
+            "missing_auth" => Some(format!("Add @Auth decorator to function {}", func.name)),
+            _ => None,
         }
     }
 
@@ -185,10 +179,10 @@ impl AIBugDetectionPass {
     fn detect_semantic_bugs(&self, program: &Program) -> Result<Vec<DetectedBug>> {
         if let Some(ref client) = self.llm_client {
             let code_summary = self.extract_code_summary(program);
-            
+
             // Sanitize Code-Kontext
             let sanitized_code = self.prompt_sanitizer.sanitize_code_context(&code_summary);
-            
+
             let prompt = format!(
                 "Analyze the following VelinScript code for potential bugs and security issues.\n\
                 Provide a JSON array of bugs with:\n\
@@ -205,7 +199,7 @@ impl AIBugDetectionPass {
 
             // Sanitize Prompt vor dem Senden
             let sanitized_prompt = self.prompt_sanitizer.sanitize(&prompt);
-            
+
             if !self.prompt_sanitizer.is_safe(&sanitized_prompt) {
                 // Prompt enthält gefährliche Patterns, nutze Fallback
                 return Ok(Vec::new());
@@ -223,7 +217,7 @@ impl AIBugDetectionPass {
     /// Extrahiert Code-Zusammenfassung für Bug-Analyse
     fn extract_code_summary(&self, program: &Program) -> String {
         let mut summary = String::new();
-        
+
         for item in &program.items {
             if let Item::Function(f) = item {
                 summary.push_str(&format!("fn {}(", f.name));
@@ -238,32 +232,41 @@ impl AIBugDetectionPass {
                     summary.push_str(&format!(" -> {:?}", rt));
                 }
                 summary.push_str("\n");
-                
+
                 // Decorators
                 for decorator in &f.decorators {
                     summary.push_str(&format!("  @{}\n", decorator.name));
                 }
-                
+
                 // Body-Zusammenfassung (erste paar Statements)
                 let statement_count = f.body.statements.len();
                 summary.push_str(&format!("  // {} statements\n", statement_count));
             }
         }
-        
+
         summary
     }
 
     /// Parst KI-Antwort in Bug-Liste
     fn parse_bug_response(&self, response: &str) -> Result<Vec<DetectedBug>> {
-        let cleaned = response.trim().trim_start_matches("```json").trim_end_matches("```").trim();
-        
+        let cleaned = response
+            .trim()
+            .trim_start_matches("```json")
+            .trim_end_matches("```")
+            .trim();
+
         match serde_json::from_str::<serde_json::Value>(cleaned) {
             Ok(json) => {
                 let mut bugs = Vec::new();
-                
+
                 if let Some(array) = json.as_array() {
                     for bug_json in array {
-                        if let (Some(pattern), Some(location), Some(description), Some(severity_str)) = (
+                        if let (
+                            Some(pattern),
+                            Some(location),
+                            Some(description),
+                            Some(severity_str),
+                        ) = (
                             bug_json["pattern"].as_str(),
                             bug_json["location"].as_str(),
                             bug_json["description"].as_str(),
@@ -276,19 +279,21 @@ impl AIBugDetectionPass {
                                 "low" => BugSeverity::Low,
                                 _ => BugSeverity::Medium,
                             };
-                            
+
                             bugs.push(DetectedBug {
                                 pattern: pattern.to_string(),
                                 location: location.to_string(),
                                 description: description.to_string(),
                                 severity,
                                 auto_fixable: bug_json["auto_fixable"].as_bool().unwrap_or(false),
-                                suggested_fix: bug_json["suggested_fix"].as_str().map(|s| s.to_string()),
+                                suggested_fix: bug_json["suggested_fix"]
+                                    .as_str()
+                                    .map(|s| s.to_string()),
                             });
                         }
                     }
                 }
-                
+
                 Ok(bugs)
             }
             Err(_) => Ok(Vec::new()), // Parsing fehlgeschlagen
@@ -298,7 +303,7 @@ impl AIBugDetectionPass {
     /// Erkennt Logik-Fehler
     fn detect_logic_errors(&self, program: &Program) -> Vec<DetectedBug> {
         let bugs = Vec::new();
-        
+
         // Einfache Heuristiken für Logik-Fehler
         for item in &program.items {
             if let Item::Function(_f) = item {
@@ -308,21 +313,21 @@ impl AIBugDetectionPass {
                 // etc.
             }
         }
-        
+
         bugs
     }
 
     /// Erkennt Sicherheitslücken
     fn detect_security_issues(&self, program: &Program) -> Vec<DetectedBug> {
         let mut bugs = Vec::new();
-        
+
         for item in &program.items {
             if let Item::Function(f) = item {
                 // Prüfe auf fehlende Auth bei sensiblen Operationen
-                let is_sensitive = f.name.contains("delete") 
-                    || f.name.contains("update") 
+                let is_sensitive = f.name.contains("delete")
+                    || f.name.contains("update")
                     || f.name.contains("admin");
-                
+
                 if is_sensitive {
                     let has_auth = f.decorators.iter().any(|d| d.name == "@Auth");
                     if !has_auth {
@@ -332,13 +337,16 @@ impl AIBugDetectionPass {
                             description: "Sensitive operation without authentication".to_string(),
                             severity: BugSeverity::Critical,
                             auto_fixable: true,
-                            suggested_fix: Some(format!("Add @Auth decorator to function {}", f.name)),
+                            suggested_fix: Some(format!(
+                                "Add @Auth decorator to function {}",
+                                f.name
+                            )),
                         });
                     }
                 }
             }
         }
-        
+
         bugs
     }
 
@@ -405,7 +413,7 @@ impl Pass for AIBugDetectionPass {
                         bug.location,
                         bug.description
                     );
-                    
+
                     context.errors.push(CompilerError::Warning(error_msg));
                 }
             }

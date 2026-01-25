@@ -1,9 +1,11 @@
-
 pub struct LLMStdlib;
 
 impl LLMStdlib {
     pub fn generate_summarize_code(client: &str, text: &str) -> String {
-        format!("{}.generate(&format!(\"Summarize the following text:\\n\\n{{}}\", {}))", client, text)
+        format!(
+            "{}.generate(&format!(\"Summarize the following text:\\n\\n{{}}\", {}))",
+            client, text
+        )
     }
 
     pub fn generate_classify_code(client: &str, text: &str, categories: &str) -> String {

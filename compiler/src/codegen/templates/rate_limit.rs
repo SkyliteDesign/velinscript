@@ -2,14 +2,15 @@ use super::{Template, TemplateConfig};
 use anyhow::Result;
 
 /// Rate Limiting Template
-/// 
+///
 /// Generiert Redis-basiertes Rate Limiting
 /// Mit verschiedenen Strategien
 pub struct RateLimitTemplate;
 
 impl Template for RateLimitTemplate {
     fn generate(&self, config: &TemplateConfig) -> Result<String, String> {
-        let strategy = config.options
+        let strategy = config
+            .options
             .get("strategy")
             .and_then(|v| v.as_str())
             .unwrap_or("fixed-window");
@@ -85,7 +86,8 @@ pub async fn rate_limit_middleware(request: Request, next: Next) -> Response {
             .unwrap()
     }
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_sliding_window(&self) -> String {
@@ -128,7 +130,8 @@ impl SlidingWindowLimiter {
         }
     }
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn generate_token_bucket(&self) -> String {
@@ -169,6 +172,7 @@ impl TokenBucket {
         }
     }
 }
-"#.to_string()
+"#
+        .to_string()
     }
 }

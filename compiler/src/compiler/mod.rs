@@ -1,14 +1,14 @@
 pub mod config;
 pub mod context;
 pub mod error;
-pub mod pass;
 pub mod language;
 pub mod orchestrator;
+pub mod pass;
 
 use crate::compiler::config::CompilerConfig;
 use crate::compiler::context::CompilationContext;
-use crate::compiler::pass::Pass;
 use crate::compiler::language::validate_velisch_identity;
+use crate::compiler::pass::Pass;
 use anyhow::Result;
 
 pub struct VelinCompiler {
@@ -32,22 +32,24 @@ impl VelinCompiler {
     pub fn compile(&self, root_file: String, source: String) -> Result<CompilationContext> {
         // Velisch Identity Check - Fingerabdruck im Kern
         if !validate_velisch_identity() {
-            return Err(anyhow::anyhow!("Velisch language identity validation failed. This is a critical error."));
+            return Err(anyhow::anyhow!(
+                "Velisch language identity validation failed. This is a critical error."
+            ));
         }
-        
+
         let mut context = CompilationContext::new(root_file, source);
+
+        // Definiere kritische Passes, die bei Fehlern stoppen sollten
+        let critical_passes = ["Parser", "TypeCheck", "Codegen"];
 
         for pass in &self.passes {
             // tracing::info!("Running pass: {}", pass.name());
             pass.run(&mut context)?;
-            
+
             if context.has_errors() {
-                // For now, stop on first pass failure unless we have a "tolerant" mode
-                // But let's allow Autofix pass to proceed even if previous had issues? 
-                // Actually, Autofix is first.
-                // If Parser fails, we stop.
-                if pass.name() == "Parser" {
-                     break;
+                // Stoppe bei kritischen Passes
+                if critical_passes.contains(&pass.name()) {
+                    break;
                 }
             }
         }

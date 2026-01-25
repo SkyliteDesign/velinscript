@@ -30,24 +30,24 @@ pub enum Token {
     Async,
     Await,
     In,
-    
+
     // Decorators
     At, // @
-    
+
     // HTTP Methods (als Decorators)
     Get,
     Post,
     Put,
     Delete,
     Patch,
-    
+
     // Security Decorators
     Auth,
     Role,
     Cache,
     SEO,
     AI,
-    
+
     // Literals
     String(String),
     FormatString(Vec<FormatStringPart>),
@@ -55,40 +55,40 @@ pub enum Token {
     Boolean(bool),
     Null,
     Identifier(String),
-    
+
     // Operators
-    Plus,        // +
-    Minus,       // -
-    Star,        // *
-    Slash,       // /
-    Percent,     // %
-    Eq,          // =
-    EqEq,        // ==
-    NotEq,       // !=
-    Lt,          // <
-    Gt,          // >
-    LtEq,        // <=
-    GtEq,        // >=
-    And,         // &&
-    Or,          // ||
-    Not,         // !
-    
+    Plus,    // +
+    Minus,   // -
+    Star,    // *
+    Slash,   // /
+    Percent, // %
+    Eq,      // =
+    EqEq,    // ==
+    NotEq,   // !=
+    Lt,      // <
+    Gt,      // >
+    LtEq,    // <=
+    GtEq,    // >=
+    And,     // &&
+    Or,      // ||
+    Not,     // !
+
     // Punctuation
-    LParen,      // (
-    RParen,      // )
-    LBrace,      // {
-    RBrace,      // }
-    LBracket,    // [
-    RBracket,    // ]
-    Comma,       // ,
-    Semicolon,   // ;
-    Colon,       // :
-    Dot,         // .
-    Arrow,       // ->
-    FatArrow,    // =>
-    DotDot,      // ..
-    DotDotEq,    // ..=
-    
+    LParen,    // (
+    RParen,    // )
+    LBrace,    // {
+    RBrace,    // }
+    LBracket,  // [
+    RBracket,  // ]
+    Comma,     // ,
+    Semicolon, // ;
+    Colon,     // :
+    Dot,       // .
+    Arrow,     // ->
+    FatArrow,  // =>
+    DotDot,    // ..
+    DotDotEq,  // ..=
+
     // Special
     Newline,
     EOF,
@@ -136,7 +136,7 @@ impl<'a> Lexer<'a> {
         }
         lexer
     }
-    
+
     fn advance(&mut self) {
         if let Some(ch) = self.current {
             self.byte_position += ch.len_utf8();
@@ -160,7 +160,7 @@ impl<'a> Lexer<'a> {
         }
         self.position += 1;
     }
-    
+
     pub fn skip_whitespace(&mut self) {
         while let Some(ch) = self.current {
             // Skip BOM (Byte Order Mark) if present
@@ -168,7 +168,7 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 continue;
             }
-            
+
             if ch.is_whitespace() && ch != '\n' {
                 self.advance();
             } else {
@@ -176,14 +176,14 @@ impl<'a> Lexer<'a> {
             }
         }
     }
-    
+
     fn skip_comment(&mut self) -> Option<Token> {
         // We already consumed the first '/' in next_token()
         // Now check for second '/' or '*'
         if let Some('/') = self.current {
             // Single-line comment: //
             self.advance(); // consume second '/'
-            
+
             // Check for third '/' (Doc Comment)
             let is_doc_comment = if let Some('/') = self.current {
                 self.advance();
@@ -209,7 +209,6 @@ impl<'a> Lexer<'a> {
             if is_doc_comment {
                 return Some(Token::DocComment(comment_content.trim().to_string()));
             }
-
         } else if let Some('*') = self.current {
             // Multi-line comment: /*
             self.advance(); // consume '*'
@@ -227,12 +226,12 @@ impl<'a> Lexer<'a> {
         }
         None
     }
-    
+
     fn read_string(&mut self) -> Result<String, LexerError> {
         let mut string = String::new();
         let quote = self.current.unwrap();
         self.advance();
-        
+
         while let Some(ch) = self.current {
             match ch {
                 '"' | '\'' if ch == quote => {
@@ -260,20 +259,20 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
-        
+
         Err(LexerError {
             message: "Unterminated string".to_string(),
             line: self.line,
             column: self.column,
         })
     }
-    
+
     fn read_format_string(&mut self) -> Result<Vec<FormatStringPart>, LexerError> {
         let quote = self.current.unwrap();
         self.advance();
         let mut parts = Vec::new();
         let mut current_text = String::new();
-        
+
         while let Some(ch) = self.current {
             match ch {
                 '"' | '\'' if ch == quote => {
@@ -290,11 +289,11 @@ impl<'a> Lexer<'a> {
                         current_text = String::new();
                     }
                     self.advance(); // consume '{'
-                    
+
                     // Read expression until '}'
                     let mut expr = String::new();
                     let mut brace_count = 1;
-                    
+
                     while let Some(ch) = self.current {
                         match ch {
                             '{' => {
@@ -306,7 +305,9 @@ impl<'a> Lexer<'a> {
                                 brace_count -= 1;
                                 if brace_count == 0 {
                                     self.advance(); // consume '}'
-                                    parts.push(FormatStringPart::Expression(expr.trim().to_string()));
+                                    parts.push(FormatStringPart::Expression(
+                                        expr.trim().to_string(),
+                                    ));
                                     break;
                                 } else {
                                     expr.push(ch);
@@ -340,7 +341,7 @@ impl<'a> Lexer<'a> {
                             }
                         }
                     }
-                    
+
                     if brace_count > 0 {
                         return Err(LexerError {
                             message: "Unterminated format string expression".to_string(),
@@ -372,18 +373,18 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
-        
+
         Err(LexerError {
             message: "Unterminated format string".to_string(),
             line: self.line,
             column: self.column,
         })
     }
-    
+
     fn read_number(&mut self) -> f64 {
         let mut num_str = String::new();
         let mut has_dot = false;
-        
+
         while let Some(ch) = self.current {
             if ch.is_ascii_digit() {
                 num_str.push(ch);
@@ -407,13 +408,13 @@ impl<'a> Lexer<'a> {
                 break;
             }
         }
-        
+
         num_str.parse().unwrap_or(0.0)
     }
-    
+
     fn read_identifier(&mut self) -> String {
         let mut ident = String::new();
-        
+
         while let Some(ch) = self.current {
             if ch.is_alphanumeric() || ch == '_' {
                 ident.push(ch);
@@ -422,13 +423,13 @@ impl<'a> Lexer<'a> {
                 break;
             }
         }
-        
+
         ident
     }
-    
+
     fn read_keyword_or_identifier(&mut self) -> Token {
         let ident = self.read_identifier();
-        
+
         match ident.as_str() {
             "fn" => Token::Fn,
             "let" => Token::Let,
@@ -473,10 +474,20 @@ impl<'a> Lexer<'a> {
             _ => Token::Identifier(ident),
         }
     }
-    
+
     pub fn next_token(&mut self) -> Result<Token, LexerError> {
         self.skip_whitespace();
-        
+
+        #[cfg(debug_assertions)]
+        {
+            if let Some(ch) = self.current {
+                if ch == '}' || ch == ';' {
+                    eprintln!("🔍 LEXER next_token() - Aktuelles Zeichen: '{:?}' (0x{:02x}), Line: {}, Column: {}", 
+                             ch, ch as u32, self.line, self.column);
+                }
+            }
+        }
+
         if let Some(ch) = self.current {
             let token = match ch {
                 '@' => {
@@ -584,6 +595,13 @@ impl<'a> Lexer<'a> {
                     Token::LBrace
                 }
                 '}' => {
+                    #[cfg(debug_assertions)]
+                    {
+                        eprintln!(
+                            "🔍 LEXER: RBrace tokenisiert - Line: {}, Column: {}, Position: {}",
+                            self.line, self.column, self.position
+                        );
+                    }
                     self.advance();
                     Token::RBrace
                 }
@@ -638,10 +656,10 @@ impl<'a> Lexer<'a> {
                     let quote = ch;
                     let mut peek_iter = self.input.clone();
                     let mut is_format_string = false;
-                    
+
                     // Skip the quote
                     peek_iter.next();
-                    
+
                     // Look for '{' before the closing quote
                     while let Some(peek_ch) = peek_iter.next() {
                         if peek_ch == quote {
@@ -657,7 +675,7 @@ impl<'a> Lexer<'a> {
                             continue;
                         }
                     }
-                    
+
                     if is_format_string {
                         let parts = self.read_format_string()?;
                         Token::FormatString(parts)
@@ -679,16 +697,16 @@ impl<'a> Lexer<'a> {
                     Token::Unknown(unknown)
                 }
             };
-            
+
             Ok(token)
         } else {
             Ok(Token::EOF)
         }
     }
-    
+
     pub fn tokenize(&mut self) -> Result<Vec<Token>, LexerError> {
         let mut tokens = Vec::new();
-        
+
         loop {
             let token = self.next_token()?;
             if token == Token::EOF {
@@ -697,7 +715,7 @@ impl<'a> Lexer<'a> {
             }
             tokens.push(token);
         }
-        
+
         Ok(tokens)
     }
 }
@@ -705,43 +723,43 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_basic_tokens() {
         let mut lexer = Lexer::new("fn hello()");
         let tokens = lexer.tokenize().unwrap();
-        
+
         assert_eq!(tokens[0], Token::Fn);
         assert_eq!(tokens[1], Token::Identifier("hello".to_string()));
         assert_eq!(tokens[2], Token::LParen);
         assert_eq!(tokens[3], Token::RParen);
     }
-    
+
     #[test]
     fn test_string_literal() {
         let mut lexer = Lexer::new("\"hello world\"");
         let tokens = lexer.tokenize().unwrap();
-        
+
         assert_eq!(tokens[0], Token::String("hello world".to_string()));
     }
-    
+
     #[test]
     fn test_decorator() {
         let mut lexer = Lexer::new("@GET(\"/api/users\")");
         let tokens = lexer.tokenize().unwrap();
-        
+
         assert_eq!(tokens[0], Token::At);
         assert_eq!(tokens[1], Token::Get);
         assert_eq!(tokens[2], Token::LParen);
         assert_eq!(tokens[3], Token::String("/api/users".to_string()));
         assert_eq!(tokens[4], Token::RParen);
     }
-    
+
     #[test]
     fn test_comment_at_start() {
         let mut lexer = Lexer::new("// Comment\nfn test() {}");
         let tokens = lexer.tokenize().unwrap();
-        
+
         // After comment and newline, should get Fn token
         assert_eq!(tokens[0], Token::Newline);
         assert_eq!(tokens[1], Token::Fn);

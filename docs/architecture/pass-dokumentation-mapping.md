@@ -254,6 +254,7 @@ Diese Übersicht zeigt, welche Dokumentation für welchen Pass zuständig ist.
 1. **`pass-verlauf.md`** → Alle Passes (Übersicht)
 2. **`passes-uebersicht.md`** → Alle Passes (Status-Übersicht)
 3. **`compiler-architecture.md`** → Compiler-Architektur (inkl. Passes)
+4. **`error-handling.md`** ✅ (Neu in 3.1.0) → Fehlerbehandlung & Lösungsvorschläge für alle Passes
 
 ---
 
@@ -273,13 +274,28 @@ Diese Übersicht zeigt, welche Dokumentation für welchen Pass zuständig ist.
 
 ---
 
+## Fehlerbehandlung ✅ (Neu in 3.1.0)
+
+Alle Passes verwenden jetzt ein konsistentes Fehlerbehandlungssystem:
+
+- **Zentrale API:** `context.add_error()`, `context.add_warning()`, `context.add_info()`
+- **Intelligente Lösungsvorschläge:** Alle Fehlertypen erhalten kontextbezogene Vorschläge
+- **Separate Warnings:** Warnings werden nicht mehr als Errors behandelt
+- **Fehlerstatistiken:** Detaillierte Statistiken über alle Fehlertypen
+- **Export-Funktionen:** JSON- und HTML-Export verfügbar
+
+**Siehe:** [Fehlerbehandlung & Lösungsvorschläge](./error-handling.md) ✅ (Neu in 3.1.0)
+
+---
+
 ## Siehe auch
 
 - [Pass-Verlauf](./pass-verlauf.md) - Detaillierte Erklärung aller Passes
 - [Passes-Übersicht](./passes-uebersicht.md) - Vollständige Übersicht aller Passes
 - [Compiler Architecture](./compiler-architecture.md) - Compiler-Architektur
+- [Fehlerbehandlung & Lösungsvorschläge](./error-handling.md) ✅ (Neu in 3.1.0) - Umfassendes Fehlerbehandlungssystem
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
+**Letzte Aktualisierung:** 2026-02-02  
 **Version:** 3.1.0

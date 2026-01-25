@@ -2,14 +2,15 @@ use super::{Template, TemplateConfig};
 use anyhow::Result;
 
 /// AI Client Template
-/// 
+///
 /// Generiert LLM-Client Integration
 /// Mit OpenAI, Anthropic, etc.
 pub struct AIClientTemplate;
 
 impl Template for AIClientTemplate {
     fn generate(&self, config: &TemplateConfig) -> Result<String, String> {
-        let provider = config.options
+        let provider = config
+            .options
             .get("provider")
             .and_then(|v| v.as_str())
             .unwrap_or("openai");

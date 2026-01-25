@@ -1,18 +1,18 @@
-use crate::compiler::pass::Pass;
-use crate::compiler::context::CompilationContext;
-use crate::compiler::config::CompilerConfig;
 use crate::analysis::insight::InsightAnalyzer;
-use crate::stdlib::ml::{LLMClient, LLMProvider};
+use crate::compiler::config::CompilerConfig;
+use crate::compiler::context::CompilationContext;
+use crate::compiler::pass::Pass;
 use crate::parser::ast::*;
 use crate::prompt::sanitizer::PromptSanitizer;
+use crate::stdlib::ml::{LLMClient, LLMProvider};
 use anyhow::Result;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 use std::sync::{Arc, Mutex};
 
 /// KI-basierter Semantic Analysis Pass
-/// 
+///
 /// Analysiert Code-Semantik mit Hilfe von LLM und VelinInsight:
 /// - Erkennt Kontext (API, Service, Library)
 /// - Identifiziert Abhängigkeiten
@@ -61,7 +61,7 @@ impl AISemanticPass {
         let mut hasher = DefaultHasher::new();
         code_summary.hash(&mut hasher);
         let cache_key = hasher.finish();
-        
+
         // Prüfe Cache
         {
             let cache = self.response_cache.lock().unwrap();
@@ -69,11 +69,11 @@ impl AISemanticPass {
                 return Ok(cached.clone());
             }
         }
-        
+
         if let Some(ref client) = self.llm_client {
             // Sanitize Code-Kontext
             let sanitized_code = self.prompt_sanitizer.sanitize_code_context(&code_summary);
-            
+
             let prompt = format!(
                 "Analyze the following VelinScript code and provide a JSON response with:\n\
                 1. context_type: one of 'api', 'service', 'library', 'application'\n\
@@ -87,7 +87,7 @@ impl AISemanticPass {
 
             // Sanitize Prompt vor dem Senden
             let sanitized_prompt = self.prompt_sanitizer.sanitize(&prompt);
-            
+
             if !self.prompt_sanitizer.is_safe(&sanitized_prompt) {
                 // Prompt enthält gefährliche Patterns, nutze Fallback
                 let result = self.heuristic_analysis(program);
@@ -131,7 +131,7 @@ impl AISemanticPass {
     /// Extrahiert Code-Zusammenfassung für KI-Analyse
     fn extract_code_summary(&self, program: &Program) -> String {
         let mut summary = String::new();
-        
+
         for item in &program.items {
             match item {
                 Item::Function(f) => {
@@ -147,7 +147,7 @@ impl AISemanticPass {
                         summary.push_str(&format!(" -> {:?}", rt));
                     }
                     summary.push_str("\n");
-                    
+
                     // Decorators analysieren
                     for decorator in &f.decorators {
                         summary.push_str(&format!("  @{}\n", decorator.name));
@@ -163,47 +163,47 @@ impl AISemanticPass {
                 _ => {}
             }
         }
-        
+
         summary
     }
 
     /// Parst KI-Antwort in SemanticAnalysis
     fn parse_ai_response(&self, response: &str) -> Result<SemanticAnalysis> {
         // Versuche JSON zu parsen
-        let cleaned = response.trim().trim_start_matches("```json").trim_end_matches("```").trim();
-        
+        let cleaned = response
+            .trim()
+            .trim_start_matches("```json")
+            .trim_end_matches("```")
+            .trim();
+
         match serde_json::from_str::<serde_json::Value>(cleaned) {
-            Ok(json) => {
-                Ok(SemanticAnalysis {
-                    context_type: json["context_type"]
-                        .as_str()
-                        .map(|s| s.to_string()),
-                    dependencies: json["dependencies"]
-                        .as_array()
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                                .collect()
-                        })
-                        .unwrap_or_default(),
-                    security_requirements: json["security_requirements"]
-                        .as_array()
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                                .collect()
-                        })
-                        .unwrap_or_default(),
-                    missing_components: json["missing_components"]
-                        .as_array()
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                                .collect()
-                        })
-                        .unwrap_or_default(),
-                })
-            }
+            Ok(json) => Ok(SemanticAnalysis {
+                context_type: json["context_type"].as_str().map(|s| s.to_string()),
+                dependencies: json["dependencies"]
+                    .as_array()
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                security_requirements: json["security_requirements"]
+                    .as_array()
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                missing_components: json["missing_components"]
+                    .as_array()
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            }),
             Err(_) => {
                 // JSON-Parsing fehlgeschlagen, nutze heuristische Analyse
                 Err(anyhow::anyhow!("Failed to parse AI response as JSON"))
@@ -271,15 +271,19 @@ impl AISemanticPass {
     }
 
     /// Erkennt Kontext aus AST und Insight
-    fn extract_context(&self, program: &Program, insight: &crate::analysis::insight::InsightReport) -> String {
+    fn extract_context(
+        &self,
+        program: &Program,
+        insight: &crate::analysis::insight::InsightReport,
+    ) -> String {
         // Nutze Insight-Daten und AST-Analyse
         if !insight.complex_functions.is_empty() {
             "application".to_string()
         } else if program.items.iter().any(|item| {
             if let Item::Function(f) = item {
-                f.decorators.iter().any(|d| {
-                    matches!(d.name.as_str(), "@GET" | "@POST" | "@PUT" | "@DELETE")
-                })
+                f.decorators
+                    .iter()
+                    .any(|d| matches!(d.name.as_str(), "@GET" | "@POST" | "@PUT" | "@DELETE"))
             } else {
                 false
             }
@@ -323,7 +327,8 @@ impl Pass for AISemanticPass {
             // 4. Metadaten zum Context hinzufügen
             context.semantic_metadata.context_type = Some(context_type);
             context.semantic_metadata.dependencies = semantic_analysis.dependencies;
-            context.semantic_metadata.security_requirements = semantic_analysis.security_requirements;
+            context.semantic_metadata.security_requirements =
+                semantic_analysis.security_requirements;
             context.semantic_metadata.missing_components = semantic_analysis.missing_components;
         }
 

@@ -1,17 +1,16 @@
+use crate::borrow::lifetime::{Lifetime, LifetimeAnalyzer, ScopeId};
+use crate::borrow::ownership::{Ownership as BorrowOwnership, OwnershipRules};
 /// Borrow Checker - Prüft Ownership & Borrowing
-/// 
+///
 /// Dieser Checker prüft IR-Code auf Borrow-Verletzungen:
 /// - Use-After-Move
 /// - Multiple Mutable Borrows
 /// - Borrow-After-Move
 /// - Lifetime-Verletzungen
 /// - Dangling References
-
 use crate::ir::ir::*;
-use crate::borrow::ownership::{Ownership as BorrowOwnership, OwnershipRules};
-use crate::borrow::lifetime::{LifetimeAnalyzer, Lifetime, ScopeId};
-use std::collections::HashMap;
 use anyhow::Result;
+use std::collections::HashMap;
 
 /// Konvertiert borrow::ownership::Ownership zu ir::ir::Ownership
 fn convert_to_ir_ownership(borrow_ownership: &BorrowOwnership) -> Ownership {
@@ -75,14 +74,24 @@ impl BorrowError {
             BorrowError::BorrowAfterMove { value, location } => {
                 format!("Borrow after move: {:?} at {}", value, location)
             }
-            BorrowError::LifetimeOutlivesScope { lifetime, scope, location } => {
-                format!("Lifetime {} outlives scope {:?} at {}", lifetime, scope, location)
+            BorrowError::LifetimeOutlivesScope {
+                lifetime,
+                scope,
+                location,
+            } => {
+                format!(
+                    "Lifetime {} outlives scope {:?} at {}",
+                    lifetime, scope, location
+                )
             }
             BorrowError::DanglingReference { value, location } => {
                 format!("Dangling reference: {:?} at {}", value, location)
             }
             BorrowError::ImmutableBorrowMutation { value, location } => {
-                format!("Cannot mutate immutable borrow: {:?} at {}", value, location)
+                format!(
+                    "Cannot mutate immutable borrow: {:?} at {}",
+                    value, location
+                )
             }
         }
     }
@@ -93,7 +102,7 @@ impl BorrowChecker {
     pub fn new() -> Self {
         let mut analyzer = LifetimeAnalyzer::new();
         let root_scope = analyzer.create_scope();
-        
+
         BorrowChecker {
             ownership_map: HashMap::new(),
             lifetime_analyzer: analyzer,
@@ -102,14 +111,14 @@ impl BorrowChecker {
             scope_stack: vec![root_scope],
         }
     }
-    
+
     /// Prüft IR-Modul auf Borrow-Verletzungen
     pub fn check(&mut self, module: &IRModule) -> Result<(), Vec<BorrowError>> {
         self.errors.clear();
-        
+
         // 1. Ownership für alle Variablen initialisieren
         self.initialize_ownership(module);
-        
+
         // 2. Jede Funktion prüfen
         for func in &module.functions {
             if let Err(e) = self.check_function(func) {
@@ -119,14 +128,14 @@ impl BorrowChecker {
                 });
             }
         }
-        
+
         if self.errors.is_empty() {
             Ok(())
         } else {
             Err(self.errors.clone())
         }
     }
-    
+
     /// Initialisiert Ownership für alle Variablen
     fn initialize_ownership(&mut self, module: &IRModule) {
         for func in &module.functions {
@@ -144,13 +153,13 @@ impl BorrowChecker {
             }
         }
     }
-    
+
     /// Prüft Funktion auf Borrow-Verletzungen
     fn check_function(&mut self, func: &IRFunction) -> Result<()> {
         // Neuer Scope für Funktion
         let func_scope = self.lifetime_analyzer.create_scope();
         self.enter_scope(func_scope);
-        
+
         // Parameter: Ownership initialisieren
         for param in &func.params {
             let ownership = OwnershipRules::default_ownership(&param.ty);
@@ -163,14 +172,14 @@ impl BorrowChecker {
             });
             self.ownership_map.insert(var_value, ownership);
         }
-        
+
         // Body prüfen
         self.check_block(&func.body, func_scope)?;
-        
+
         self.exit_scope();
         Ok(())
     }
-    
+
     /// Prüft Block auf Borrow-Verletzungen
     fn check_block(&mut self, block: &IRBlock, scope: ScopeId) -> Result<()> {
         for instruction in &block.instructions {
@@ -178,7 +187,7 @@ impl BorrowChecker {
         }
         Ok(())
     }
-    
+
     /// Prüft Instruction auf Borrow-Verletzungen
     fn check_instruction(&mut self, inst: &IRInstruction, scope: ScopeId) -> Result<()> {
         match inst {
@@ -196,7 +205,9 @@ impl BorrowChecker {
                 // Borrows überleben async boundaries nicht - müssen 'static sein oder shared
                 self.check_async_call(dest, func, args, scope)?;
             }
-            IRInstruction::StructAccess { dest, struct_val, .. } => {
+            IRInstruction::StructAccess {
+                dest, struct_val, ..
+            } => {
                 self.check_struct_access(dest, struct_val, scope)?;
             }
             IRInstruction::ListGet { dest, list, .. } => {
@@ -214,10 +225,10 @@ impl BorrowChecker {
                 // Andere Instructions haben keine speziellen Borrow-Checks
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Prüft Load-Instruction
     fn check_load(&mut self, dest: &IRValue, source: &IRValue, scope: ScopeId) -> Result<()> {
         if let Some(ownership) = self.ownership_map.get(source) {
@@ -225,7 +236,8 @@ impl BorrowChecker {
                 BorrowOwnership::Owned => {
                     // Move: source wird zu dest
                     self.ownership_map.remove(source);
-                    self.ownership_map.insert(dest.clone(), BorrowOwnership::Owned);
+                    self.ownership_map
+                        .insert(dest.clone(), BorrowOwnership::Owned);
                 }
                 BorrowOwnership::Borrowed { lifetime } => {
                     // Borrow: dest ist eine Referenz
@@ -236,7 +248,12 @@ impl BorrowChecker {
                             location: format!("Load from {:?}", source),
                         });
                     } else {
-                        self.ownership_map.insert(dest.clone(), BorrowOwnership::Borrowed { lifetime: *lifetime });
+                        self.ownership_map.insert(
+                            dest.clone(),
+                            BorrowOwnership::Borrowed {
+                                lifetime: *lifetime,
+                            },
+                        );
                     }
                 }
                 BorrowOwnership::BorrowedMut { lifetime } => {
@@ -248,16 +265,23 @@ impl BorrowChecker {
                             location: format!("Load from {:?}", source),
                         });
                     } else {
-                        self.ownership_map.insert(dest.clone(), BorrowOwnership::BorrowedMut { lifetime: *lifetime });
+                        self.ownership_map.insert(
+                            dest.clone(),
+                            BorrowOwnership::BorrowedMut {
+                                lifetime: *lifetime,
+                            },
+                        );
                     }
                 }
                 BorrowOwnership::Copy => {
                     // Copy: source bleibt gültig
-                    self.ownership_map.insert(dest.clone(), BorrowOwnership::Copy);
+                    self.ownership_map
+                        .insert(dest.clone(), BorrowOwnership::Copy);
                 }
                 BorrowOwnership::Shared => {
                     // Shared: beide bleiben gültig
-                    self.ownership_map.insert(dest.clone(), BorrowOwnership::Shared);
+                    self.ownership_map
+                        .insert(dest.clone(), BorrowOwnership::Shared);
                 }
             }
         } else {
@@ -267,10 +291,10 @@ impl BorrowChecker {
                 location: format!("Load to {:?}", dest),
             });
         }
-        
+
         Ok(())
     }
-    
+
     /// Prüft Store-Instruction
     fn check_store(&mut self, dest: &IRValue, value: &IRValue, _scope: ScopeId) -> Result<()> {
         // Prüfe: Ist dest mutable?
@@ -296,7 +320,7 @@ impl BorrowChecker {
                 _ => {}
             }
         }
-        
+
         // Prüfe: Wird value moved?
         if let Some(ownership) = self.ownership_map.get(value) {
             match ownership {
@@ -304,17 +328,26 @@ impl BorrowChecker {
                     // Move: value wird consumed
                     self.ownership_map.remove(value);
                 }
-                BorrowOwnership::Borrowed { .. } | BorrowOwnership::BorrowedMut { .. } | BorrowOwnership::Shared | BorrowOwnership::Copy => {
+                BorrowOwnership::Borrowed { .. }
+                | BorrowOwnership::BorrowedMut { .. }
+                | BorrowOwnership::Shared
+                | BorrowOwnership::Copy => {
                     // Borrow/Shared/Copy: value bleibt gültig
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Prüft Call-Instruction
-    fn check_call(&mut self, dest: &Option<IRValue>, _func: &IRValue, args: &[IRValue], scope: ScopeId) -> Result<()> {
+    fn check_call(
+        &mut self,
+        dest: &Option<IRValue>,
+        _func: &IRValue,
+        args: &[IRValue],
+        scope: ScopeId,
+    ) -> Result<()> {
         // Prüfe: Werden Argumente moved?
         for arg in args {
             if let Some(ownership) = self.ownership_map.get(arg) {
@@ -349,22 +382,28 @@ impl BorrowChecker {
                 }
             }
         }
-        
+
         // Dest erhält Ownership basierend auf Return-Type
         if let Some(d) = dest {
             // Standardmäßig Owned (wird später durch Type-Info korrigiert)
             self.ownership_map.insert(d.clone(), BorrowOwnership::Owned);
         }
-        
+
         Ok(())
     }
-    
+
     /// Prüft Async-Call-Instruction (KRITISCH: Borrows überleben async boundaries nicht)
-    fn check_async_call(&mut self, dest: &Option<IRValue>, _func: &IRValue, args: &[IRValue], _scope: ScopeId) -> Result<()> {
+    fn check_async_call(
+        &mut self,
+        dest: &Option<IRValue>,
+        _func: &IRValue,
+        args: &[IRValue],
+        _scope: ScopeId,
+    ) -> Result<()> {
         // KRITISCH: Async-Calls erfordern, dass Borrows 'static sind oder shared
         // Erstelle neuen Scope für async boundary
         let async_scope = self.lifetime_analyzer.create_scope();
-        
+
         // Prüfe: Werden Argumente moved?
         for arg in args {
             if let Some(ownership) = self.ownership_map.get(arg) {
@@ -376,7 +415,9 @@ impl BorrowChecker {
                     BorrowOwnership::Borrowed { lifetime } => {
                         // KRITISCH: Borrow überlebt async boundary nicht
                         // Lifetime muss 'static sein (scope 0) oder shared
-                        if lifetime.scope.0 != 0 && !self.lifetime_analyzer.outlives(lifetime, async_scope) {
+                        if lifetime.scope.0 != 0
+                            && !self.lifetime_analyzer.outlives(lifetime, async_scope)
+                        {
                             self.errors.push(BorrowError::LifetimeOutlivesScope {
                                 lifetime: *lifetime,
                                 scope: async_scope,
@@ -386,7 +427,9 @@ impl BorrowChecker {
                     }
                     BorrowOwnership::BorrowedMut { lifetime } => {
                         // KRITISCH: Mutable Borrow überlebt async boundary nicht
-                        if lifetime.scope.0 != 0 && !self.lifetime_analyzer.outlives(lifetime, async_scope) {
+                        if lifetime.scope.0 != 0
+                            && !self.lifetime_analyzer.outlives(lifetime, async_scope)
+                        {
                             self.errors.push(BorrowError::LifetimeOutlivesScope {
                                 lifetime: *lifetime,
                                 scope: async_scope,
@@ -400,24 +443,34 @@ impl BorrowChecker {
                 }
             }
         }
-        
+
         // Dest erhält Ownership basierend auf Return-Type
         if let Some(d) = dest {
             // Standardmäßig Owned (wird später durch Type-Info korrigiert)
             self.ownership_map.insert(d.clone(), BorrowOwnership::Owned);
         }
-        
+
         Ok(())
     }
-    
+
     /// Prüft Struct-Access
-    fn check_struct_access(&mut self, dest: &IRValue, struct_val: &IRValue, scope: ScopeId) -> Result<()> {
+    fn check_struct_access(
+        &mut self,
+        dest: &IRValue,
+        struct_val: &IRValue,
+        scope: ScopeId,
+    ) -> Result<()> {
         if let Some(ownership) = self.ownership_map.get(struct_val) {
             match ownership {
                 BorrowOwnership::Borrowed { lifetime } => {
                     // Field-Access erstellt neue Borrow
                     if self.lifetime_analyzer.outlives(lifetime, scope) {
-                        self.ownership_map.insert(dest.clone(), BorrowOwnership::Borrowed { lifetime: *lifetime });
+                        self.ownership_map.insert(
+                            dest.clone(),
+                            BorrowOwnership::Borrowed {
+                                lifetime: *lifetime,
+                            },
+                        );
                     } else {
                         self.errors.push(BorrowError::LifetimeOutlivesScope {
                             lifetime: *lifetime,
@@ -429,7 +482,12 @@ impl BorrowChecker {
                 BorrowOwnership::BorrowedMut { lifetime } => {
                     // Field-Access erstellt neue mutable Borrow
                     if self.lifetime_analyzer.outlives(lifetime, scope) {
-                        self.ownership_map.insert(dest.clone(), BorrowOwnership::BorrowedMut { lifetime: *lifetime });
+                        self.ownership_map.insert(
+                            dest.clone(),
+                            BorrowOwnership::BorrowedMut {
+                                lifetime: *lifetime,
+                            },
+                        );
                     } else {
                         self.errors.push(BorrowError::LifetimeOutlivesScope {
                             lifetime: *lifetime,
@@ -440,15 +498,18 @@ impl BorrowChecker {
                 }
                 BorrowOwnership::Owned => {
                     // Field-Access erstellt Move
-                    self.ownership_map.insert(dest.clone(), BorrowOwnership::Owned);
+                    self.ownership_map
+                        .insert(dest.clone(), BorrowOwnership::Owned);
                 }
                 BorrowOwnership::Copy => {
                     // Field-Access erstellt Copy
-                    self.ownership_map.insert(dest.clone(), BorrowOwnership::Copy);
+                    self.ownership_map
+                        .insert(dest.clone(), BorrowOwnership::Copy);
                 }
                 BorrowOwnership::Shared => {
                     // Field-Access erstellt Shared
-                    self.ownership_map.insert(dest.clone(), BorrowOwnership::Shared);
+                    self.ownership_map
+                        .insert(dest.clone(), BorrowOwnership::Shared);
                 }
             }
         } else {
@@ -457,22 +518,22 @@ impl BorrowChecker {
                 location: format!("Struct access to {:?}", dest),
             });
         }
-        
+
         Ok(())
     }
-    
+
     /// Prüft List-Get
     fn check_list_get(&mut self, dest: &IRValue, list: &IRValue, scope: ScopeId) -> Result<()> {
         // Ähnlich wie Struct-Access
         self.check_struct_access(dest, list, scope)
     }
-    
+
     /// Prüft Map-Get
     fn check_map_get(&mut self, dest: &IRValue, map: &IRValue, scope: ScopeId) -> Result<()> {
         // Ähnlich wie Struct-Access
         self.check_struct_access(dest, map, scope)
     }
-    
+
     /// Prüft Return-Value
     fn check_return_value(&mut self, value: &IRValue, scope: ScopeId) -> Result<()> {
         if let Some(ownership) = self.ownership_map.get(value) {
@@ -481,7 +542,8 @@ impl BorrowChecker {
                     // Move: value wird returned
                     self.ownership_map.remove(value);
                 }
-                BorrowOwnership::Borrowed { lifetime } | BorrowOwnership::BorrowedMut { lifetime } => {
+                BorrowOwnership::Borrowed { lifetime }
+                | BorrowOwnership::BorrowedMut { lifetime } => {
                     // Prüfe: Lifetime muss Function-Scope überleben
                     if !self.lifetime_analyzer.outlives(lifetime, scope) {
                         self.errors.push(BorrowError::LifetimeOutlivesScope {
@@ -494,16 +556,16 @@ impl BorrowChecker {
                 _ => {}
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Betritt einen neuen Scope
     fn enter_scope(&mut self, scope: ScopeId) {
         self.scope_stack.push(scope);
         self.current_scope = scope;
     }
-    
+
     /// Verlässt den aktuellen Scope
     fn exit_scope(&mut self) {
         self.scope_stack.pop();

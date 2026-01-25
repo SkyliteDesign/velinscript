@@ -35,11 +35,7 @@ pub struct RateLimitStdlib;
 
 impl RateLimitStdlib {
     /// Generiert Rust-Code für Fixed Window Rate Limiting
-    pub fn generate_fixed_window(
-        requests: usize,
-        window_seconds: u64,
-        key: &str,
-    ) -> String {
+    pub fn generate_fixed_window(requests: usize, window_seconds: u64, key: &str) -> String {
         format!(
             r#"
             {{
@@ -75,13 +71,9 @@ impl RateLimitStdlib {
             key, window_seconds, requests
         )
     }
-    
+
     /// Generiert Rust-Code für Sliding Window Rate Limiting
-    pub fn generate_sliding_window(
-        requests: usize,
-        window_seconds: u64,
-        key: &str,
-    ) -> String {
+    pub fn generate_sliding_window(requests: usize, window_seconds: u64, key: &str) -> String {
         format!(
             r#"
             {{
@@ -119,7 +111,7 @@ impl RateLimitStdlib {
             key, window_seconds, requests
         )
     }
-    
+
     /// Generiert Rust-Code für Token Bucket Rate Limiting
     pub fn generate_token_bucket(
         capacity: usize,
@@ -169,13 +161,9 @@ impl RateLimitStdlib {
             key, capacity, capacity, refill_rate
         )
     }
-    
+
     /// Generiert Rust-Code für Distributed Rate Limiting (Redis-basiert)
-    pub fn generate_distributed(
-        requests: usize,
-        window_seconds: u64,
-        key: &str,
-    ) -> String {
+    pub fn generate_distributed(requests: usize, window_seconds: u64, key: &str) -> String {
         format!(
             r#"
             {{
@@ -196,19 +184,18 @@ impl RateLimitStdlib {
             key, window_seconds, requests
         )
     }
-    
+
     /// Generiert Rust-Code für Rate Limit Headers
-    pub fn generate_rate_limit_headers(
-        remaining: usize,
-        reset: u64,
-    ) -> String {
+    pub fn generate_rate_limit_headers(remaining: usize, reset: u64) -> String {
         format!(
             r#"
             headers.insert("X-RateLimit-Remaining", "{}".parse().unwrap());
             headers.insert("X-RateLimit-Reset", "{}".parse().unwrap());
             headers.insert("X-RateLimit-Limit", "{}".parse().unwrap());
             "#,
-            remaining, reset, remaining + 1
+            remaining,
+            reset,
+            remaining + 1
         )
     }
 }
@@ -224,42 +211,40 @@ pub fn parse_rate_limit_config(args: &[DecoratorArg]) -> Option<RateLimitConfig>
     let mut window = "1m".to_string();
     let mut strategy = RateLimitStrategy::FixedWindow;
     let mut key = None;
-    
+
     for arg in args {
         match arg {
-            DecoratorArg::Named { name, value } => {
-                match name.as_str() {
-                    "requests" => {
-                        if let DecoratorArg::Number(n) = value.as_ref() {
-                            requests = *n as usize;
-                        }
+            DecoratorArg::Named { name, value } => match name.as_str() {
+                "requests" => {
+                    if let DecoratorArg::Number(n) = value.as_ref() {
+                        requests = *n as usize;
                     }
-                    "window" => {
-                        if let DecoratorArg::String(s) = value.as_ref() {
-                            window = s.clone();
-                        }
-                    }
-                    "strategy" => {
-                        if let DecoratorArg::String(s) = value.as_ref() {
-                            strategy = match s.as_str() {
-                                "sliding-window" | "slidingWindow" => RateLimitStrategy::SlidingWindow,
-                                "token-bucket" | "tokenBucket" => RateLimitStrategy::TokenBucket,
-                                _ => RateLimitStrategy::FixedWindow,
-                            };
-                        }
-                    }
-                    "key" => {
-                        if let DecoratorArg::String(s) = value.as_ref() {
-                            key = Some(s.clone());
-                        }
-                    }
-                    _ => {}
                 }
-            }
+                "window" => {
+                    if let DecoratorArg::String(s) = value.as_ref() {
+                        window = s.clone();
+                    }
+                }
+                "strategy" => {
+                    if let DecoratorArg::String(s) = value.as_ref() {
+                        strategy = match s.as_str() {
+                            "sliding-window" | "slidingWindow" => RateLimitStrategy::SlidingWindow,
+                            "token-bucket" | "tokenBucket" => RateLimitStrategy::TokenBucket,
+                            _ => RateLimitStrategy::FixedWindow,
+                        };
+                    }
+                }
+                "key" => {
+                    if let DecoratorArg::String(s) = value.as_ref() {
+                        key = Some(s.clone());
+                    }
+                }
+                _ => {}
+            },
             _ => {}
         }
     }
-    
+
     Some(RateLimitConfig {
         requests,
         window,

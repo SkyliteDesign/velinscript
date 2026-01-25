@@ -1,4 +1,3 @@
-
 pub struct SandboxStdlib;
 
 impl SandboxStdlib {
@@ -31,7 +30,7 @@ impl SandboxStdlib {
 
     pub fn generate_run_code(_code: &str) -> String {
         format!(
-             "{{
+            "{{
                 // Not strictly safe 'sandbox', but executes code
                 Err(\"Sandbox run not implemented yet\".to_string())
              }}"

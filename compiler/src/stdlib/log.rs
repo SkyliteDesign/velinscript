@@ -1,4 +1,3 @@
-
 pub struct LogStdlib;
 
 impl LogStdlib {
@@ -25,7 +24,10 @@ impl LogStdlib {
     pub fn generate_set_level_code(level: &str) -> String {
         // Changing log level at runtime might require a reloadable subscriber
         // For now, log that we want to change it
-        format!("tracing::info!(\"Setting log level to {}\", {})", "{}", level)
+        format!(
+            "tracing::info!(\"Setting log level to {}\", {})",
+            "{}", level
+        )
     }
 
     pub fn generate_with_context_code(key: &str, value: &str) -> String {

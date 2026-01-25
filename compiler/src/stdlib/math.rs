@@ -1,4 +1,3 @@
-
 pub struct MathStdlib;
 
 impl MathStdlib {

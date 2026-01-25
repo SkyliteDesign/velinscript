@@ -1,4 +1,4 @@
-use crate::parser::ast::{Type, Struct, Enum};
+use crate::parser::ast::{Enum, Struct, Type};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
@@ -28,16 +28,19 @@ pub struct ParameterInfo {
 impl Environment {
     pub fn new() -> Self {
         let mut functions = HashMap::new();
-        
+
         // Add built-in Error function
-        functions.insert("Error".to_string(), FunctionSignature {
-            name: "Error".to_string(),
-            params: vec![ParameterInfo {
-                name: "message".to_string(),
-                param_type: Type::String,
-            }],
-            return_type: Some(Type::Named("Error".to_string())),
-        });
+        functions.insert(
+            "Error".to_string(),
+            FunctionSignature {
+                name: "Error".to_string(),
+                params: vec![ParameterInfo {
+                    name: "message".to_string(),
+                    param_type: Type::String,
+                }],
+                return_type: Some(Type::Named("Error".to_string())),
+            },
+        );
 
         Environment {
             variables: HashMap::new(),
@@ -49,7 +52,7 @@ impl Environment {
             parent: None,
         }
     }
-    
+
     pub fn with_parent(parent: Environment) -> Self {
         Environment {
             variables: HashMap::new(),
@@ -61,21 +64,39 @@ impl Environment {
             parent: Some(Box::new(parent)),
         }
     }
-    
+
     pub fn define_module(&mut self, name: String, env: Environment) {
         // Debug logging for module definition
         {
             use std::io::Write;
-            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("d:\\velinscript\\env_debug.log")
+            {
                 writeln!(file, "DEBUG: Env::define_module({})", name).ok();
-                writeln!(file, "DEBUG: Before insert, modules: {:?}", self.modules.keys().collect::<Vec<_>>()).ok();
+                writeln!(
+                    file,
+                    "DEBUG: Before insert, modules: {:?}",
+                    self.modules.keys().collect::<Vec<_>>()
+                )
+                .ok();
             }
         }
         self.modules.insert(name, Box::new(env));
         {
             use std::io::Write;
-            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
-                writeln!(file, "DEBUG: After insert, modules: {:?}", self.modules.keys().collect::<Vec<_>>()).ok();
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("d:\\velinscript\\env_debug.log")
+            {
+                writeln!(
+                    file,
+                    "DEBUG: After insert, modules: {:?}",
+                    self.modules.keys().collect::<Vec<_>>()
+                )
+                .ok();
             }
         }
     }
@@ -84,9 +105,18 @@ impl Environment {
         // Debug logging for module lookup
         {
             use std::io::Write;
-            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("d:\\velinscript\\env_debug.log")
+            {
                 let keys: Vec<_> = self.modules.keys().collect();
-                writeln!(file, "DEBUG: Env::get_module({}) - Available: {:?}", name, keys).ok();
+                writeln!(
+                    file,
+                    "DEBUG: Env::get_module({}) - Available: {:?}",
+                    name, keys
+                )
+                .ok();
             }
         }
 
@@ -106,7 +136,7 @@ impl Environment {
     pub fn define_variable(&mut self, name: String, var_type: Type) {
         self.variables.insert(name, var_type);
     }
-    
+
     pub fn get_variable(&self, name: &str) -> Option<Type> {
         if let Some((module_name, rest)) = name.split_once('.') {
             if let Some(module_env) = self.get_module(module_name) {
@@ -122,16 +152,20 @@ impl Environment {
             None
         }
     }
-    
+
     pub fn define_function(&mut self, name: String, signature: FunctionSignature) {
         self.functions.insert(name, signature);
     }
-    
+
     pub fn get_function(&self, name: &str) -> Option<FunctionSignature> {
         // Debug logging for function lookup
         {
             use std::io::Write;
-            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("d:\\velinscript\\env_debug.log")
+            {
                 writeln!(file, "DEBUG: Env::get_function({})", name).ok();
             }
         }
@@ -140,22 +174,45 @@ impl Environment {
             if let Some(module_env) = self.get_module(module_name) {
                 {
                     use std::io::Write;
-                    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
-                        writeln!(file, "DEBUG: Env::get_function - Found module {}, looking for {}", module_name, rest).ok();
-                        writeln!(file, "DEBUG: Module functions: {:?}", module_env.functions.keys().collect::<Vec<_>>()).ok();
+                    if let Ok(mut file) = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open("d:\\velinscript\\env_debug.log")
+                    {
+                        writeln!(
+                            file,
+                            "DEBUG: Env::get_function - Found module {}, looking for {}",
+                            module_name, rest
+                        )
+                        .ok();
+                        writeln!(
+                            file,
+                            "DEBUG: Module functions: {:?}",
+                            module_env.functions.keys().collect::<Vec<_>>()
+                        )
+                        .ok();
                     }
                 }
                 return module_env.get_function(rest);
             } else {
                 {
                     use std::io::Write;
-                    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("d:\\velinscript\\env_debug.log") {
-                        writeln!(file, "DEBUG: Env::get_function - Module {} NOT found", module_name).ok();
+                    if let Ok(mut file) = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open("d:\\velinscript\\env_debug.log")
+                    {
+                        writeln!(
+                            file,
+                            "DEBUG: Env::get_function - Module {} NOT found",
+                            module_name
+                        )
+                        .ok();
                     }
                 }
             }
         }
-        
+
         if let Some(sig) = self.functions.get(name) {
             Some(sig.clone())
         } else if let Some(ref parent) = self.parent {
@@ -164,11 +221,11 @@ impl Environment {
             None
         }
     }
-    
+
     pub fn define_type(&mut self, name: String, type_def: Type) {
         self.types.insert(name, type_def);
     }
-    
+
     pub fn get_type(&self, name: &str) -> Option<Type> {
         if let Some((module_name, rest)) = name.split_once('.') {
             if let Some(module_env) = self.get_module(module_name) {
@@ -184,23 +241,23 @@ impl Environment {
             None
         }
     }
-    
+
     pub fn has_variable(&self, name: &str) -> bool {
         self.get_variable(name).is_some()
     }
-    
+
     pub fn has_function(&self, name: &str) -> bool {
         self.get_function(name).is_some()
     }
-    
+
     pub fn has_type(&self, name: &str) -> bool {
         self.get_type(name).is_some()
     }
-    
+
     pub fn define_struct(&mut self, name: String, struct_def: Struct) {
         self.structs.insert(name, struct_def);
     }
-    
+
     pub fn get_struct(&self, name: &str) -> Option<Struct> {
         if let Some((module_name, rest)) = name.split_once('.') {
             if let Some(module_env) = self.get_module(module_name) {
@@ -216,11 +273,11 @@ impl Environment {
             None
         }
     }
-    
+
     pub fn define_enum(&mut self, name: String, enum_def: Enum) {
         self.enums.insert(name, enum_def);
     }
-    
+
     pub fn get_enum(&self, name: &str) -> Option<Enum> {
         if let Some((module_name, rest)) = name.split_once('.') {
             if let Some(module_env) = self.get_module(module_name) {

@@ -1,4 +1,3 @@
-
 pub struct FsStdlib;
 
 impl FsStdlib {
@@ -21,19 +20,31 @@ impl FsStdlib {
     }
 
     pub fn generate_mkdir_code(path: &str) -> String {
-        format!("std::fs::create_dir_all({}).map_err(|e| e.to_string())", path)
+        format!(
+            "std::fs::create_dir_all({}).map_err(|e| e.to_string())",
+            path
+        )
     }
 
     pub fn generate_copy_code(source: &str, dest: &str) -> String {
-        format!("std::fs::copy({}, {}).map(|_| ()).map_err(|e| e.to_string())", source, dest)
+        format!(
+            "std::fs::copy({}, {}).map(|_| ()).map_err(|e| e.to_string())",
+            source, dest
+        )
     }
 
     pub fn generate_move_file_code(source: &str, dest: &str) -> String {
-        format!("std::fs::rename({}, {}).map_err(|e| e.to_string())", source, dest)
+        format!(
+            "std::fs::rename({}, {}).map_err(|e| e.to_string())",
+            source, dest
+        )
     }
 
     pub fn generate_get_size_code(path: &str) -> String {
-        format!("std::fs::metadata({}).map(|m| m.len()).map_err(|e| e.to_string())", path)
+        format!(
+            "std::fs::metadata({}).map(|m| m.len()).map_err(|e| e.to_string())",
+            path
+        )
     }
 
     pub fn generate_list_files_code(path: &str) -> String {

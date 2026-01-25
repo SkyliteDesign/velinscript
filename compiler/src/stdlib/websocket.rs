@@ -1,4 +1,3 @@
-
 pub struct WebSocketStdlib;
 
 impl WebSocketStdlib {
@@ -66,7 +65,7 @@ impl WebSocketStdlib {
     }
 
     pub fn generate_ping_code(ws: &str) -> String {
-         format!(
+        format!(
             "{{
                 use futures_util::SinkExt;
                 use tokio_tungstenite::tungstenite::Message;

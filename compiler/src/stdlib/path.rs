@@ -1,4 +1,3 @@
-
 pub struct PathStdlib;
 
 impl PathStdlib {
@@ -59,10 +58,7 @@ impl PathStdlib {
     }
 
     pub fn generate_is_absolute_code(path: &str) -> String {
-        format!(
-            "std::path::Path::new({}).is_absolute()",
-            path
-        )
+        format!("std::path::Path::new({}).is_absolute()", path)
     }
 
     pub fn generate_separator_code() -> String {

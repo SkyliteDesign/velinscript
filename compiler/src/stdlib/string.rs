@@ -1,9 +1,11 @@
-
 pub struct StringStdlib;
 
 impl StringStdlib {
     pub fn generate_split_code(text: &str, delimiter: &str) -> String {
-        format!("{}.split({}).map(|s| s.to_string()).collect::<Vec<String>>()", text, delimiter)
+        format!(
+            "{}.split({}).map(|s| s.to_string()).collect::<Vec<String>>()",
+            text, delimiter
+        )
     }
 
     pub fn generate_join_code(list: &str, delimiter: &str) -> String {

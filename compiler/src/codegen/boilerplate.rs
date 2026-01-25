@@ -6,12 +6,12 @@ impl BoilerplateGenerator {
     pub fn new() -> Self {
         BoilerplateGenerator
     }
-    
+
     pub fn generate_api(&self, name: &str, path: Option<&str>) -> String {
         let api_name = name;
         let default_path = format!("/api/{}", api_name.to_lowercase());
         let api_path = path.unwrap_or(&default_path);
-        
+
         format!(
             r#"// Auto-generated API: {}
 
@@ -56,7 +56,7 @@ fn delete{}(id: string): boolean {{
             api_name
         )
     }
-    
+
     pub fn generate_crud(&self, model_name: &str, fields: &str) -> String {
         // Parse fields: "id:string,name:string,email:string"
         let field_list: Vec<&str> = fields.split(',').collect();
@@ -71,11 +71,11 @@ fn delete{}(id: string): boolean {{
                 }
             })
             .collect();
-        
+
         let struct_fields_str = struct_fields.join("\n");
         let model_lower = model_name.to_lowercase();
         let api_path = format!("/api/{}", model_lower);
-        
+
         format!(
             r#"// Auto-generated CRUD for {}
 
@@ -136,7 +136,7 @@ fn delete{}(id: string): boolean {{
             model_name
         )
     }
-    
+
     pub fn generate_test(&self, function_name: &str) -> String {
         // Convert function_name to camelCase for test function name: test + FunctionName
         let test_fn_name = if function_name.is_empty() {
@@ -144,7 +144,7 @@ fn delete{}(id: string): boolean {{
         } else {
             format!("test{}", function_name)
         };
-        
+
         format!(
             r#"// Auto-generated test for {}
 
@@ -156,36 +156,34 @@ fn {}() {{
     assert(result != null); 
 }}
 "#,
-            function_name,
-            test_fn_name,
-            function_name
+            function_name, test_fn_name, function_name
         )
     }
-    
+
     pub fn generate_responses_module(&self) -> String {
         include_str!("../../../tools/vscode-extension/templates/responses.velin").to_string()
     }
-    
+
     pub fn generate_errors_module(&self) -> String {
         include_str!("../../../tools/vscode-extension/templates/errors.velin").to_string()
     }
-    
+
     pub fn generate_logging_module(&self) -> String {
         include_str!("../../../tools/vscode-extension/templates/logging.velin").to_string()
     }
-    
+
     pub fn generate_cache_module(&self) -> String {
         include_str!("../../../tools/vscode-extension/templates/cache.velin").to_string()
     }
-    
+
     pub fn generate_health_module(&self) -> String {
         include_str!("../../../tools/vscode-extension/templates/health.velin").to_string()
     }
-    
+
     pub fn generate_async_module(&self) -> String {
         include_str!("../../../tools/vscode-extension/templates/async.velin").to_string()
     }
-    
+
     pub fn generate_security_module(&self) -> String {
         include_str!("../../../tools/vscode-extension/templates/security.velin").to_string()
     }

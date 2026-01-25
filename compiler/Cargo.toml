@@ -87,51 +87,15 @@ qdrant-client = ["dep:qdrant-client"]
 
 
 [[test]]
-name = "parser_test"
-path = "tests/parser_test.rs"
+name = "pass_error_handling"
+path = "tests/pass_error_handling.rs"
 
 [[test]]
-name = "type_checker_test"
-path = "tests/type_checker_test.rs"
+name = "autofix_parse_errors"
+path = "tests/autofix_parse_errors.rs"
 
 [[test]]
-name = "codegen_test"
-path = "tests/codegen_test.rs"
-
-[[test]]
-name = "formatter_test"
-path = "tests/formatter_test.rs"
-
-[[test]]
-name = "backup_test"
-path = "tests/backup_test.rs"
-
-[[test]]
-name = "rollback_test"
-path = "tests/rollback_test.rs"
-
-[[test]]
-name = "async_test"
-path = "tests/async_test.rs"
-
-[[test]]
-name = "pattern_matching_test"
-path = "tests/pattern_matching_test.rs"
-
-[[test]]
-name = "closures_test"
-path = "tests/closures_test.rs"
-
-[[test]]
-name = "collections_test"
-path = "tests/collections_test.rs"
-
-[[test]]
-name = "http_client_test"
-path = "tests/http_client_test.rs"
-
-[[test]]
-name = "ai_performance_test"
-path = "tests/performance/ai_performance_test.rs"
+name = "struct_literal_parsing"
+path = "tests/struct_literal_parsing.rs"
 
 [dev-dependencies]

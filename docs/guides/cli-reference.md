@@ -93,9 +93,17 @@ velin compile -i main.velin --no-type-check
 
 ---
 
-### `velin check` - Code-Prüfung
+### `velin check` - Code-Prüfung ✅ (Verbessert in 3.1.0)
 
 Prüft eine VelinScript-Datei auf Fehler (nur Parsing & Type Checking, keine Code-Generierung).
+
+**Neue Features in 3.1.0:**
+- ✅ Intelligente Lösungsvorschläge für alle Fehlertypen
+- ✅ Separate Warnings-Anzeige
+- ✅ Detaillierte Fehlerstatistiken
+- ✅ Verbesserte Fehlermeldungen mit Code-Beispielen
+
+**Siehe:** [Fehlerbehandlung & Lösungsvorschläge](../architecture/error-handling.md) ✅ (Neu in 3.1.0)
 
 **Syntax:**
 ```bash
@@ -901,5 +909,5 @@ export VELIN_LOG_LEVEL="debug"
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
+**Letzte Aktualisierung:** 2026-02-02  
 **Version:** 3.1.0

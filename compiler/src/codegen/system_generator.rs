@@ -5,7 +5,7 @@ use crate::stdlib::ml::LLMClient;
 use anyhow::Result;
 
 /// System-Generator für boilerplate-freie Systeme
-/// 
+///
 /// Erkennt High-Level APIs und generiert vollständige Systeme:
 /// - API-Server (Axum/Actix-Web)
 /// - Routing
@@ -95,26 +95,33 @@ impl SystemGenerator {
             client_generator: ClientGenerator::new(),
             llm_client,
             framework: Framework::Axum, // Default
-            port: 3000, // Default
+            port: 3000,                 // Default
         }
     }
-    
+
     pub fn with_framework(mut self, framework: Framework) -> Self {
         self.framework = framework;
         self
     }
-    
+
     pub fn with_port(mut self, port: u16) -> Self {
         self.port = port;
         self
     }
-    
+
     /// Erkennt Framework aus Programm oder Config
-    pub fn detect_framework(&mut self, program: Option<&crate::parser::ast::Program>, config_framework: Option<&str>) {
+    pub fn detect_framework(
+        &mut self,
+        program: Option<&crate::parser::ast::Program>,
+        config_framework: Option<&str>,
+    ) {
         if let Some(prog) = program {
             self.framework = FrameworkSelector::detect_framework(prog, config_framework);
         } else if let Some(fw) = config_framework {
-            self.framework = FrameworkSelector::detect_framework(&crate::parser::ast::Program { items: vec![] }, Some(fw));
+            self.framework = FrameworkSelector::detect_framework(
+                &crate::parser::ast::Program { items: vec![] },
+                Some(fw),
+            );
         }
     }
 
@@ -189,7 +196,7 @@ impl SystemGenerator {
     fn heuristic_api_type_detection(&self, api_call: &APICall) -> APIType {
         let call_str = api_call.to_string().to_lowercase();
         let name_lower = api_call.name.to_lowercase();
-        
+
         // Prüfe Decorators
         for decorator in &api_call.decorators {
             let decorator_lower = decorator.to_lowercase();
@@ -197,16 +204,25 @@ impl SystemGenerator {
                 return APIType::Chatbot;
             }
         }
-        
+
         // Prüfe Funktionsname und Call-String
-        if name_lower.contains("chat") || name_lower.contains("llm") || 
-           call_str.contains("llm.") || call_str.contains("chat") {
+        if name_lower.contains("chat")
+            || name_lower.contains("llm")
+            || call_str.contains("llm.")
+            || call_str.contains("chat")
+        {
             APIType::Chatbot
-        } else if name_lower.contains("db") || name_lower.contains("database") ||
-                  call_str.contains("db.") || call_str.contains("database") {
+        } else if name_lower.contains("db")
+            || name_lower.contains("database")
+            || call_str.contains("db.")
+            || call_str.contains("database")
+        {
             APIType::Database
-        } else if name_lower.contains("auth") || name_lower.contains("login") ||
-                  call_str.contains("auth.") || call_str.contains("login") {
+        } else if name_lower.contains("auth")
+            || name_lower.contains("login")
+            || call_str.contains("auth.")
+            || call_str.contains("login")
+        {
             APIType::Authentication
         } else if api_call.decorators.iter().any(|d| {
             let d_lower = d.to_lowercase();
@@ -219,7 +235,11 @@ impl SystemGenerator {
     }
 
     /// Analysiert System-Anforderungen
-    fn analyze_requirements(&self, _api_call: &APICall, api_type: &APIType) -> Result<Requirements> {
+    fn analyze_requirements(
+        &self,
+        _api_call: &APICall,
+        api_type: &APIType,
+    ) -> Result<Requirements> {
         let mut requirements = Requirements {
             needs_auth: false,
             needs_rate_limit: false,
@@ -340,78 +360,65 @@ impl SystemGenerator {
     }
 
     /// Generiert Code für Komponente
-    fn generate_component_code(&self, component: &GeneratedComponent, requirements: &Requirements) -> Result<String> {
+    fn generate_component_code(
+        &self,
+        component: &GeneratedComponent,
+        requirements: &Requirements,
+    ) -> Result<String> {
         let code = match component.component_type {
-            ComponentType::Server => {
-                self.generate_server_code()
-            }
-            ComponentType::Routing => {
-                self.generate_routing_code(requirements)
-            }
-            ComponentType::Handlers => {
-                self.generate_handlers_code(requirements)
-            }
-            ComponentType::Authentication => {
-                self.generate_auth_code()
-            }
-            ComponentType::RateLimiting => {
-                self.generate_rate_limit_code()
-            }
-            ComponentType::Logging => {
-                self.generate_logging_code()
-            }
-            ComponentType::AIClient => {
-                self.generate_ai_client_code()
-            }
-            ComponentType::Database => {
-                self.generate_database_code()
-            }
-            ComponentType::Caching => {
-                self.generate_caching_code()
-            }
-            ComponentType::ErrorHandling => {
-                self.generate_error_handling_code()
-            }
-            ComponentType::Docker => {
-                self.generate_dockerfile()
-            }
-            ComponentType::Kubernetes => {
-                self.generate_kubernetes_config()
-            }
+            ComponentType::Server => self.generate_server_code(),
+            ComponentType::Routing => self.generate_routing_code(requirements),
+            ComponentType::Handlers => self.generate_handlers_code(requirements),
+            ComponentType::Authentication => self.generate_auth_code(),
+            ComponentType::RateLimiting => self.generate_rate_limit_code(),
+            ComponentType::Logging => self.generate_logging_code(),
+            ComponentType::AIClient => self.generate_ai_client_code(),
+            ComponentType::Database => self.generate_database_code(),
+            ComponentType::Caching => self.generate_caching_code(),
+            ComponentType::ErrorHandling => self.generate_error_handling_code(),
+            ComponentType::Docker => self.generate_dockerfile(),
+            ComponentType::Kubernetes => self.generate_kubernetes_config(),
         };
-        
+
         // Validiere generierten Code
         self.validate_component_code(&code, &component.component_type)?;
-        
+
         Ok(code)
     }
-    
+
     /// Validiert generierten Komponenten-Code
     fn validate_component_code(&self, code: &str, component_type: &ComponentType) -> Result<()> {
         // Basis-Validierungen
         if code.is_empty() {
-            return Err(anyhow::anyhow!("Generated code for {:?} is empty", component_type));
+            return Err(anyhow::anyhow!(
+                "Generated code for {:?} is empty",
+                component_type
+            ));
         }
-        
+
         // Prüfe auf häufige Syntax-Fehler
         let open_braces = code.matches('{').count();
         let close_braces = code.matches('}').count();
         if open_braces != close_braces {
             return Err(anyhow::anyhow!(
                 "Mismatched braces in {:?} code: {} open, {} close",
-                component_type, open_braces, close_braces
+                component_type,
+                open_braces,
+                close_braces
             ));
         }
-        
+
         let open_parens = code.matches('(').count();
         let close_parens = code.matches(')').count();
         if open_parens != close_parens {
             return Err(anyhow::anyhow!(
                 "Mismatched parentheses in {:?} code: {} open, {} close",
-                component_type, open_parens, close_parens
+                component_type,
+                open_parens,
+                close_parens
             ));
         }
-        
+
         // Spezifische Validierungen je nach Komponenten-Typ
         match component_type {
             ComponentType::Server | ComponentType::Routing => {
@@ -421,7 +428,9 @@ impl SystemGenerator {
             }
             ComponentType::Database => {
                 if code.contains("format!") && code.contains("SELECT") {
-                    return Err(anyhow::anyhow!("Database code should not use format! for SQL queries (SQL injection risk)"));
+                    return Err(anyhow::anyhow!(
+                        "Database code should not use format! for SQL queries (SQL injection risk)"
+                    ));
                 }
             }
             ComponentType::Kubernetes => {
@@ -431,7 +440,7 @@ impl SystemGenerator {
             }
             _ => {}
         }
-        
+
         Ok(())
     }
 
@@ -439,7 +448,8 @@ impl SystemGenerator {
     fn generate_server_code(&self) -> String {
         match self.framework {
             Framework::Axum => {
-                format!(r#"// Axum Server Setup
+                format!(
+                    r#"// Axum Server Setup
 // Port: {}
 use axum::{{Router, routing::get, Json}};
 use tower::ServiceBuilder;
@@ -458,10 +468,13 @@ pub async fn create_server() -> Router {{
             .into_inner())
         .layer(CorsLayer::permissive())
 }}
-"#, self.port)
+"#,
+                    self.port
+                )
             }
             Framework::Actix => {
-                format!(r#"// Actix-Web Server Setup
+                format!(
+                    r#"// Actix-Web Server Setup
 // Port: {}
 use actix_web::{{web, App, HttpServer, middleware::Logger}};
 use actix_cors::Cors;
@@ -483,7 +496,9 @@ pub async fn create_server() -> std::io::Result<()> {{
     .run()
     .await
 }}
-"#, self.port, self.port)
+"#,
+                    self.port, self.port
+                )
             }
             _ => {
                 // Fallback zu Axum
@@ -491,12 +506,13 @@ pub async fn create_server() -> std::io::Result<()> {{
             }
         }
     }
-    
+
     /// Generiert Server-Code für spezifisches Framework
     fn generate_server_code_for_framework(&self, framework: Framework) -> String {
         match framework {
             Framework::Axum => {
-                format!(r#"// Axum Server (Default)
+                format!(
+                    r#"// Axum Server (Default)
 // Port: {}
 use axum::{{Router, routing::get, Json}};
 use tower::ServiceBuilder;
@@ -509,7 +525,9 @@ pub async fn create_server() -> Router {{
             .into_inner())
         .layer(CorsLayer::permissive())
 }}
-"#, self.port)
+"#,
+                    self.port
+                )
             }
             _ => {
                 // Für andere Frameworks wird Axum als Fallback verwendet
@@ -521,13 +539,20 @@ pub async fn create_server() -> Router {{
     /// Generiert Routing-Code
     fn generate_routing_code(&self, requirements: &Requirements) -> String {
         let imports = match self.framework {
-            Framework::Axum => "use axum::{Router, routing::{get, post, put, delete}};\n".to_string(),
-            Framework::Actix => "use actix_web::{web, HttpResponse, Result as ActixResult};\n".to_string(),
+            Framework::Axum => {
+                "use axum::{Router, routing::{get, post, put, delete}};\n".to_string()
+            }
+            Framework::Actix => {
+                "use actix_web::{web, HttpResponse, Result as ActixResult};\n".to_string()
+            }
             _ => "use axum::{Router, routing::{get, post, put, delete}};\n".to_string(),
         };
-        
-        let mut code = format!("// Routing Configuration\n// Framework: {:?}\n{}\n", self.framework, imports);
-        
+
+        let mut code = format!(
+            "// Routing Configuration\n// Framework: {:?}\n{}\n",
+            self.framework, imports
+        );
+
         match self.framework {
             Framework::Axum => {
                 code.push_str("/// Fügt alle Routes zum Router hinzu\n");
@@ -548,40 +573,48 @@ pub async fn create_server() -> Router {{
                 code.push_str("        .route(\"/health\", get(|| async { \"OK\" }))\n");
             }
         }
-        
+
         match self.framework {
             Framework::Axum => {
                 if requirements.needs_ai {
                     code.push_str("        .route(\"/chat\", post(crate::handlers::chat))\n");
                 }
-                
+
                 if requirements.needs_auth {
                     code.push_str("        .route(\"/login\", post(crate::handlers::login))\n");
-                    code.push_str("        .route(\"/register\", post(crate::handlers::register))\n");
+                    code.push_str(
+                        "        .route(\"/register\", post(crate::handlers::register))\n",
+                    );
                 }
-                
+
                 if requirements.needs_database {
                     code.push_str("        .route(\"/items\", get(crate::handlers::list_items))\n");
-                    code.push_str("        .route(\"/items\", post(crate::handlers::create_item))\n");
+                    code.push_str(
+                        "        .route(\"/items\", post(crate::handlers::create_item))\n",
+                    );
                 }
-                
+
                 code.push_str("}\n");
             }
             Framework::Actix => {
                 if requirements.needs_ai {
-                    code.push_str("            .route(\"/chat\", web::post().to(crate::handlers::chat))\n");
+                    code.push_str(
+                        "            .route(\"/chat\", web::post().to(crate::handlers::chat))\n",
+                    );
                 }
-                
+
                 if requirements.needs_auth {
-                    code.push_str("            .route(\"/login\", web::post().to(crate::handlers::login))\n");
+                    code.push_str(
+                        "            .route(\"/login\", web::post().to(crate::handlers::login))\n",
+                    );
                     code.push_str("            .route(\"/register\", web::post().to(crate::handlers::register))\n");
                 }
-                
+
                 if requirements.needs_database {
                     code.push_str("            .route(\"/items\", web::get().to(crate::handlers::list_items))\n");
                     code.push_str("            .route(\"/items\", web::post().to(crate::handlers::create_item))\n");
                 }
-                
+
                 code.push_str("    );\n");
                 code.push_str("}\n\n");
                 code.push_str("/// Health Check Endpoint\n");
@@ -596,16 +629,20 @@ pub async fn create_server() -> Router {{
                 }
                 if requirements.needs_auth {
                     code.push_str("        .route(\"/login\", post(crate::handlers::login))\n");
-                    code.push_str("        .route(\"/register\", post(crate::handlers::register))\n");
+                    code.push_str(
+                        "        .route(\"/register\", post(crate::handlers::register))\n",
+                    );
                 }
                 if requirements.needs_database {
                     code.push_str("        .route(\"/items\", get(crate::handlers::list_items))\n");
-                    code.push_str("        .route(\"/items\", post(crate::handlers::create_item))\n");
+                    code.push_str(
+                        "        .route(\"/items\", post(crate::handlers::create_item))\n",
+                    );
                 }
                 code.push_str("}\n");
             }
         }
-        
+
         code
     }
 
@@ -613,45 +650,58 @@ pub async fn create_server() -> Router {{
     fn generate_handlers_code(&self, requirements: &Requirements) -> String {
         let mut code = match self.framework {
             Framework::Axum => {
-                format!(r#"// Handler Code für Axum Framework
+                format!(
+                    r#"// Handler Code für Axum Framework
 // Port: {}
 
 use axum::{{Json, response::IntoResponse, http::StatusCode}};
 use serde::{{Deserialize, Serialize}};
-"#, self.port)
+"#,
+                    self.port
+                )
             }
             Framework::Actix => {
-                format!(r#"// Handler Code für Actix-Web Framework
+                format!(
+                    r#"// Handler Code für Actix-Web Framework
 // Port: {}
 
 use actix_web::{{web, HttpResponse, Responder}};
 use serde::{{Deserialize, Serialize}};
-"#, self.port)
+"#,
+                    self.port
+                )
             }
             _ => {
-                format!(r#"// Handler Code (Default: Axum)
+                format!(
+                    r#"// Handler Code (Default: Axum)
 // Port: {}
 
 use axum::{{Json, response::IntoResponse, http::StatusCode}};
 use serde::{{Deserialize, Serialize}};
-"#, self.port)
+"#,
+                    self.port
+                )
             }
         };
-        
+
         if requirements.needs_auth {
             code.push_str("use jsonwebtoken::{encode, Header, EncodingKey};\n");
             code.push_str("use std::time::{SystemTime, UNIX_EPOCH};\n");
         }
         code.push_str("\n");
-        
+
         if requirements.needs_ai {
             code.push_str("#[derive(Deserialize)]\n");
             code.push_str("pub struct ChatRequest { pub message: String }\n\n");
             code.push_str("#[derive(Serialize)]\n");
             code.push_str("pub struct ChatResponse { pub response: String }\n\n");
-            code.push_str("pub async fn chat(Json(payload): Json<ChatRequest>) -> impl IntoResponse {\n");
+            code.push_str(
+                "pub async fn chat(Json(payload): Json<ChatRequest>) -> impl IntoResponse {\n",
+            );
             code.push_str("    // Real AI Logic using generated AIClient\n");
-            code.push_str("    let api_key = std::env::var(\"OPENAI_API_KEY\").unwrap_or_default();\n");
+            code.push_str(
+                "    let api_key = std::env::var(\"OPENAI_API_KEY\").unwrap_or_default();\n",
+            );
             code.push_str("    // We use the generated AIClient struct\n");
             code.push_str("    // In a full system, this would be injected via Axum State\n");
             code.push_str("    use crate::ai_client::AIClient;\n");
@@ -660,11 +710,13 @@ use serde::{{Deserialize, Serialize}};
             code.push_str("    let client = AIClient::new(LLMProvider::OpenAI, api_key);\n");
             code.push_str("    match client.generate(&payload.message).await {\n");
             code.push_str("        Ok(content) => Json(ChatResponse { response: content }),\n");
-            code.push_str("        Err(e) => Json(ChatResponse { response: format!(\"AI Error: {}\", e) })\n");
+            code.push_str(
+                "        Err(e) => Json(ChatResponse { response: format!(\"AI Error: {}\", e) })\n",
+            );
             code.push_str("    }\n");
             code.push_str("}\n\n");
         }
-        
+
         if requirements.needs_auth {
             code.push_str("/// JWT Claims für Token-Validierung\n");
             code.push_str("#[derive(Debug, Serialize, Deserialize)]\n");
@@ -675,17 +727,23 @@ use serde::{{Deserialize, Serialize}};
 
             code.push_str("/// Login Request/Response Structs\n");
             code.push_str("#[derive(Deserialize)]\n");
-            code.push_str("pub struct LoginRequest { pub username: String, pub password: String }\n\n");
+            code.push_str(
+                "pub struct LoginRequest { pub username: String, pub password: String }\n\n",
+            );
             code.push_str("#[derive(Serialize)]\n");
             code.push_str("pub struct LoginResponse { pub token: String }\n\n");
-            
+
             match self.framework {
                 Framework::Axum => {
-                    code.push_str("/// Login Handler - Authentifiziert Benutzer und gibt JWT-Token zurück\n");
+                    code.push_str(
+                        "/// Login Handler - Authentifiziert Benutzer und gibt JWT-Token zurück\n",
+                    );
                     code.push_str("pub async fn login(Json(payload): Json<LoginRequest>) -> impl IntoResponse {\n");
                 }
                 Framework::Actix => {
-                    code.push_str("/// Login Handler - Authentifiziert Benutzer und gibt JWT-Token zurück\n");
+                    code.push_str(
+                        "/// Login Handler - Authentifiziert Benutzer und gibt JWT-Token zurück\n",
+                    );
                     code.push_str("pub async fn login(payload: web::Json<LoginRequest>) -> impl Responder {\n");
                 }
                 _ => {
@@ -693,35 +751,51 @@ use serde::{{Deserialize, Serialize}};
                 }
             }
             if requirements.needs_database {
-                 code.push_str("    // Real Database Authentication\n");
-                 code.push_str("    // Note: In production, use dependency injection for the database pool\n");
-                 code.push_str("    if let Ok(db) = crate::database::Database::new().await {\n");
-                 code.push_str("        // SECURITY: Using prepared statements to prevent SQL injection\n");
-                 code.push_str("        use sqlx::Row;\n");
-                 code.push_str("        let query_result = sqlx::query(\"SELECT * FROM users WHERE username = $1 AND password = $2\")\n");
-                 code.push_str("            .bind(&payload.username)\n");
-                 code.push_str("            .bind(&payload.password)\n");
-                 code.push_str("            .fetch_optional(&db.pool)\n");
-                 code.push_str("            .await;\n");
-                 code.push_str("        if let Ok(Some(_row)) = query_result {\n");
-                 code.push_str("                let expiration = SystemTime::now().duration_since(UNIX_EPOCH)
+                code.push_str("    // Real Database Authentication\n");
+                code.push_str(
+                    "    // Note: In production, use dependency injection for the database pool\n",
+                );
+                code.push_str("    if let Ok(db) = crate::database::Database::new().await {\n");
+                code.push_str(
+                    "        // SECURITY: Using prepared statements to prevent SQL injection\n",
+                );
+                code.push_str("        use sqlx::Row;\n");
+                code.push_str("        let query_result = sqlx::query(\"SELECT * FROM users WHERE username = $1 AND password = $2\")\n");
+                code.push_str("            .bind(&payload.username)\n");
+                code.push_str("            .bind(&payload.password)\n");
+                code.push_str("            .fetch_optional(&db.pool)\n");
+                code.push_str("            .await;\n");
+                code.push_str("        if let Ok(Some(_row)) = query_result {\n");
+                code.push_str(
+                    "                let expiration = SystemTime::now().duration_since(UNIX_EPOCH)
                     .unwrap_or_else(|_| std::time::Duration::from_secs(0))
-                    .as_secs() as usize + 3600;\n");
-                 code.push_str("                let claims = Claims { sub: payload.username, exp: expiration };\n");
-                 code.push_str("                let secret = std::env::var(\"JWT_SECRET\").unwrap_or_else(|_| \"secret\".to_string());\n");
-                 code.push_str("                if let Ok(token) = encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())) {\n");
-                 code.push_str("                    return (StatusCode::OK, Json(LoginResponse { token }));\n");
-                 code.push_str("                }\n");
-                 code.push_str("            }\n");
-                 code.push_str("        }\n");
-                 code.push_str("    }\n");
+                    .as_secs() as usize + 3600;\n",
+                );
+                code.push_str("                let claims = Claims { sub: payload.username, exp: expiration };\n");
+                code.push_str("                let secret = std::env::var(\"JWT_SECRET\").unwrap_or_else(|_| \"secret\".to_string());\n");
+                code.push_str("                if let Ok(token) = encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())) {\n");
+                code.push_str(
+                    "                    return (StatusCode::OK, Json(LoginResponse { token }));\n",
+                );
+                code.push_str("                }\n");
+                code.push_str("            }\n");
+                code.push_str("        }\n");
+                code.push_str("    }\n");
             }
-            code.push_str("    // Fallback/Demo Authentication Logic (if DB fails or user not found)\n");
-            code.push_str("    if payload.username == \"admin\" && payload.password == \"password\" {\n");
-            code.push_str("        let expiration = SystemTime::now().duration_since(UNIX_EPOCH)
+            code.push_str(
+                "    // Fallback/Demo Authentication Logic (if DB fails or user not found)\n",
+            );
+            code.push_str(
+                "    if payload.username == \"admin\" && payload.password == \"password\" {\n",
+            );
+            code.push_str(
+                "        let expiration = SystemTime::now().duration_since(UNIX_EPOCH)
             .unwrap_or_else(|_| std::time::Duration::from_secs(0))
-            .as_secs() as usize + 3600;\n");
-            code.push_str("        let claims = Claims { sub: payload.username, exp: expiration };\n");
+            .as_secs() as usize + 3600;\n",
+            );
+            code.push_str(
+                "        let claims = Claims { sub: payload.username, exp: expiration };\n",
+            );
             code.push_str("        let secret = std::env::var(\"JWT_SECRET\").unwrap_or_else(|_| \"secret\".to_string());\n");
             code.push_str("        let token = match encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref())) {\n");
             code.push_str("            Ok(t) => t,\n");
@@ -732,24 +806,24 @@ use serde::{{Deserialize, Serialize}};
             code.push_str("        (StatusCode::UNAUTHORIZED, Json(LoginResponse { token: \"\".to_string() }))\n");
             code.push_str("    }\n");
             code.push_str("}\n\n");
-            
+
             code.push_str("pub async fn register(Json(_payload): Json<LoginRequest>) -> impl IntoResponse {\n");
             code.push_str("    (StatusCode::CREATED, \"User registered\")\n");
             code.push_str("}\n\n");
         }
-        
+
         if requirements.needs_database {
             code.push_str("/// Item Struct für Datenbank-Operationen\n");
             code.push_str("#[derive(Serialize, Deserialize)]\n");
             code.push_str("pub struct Item { pub id: String, pub name: String }\n\n");
-            
+
             match self.framework {
                 Framework::Axum => {
                     code.push_str("/// List Items Handler - Gibt alle Items zurück\n");
                     code.push_str("pub async fn list_items() -> impl IntoResponse {\n");
                     code.push_str("    (StatusCode::OK, Json(vec![Item { id: \"1\".to_string(), name: \"Item 1\".to_string() }]))\n");
                     code.push_str("}\n\n");
-                    
+
                     code.push_str("/// Create Item Request Struct\n");
                     code.push_str("#[derive(Deserialize)]\n");
                     code.push_str("pub struct CreateItemRequest { pub name: String }\n\n");
@@ -762,7 +836,7 @@ use serde::{{Deserialize, Serialize}};
                     code.push_str("pub async fn list_items() -> impl Responder {\n");
                     code.push_str("    HttpResponse::Ok().json(vec![Item { id: \"1\".to_string(), name: \"Item 1\".to_string() }])\n");
                     code.push_str("}\n\n");
-                    
+
                     code.push_str("/// Create Item Request Struct\n");
                     code.push_str("#[derive(Deserialize)]\n");
                     code.push_str("pub struct CreateItemRequest { pub name: String }\n\n");
@@ -782,7 +856,7 @@ use serde::{{Deserialize, Serialize}};
             }
             code.push_str("}\n\n");
         }
-        
+
         code
     }
     /// Generiert Auth-Code
@@ -823,14 +897,16 @@ pub async fn auth_middleware(request: Request, next: Next) -> Response {
         .body("Unauthorized".into())
         .unwrap()
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generiert Rate-Limit-Code
     fn generate_rate_limit_code(&self) -> String {
         match self.framework {
             Framework::Axum => {
-                format!(r#"// Rate Limiting Middleware für Axum
+                format!(
+                    r#"// Rate Limiting Middleware für Axum
 // Port: {}
 
 use axum::{{extract::Request, middleware::Next, response::Response, http::StatusCode}};
@@ -891,10 +967,13 @@ pub async fn rate_limit_middleware(request: Request, next: Next) -> Response {{
     
     next.run(request).await
 }}
-"#, self.port)
+"#,
+                    self.port
+                )
             }
             Framework::Actix => {
-                format!(r#"// Rate Limiting Middleware für Actix-Web
+                format!(
+                    r#"// Rate Limiting Middleware für Actix-Web
 // Port: {}
 
 use actix_web::{{dev::ServiceRequest, Error}};
@@ -910,7 +989,9 @@ pub async fn rate_limit_middleware(
     // In Production: Use Redis-based rate limiting
     Ok(req)
 }}
-"#, self.port)
+"#,
+                    self.port
+                )
             }
             _ => {
                 // Fallback zu Axum
@@ -918,18 +999,20 @@ pub async fn rate_limit_middleware(
             }
         }
     }
-    
+
     /// Generiert Rate-Limit-Code für spezifisches Framework
     fn generate_rate_limit_code_for_framework(&self, framework: Framework) -> String {
         match framework {
             Framework::Axum => {
-                format!(r#"use axum::{{extract::Request, middleware::Next, response::Response}};
+                format!(
+                    r#"use axum::{{extract::Request, middleware::Next, response::Response}};
 
 pub async fn rate_limit_middleware(request: Request, next: Next) -> Response {{
     // Rate limiting implementation
     next.run(request).await
 }}
-"#)
+"#
+                )
             }
             _ => String::new(),
         }
@@ -949,7 +1032,8 @@ pub async fn logging_middleware(request: axum::extract::Request, next: axum::mid
 
     /// Generiert AI-Client-Code
     fn generate_ai_client_code(&self) -> String {
-        format!(r#"// AI Client für LLM-Integration
+        format!(
+            r#"// AI Client für LLM-Integration
 // Port: {}
 // Framework: {:?}
 
@@ -996,7 +1080,9 @@ impl AIClient {{
         self.client.generate(&format!("Chat: {{:?}}", messages))
     }}
 }}
-"#, self.port, self.framework)
+"#,
+            self.port, self.framework
+        )
     }
 
     /// Generiert Database-Code
@@ -1040,7 +1126,8 @@ impl Database {
 
     /// Generiert Caching-Code
     fn generate_caching_code(&self) -> String {
-        format!(r#"// Redis Cache für Caching-Operationen
+        format!(
+            r#"// Redis Cache für Caching-Operationen
 // Port: {}
 // Framework: {:?}
 
@@ -1125,7 +1212,9 @@ impl Cache {{
             .map_err(|e| format!("Redis delete error: {{}}", e))
     }}
 }}
-"#, self.port, self.framework)
+"#,
+            self.port, self.framework
+        )
     }
 
     /// Generiert Error-Handling-Code
@@ -1140,12 +1229,14 @@ impl IntoResponse for AppError {
         (StatusCode::INTERNAL_SERVER_ERROR, format!("Error: {}", self.0)).into_response()
     }
 }
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Generiert Dockerfile
     fn generate_dockerfile(&self) -> String {
-        format!(r#"# Multi-stage Dockerfile für optimale Image-Größe
+        format!(
+            r#"# Multi-stage Dockerfile für optimale Image-Größe
 # Port: {}
 
 # Build-Stage: Kompiliert die Anwendung
@@ -1180,12 +1271,15 @@ ENV PORT={}
 
 # Starte die Anwendung
 CMD ["velin-compiler"]
-"#, self.port, self.port, self.port)
+"#,
+            self.port, self.port, self.port
+        )
     }
 
     /// Generiert Kubernetes-Config
     fn generate_kubernetes_config(&self) -> String {
-        format!(r#"# Kubernetes Deployment Configuration
+        format!(
+            r#"# Kubernetes Deployment Configuration
 # Port: {}
 # Framework: {:?}
 
@@ -1323,20 +1417,22 @@ spec:
     path: /metrics
     interval: 30s
     scrapeTimeout: 10s
-"#, self.port, self.framework, self.port, self.port, self.port, self.port, self.port)
+"#,
+            self.port, self.framework, self.port, self.port, self.port, self.port, self.port
+        )
     }
 
     /// Generiert Integration-Code
     fn generate_integration(&self, system: &GeneratedSystem) -> Result<String> {
         let mut integration = String::from("// System Integration Code\n\n");
-        
+
         // Zentrale Import-Verwaltung
         let mut imports = std::collections::HashSet::new();
         imports.insert("use axum::{Router, routing::{get, post, put, delete}, Json, extract::Request, middleware::Next, response::{Response, IntoResponse}, http::StatusCode};".to_string());
         imports.insert("use serde::{Deserialize, Serialize};".to_string());
         imports.insert("use tower::ServiceBuilder;".to_string());
         imports.insert("use tower_http::cors::CorsLayer;".to_string());
-        
+
         // Sammle Imports aus allen Komponenten
         for component in &system.components {
             if component.code.contains("sqlx::") {
@@ -1352,14 +1448,14 @@ spec:
                 imports.insert("use tracing::instrument;".to_string());
             }
         }
-        
+
         // Füge Imports hinzu
         for import in &imports {
             integration.push_str(import);
             integration.push_str("\n");
         }
         integration.push_str("\n");
-        
+
         // Füge Komponenten hinzu
         for component in &system.components {
             integration.push_str(&format!("// Component: {}\n", component.name));
@@ -1371,7 +1467,11 @@ spec:
     }
 
     /// Generiert Deployment-Config
-    fn generate_deployment(&self, system: &GeneratedSystem, requirements: &Requirements) -> Result<DeploymentConfig> {
+    fn generate_deployment(
+        &self,
+        system: &GeneratedSystem,
+        requirements: &Requirements,
+    ) -> Result<DeploymentConfig> {
         let mut config = DeploymentConfig {
             deployment_type: DeploymentType::CloudSingle,
             dockerfile: None,
@@ -1402,7 +1502,8 @@ spec:
 
     /// Generiert docker-compose.yml
     fn generate_docker_compose(&self, requirements: &Requirements) -> String {
-        let mut compose = format!(r#"# Docker Compose Configuration
+        let mut compose = format!(
+            r#"# Docker Compose Configuration
 # Port: {}
 # Framework: {:?}
 
@@ -1415,10 +1516,12 @@ services:
     environment:
       - RUST_LOG=info
       - PORT={}
-"#, self.port, self.framework, self.port, self.port, self.port);
+"#,
+            self.port, self.framework, self.port, self.port, self.port
+        );
 
         let mut depends_on = Vec::new();
-        
+
         if requirements.needs_ai {
             compose.push_str("      - OPENAI_API_KEY=${OPENAI_API_KEY}\n");
         }
@@ -1430,7 +1533,7 @@ services:
             compose.push_str("      - DATABASE_URL=${DATABASE_URL}\n");
             depends_on.push("postgres".to_string());
         }
-        
+
         // Füge depends_on nur hinzu wenn es Dependencies gibt
         if !depends_on.is_empty() {
             compose.push_str("    depends_on:\n");
@@ -1440,7 +1543,9 @@ services:
         }
 
         if requirements.needs_caching {
-            compose.push_str("\n  redis:\n    image: redis:alpine\n    ports:\n      - \"6379:6379\"\n");
+            compose.push_str(
+                "\n  redis:\n    image: redis:alpine\n    ports:\n      - \"6379:6379\"\n",
+            );
         }
         if requirements.needs_database {
             compose.push_str("\n  postgres:\n    image: postgres:15\n    environment:\n      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}\n    ports:\n      - \"5432:5432\"\n");
@@ -1464,20 +1569,22 @@ impl APICall {
     pub fn to_string(&self) -> String {
         format!("{}({})", self.name, self.args.join(", "))
     }
-    
+
     /// Erstellt APICall aus AST Function
     pub fn from_ast(function: &crate::parser::ast::Function) -> Self {
-        let decorators: Vec<String> = function.decorators.iter()
-            .map(|d| d.name.clone())
-            .collect();
-        
-        let args: Vec<String> = function.params.iter()
+        let decorators: Vec<String> = function.decorators.iter().map(|d| d.name.clone()).collect();
+
+        let args: Vec<String> = function
+            .params
+            .iter()
             .map(|p| format!("{}: {}", p.name, Self::type_to_string(&p.param_type)))
             .collect();
-        
-        let return_type = function.return_type.as_ref()
+
+        let return_type = function
+            .return_type
+            .as_ref()
             .map(|t| Self::type_to_string(t));
-        
+
         Self {
             name: function.name.clone(),
             args,
@@ -1486,7 +1593,7 @@ impl APICall {
             is_async: function.is_async,
         }
     }
-    
+
     /// Konvertiert Type zu String
     fn type_to_string(ty: &crate::parser::ast::Type) -> String {
         match ty {
@@ -1501,10 +1608,18 @@ impl APICall {
                 format!("List<{}>", Self::type_to_string(item_type))
             }
             crate::parser::ast::Type::Map { key, value } => {
-                format!("Map<{}, {}>", Self::type_to_string(key), Self::type_to_string(value))
+                format!(
+                    "Map<{}, {}>",
+                    Self::type_to_string(key),
+                    Self::type_to_string(value)
+                )
             }
             crate::parser::ast::Type::Result { ok, err } => {
-                format!("Result<{}, {}>", Self::type_to_string(ok), Self::type_to_string(err))
+                format!(
+                    "Result<{}, {}>",
+                    Self::type_to_string(ok),
+                    Self::type_to_string(err)
+                )
             }
             crate::parser::ast::Type::Optional(inner_type) => {
                 format!("Option<{}>", Self::type_to_string(inner_type))
@@ -1513,24 +1628,41 @@ impl APICall {
                 if params.is_empty() {
                     name.clone()
                 } else {
-                    format!("{}<{}>", name, params.iter()
-                        .map(|p| Self::type_to_string(p))
-                        .collect::<Vec<_>>()
-                        .join(", "))
+                    format!(
+                        "{}<{}>",
+                        name,
+                        params
+                            .iter()
+                            .map(|p| Self::type_to_string(p))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
                 }
             }
             crate::parser::ast::Type::Tuple(types) => {
-                format!("({})", types.iter()
-                    .map(|t| Self::type_to_string(t))
-                    .collect::<Vec<_>>()
-                    .join(", "))
+                format!(
+                    "({})",
+                    types
+                        .iter()
+                        .map(|t| Self::type_to_string(t))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
             }
-            crate::parser::ast::Type::Function { params, return_type } => {
-                let params_str = params.iter()
+            crate::parser::ast::Type::Function {
+                params,
+                return_type,
+            } => {
+                let params_str = params
+                    .iter()
                     .map(|p| Self::type_to_string(p))
                     .collect::<Vec<_>>()
                     .join(", ");
-                format!("fn({}) -> {}", params_str, Self::type_to_string(return_type))
+                format!(
+                    "fn({}) -> {}",
+                    params_str,
+                    Self::type_to_string(return_type)
+                )
             }
         }
     }

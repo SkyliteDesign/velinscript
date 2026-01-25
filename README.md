@@ -57,7 +57,7 @@
 
 VelinScript (Velisch) ist eine moderne, speziell für KI-API-Entwicklung optimierte Programmiersprache. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
 
-### 🆕 Verbesserungen in Version 3.1.0  → Patch 0.5
+### 🆕 Verbesserungen in Version 3.1.0  → Patch 0.5 <-> (ist ein kleiner Ergänzungs‑Patch, kein großes Update.)
 - ✅ **Infos im Änderungsprotokoll** - [CHANGELOG](CHANGELOG.md)
 
 

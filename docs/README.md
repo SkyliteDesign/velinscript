@@ -8,6 +8,7 @@ Willkommen zur vollständigen Dokumentation von VelinScript 3.1.0!
 
 **Neu hier?** Starte mit dem [Getting Started Guide](guides/getting-started.md)!
 
+- **[Warum VelinScript? Pitch + Wow-Example + 5-Minuten-Tutorial](../bauplan/VELINSCRIPT_PITCH_START.md)**
 - **[📖 Getting Started](guides/getting-started.md)** - Dein erster Einstieg in VelinScript
 - **[📋 Language Specification](language/specification.md)** - Vollständige Sprachspezifikation
 - **[🎯 Wann nutze ich was?](wann-nutze-ich-was.md)** - Entscheidungshilfe für Tools und Features

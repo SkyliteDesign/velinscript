@@ -16,6 +16,16 @@
 
 [→ Zu 00-simple-hello](./00-simple-hello/)
 
+### 🟢 Hello mit Wow? → `00-simple-hello-wow` ⭐ NEU
+
+**Hello World + LLM-Streaming + Metrics in 5 Minuten.**
+
+- Personalisierter Gruß mit LLMClient
+- Streaming-Response, Metrics, Prompt-Optimizer
+- Sofortiger Wow-Effekt für Demos
+
+[→ Zu 00-simple-hello-wow](./00-simple-hello-wow/)
+
 ### 🟢 Variablen lernen? → `00-simple-variables` ⭐ NEU
 
 **Grundlegende Variablen-Verwendung.**
@@ -111,6 +121,8 @@
 
 | Beispiel | Schwierigkeit | Zeit | Fokus |
 |----------|--------------|------|-------|
+| `00-simple-hello` | ⭐ Einfach | 1 Min | Minimaler GET-Endpoint |
+| `00-simple-hello-wow` | ⭐⭐ Mittel | 5 Min | Hello + LLM-Streaming, Metrics |
 | `01-hello-api` | ⭐ Einfach | 3 Min | Syntax, API-Grundlagen |
 | `02-llm-chat` | ⭐⭐ Mittel | 10 Min | KI-Integration, LLM |
 | `03-automation-pipeline` | ⭐⭐ Mittel | 15 Min | Automatisierung, Entscheidungslogik |

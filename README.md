@@ -41,6 +41,14 @@
 
 ---
 
+## ✨ Warum VelinScript?
+
+- KI-first, multi-target, production-ready Toolchain in 5 Minuten erlebbar
+- Hello-Wow-Endpoint mit Streaming, Metrics und Prompt-Optimizer
+- Kurz-Pitch, 3-Zeilen-Example, 5-Minuten-Tutorial: [bauplan/VELINSCRIPT_PITCH_START.md](bauplan/VELINSCRIPT_PITCH_START.md)
+
+---
+
 ## 📊 GitHub Statistics
 
 <div align="center">
@@ -58,6 +66,8 @@
 VelinScript (Velisch) ist eine moderne, speziell für KI-API-Entwicklung optimierte Programmiersprache. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
 
 ### 🆕 Verbesserungen in Version 3.1.0  → Patch 0.5
+- ✅ **10 VelinScript Example-Tools (komplett mit Code & Dokumentation)**  -[examples](/examples/Examples%20Pack%20Vol%202/)
+  ###
 - ✅ **Infos im Änderungsprotokoll** - [CHANGELOG](CHANGELOG.md)
 
 

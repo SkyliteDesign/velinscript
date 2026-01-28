@@ -1,0 +1,389 @@
+// ================================================
+// VelinScript Beispiel: JSON-Prozessor
+// ================================================
+// Verarbeitet, validiert und transformiert JSON-Daten
+// Zeigt JSON-Manipulation und Datenverarbeitung
+
+// -------- Datenstrukturen --------
+
+struct JsonValidationResult {
+    isValid: boolean,
+    errors: List<string>,
+    warnings: List<string>,
+    structure: string,
+}
+
+struct JsonPath {
+    path: string,
+    value: any,
+    type: string,
+}
+
+struct JsonDiff {
+    added: List<string>,
+    removed: List<string>,
+    changed: List<string>,
+}
+
+struct JsonStatistics {
+    totalKeys: number,
+    maxDepth: number,
+    arrayCount: number,
+    objectCount: number,
+    stringCount: number,
+    numberCount: number,
+    booleanCount: number,
+    nullCount: number,
+}
+
+// -------- Hilfsfunktionen --------
+
+// Validiert JSON-String
+fn isValidJson(jsonString: string): boolean {
+    try {
+        JSON.parse(jsonString);
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+// Formatiert JSON mit Einrückung
+fn formatJson(data: any, indent: number): string {
+    return JSON.stringify(data, null, indent);
+}
+
+// Minimiert JSON (entfernt Whitespace)
+fn minifyJson(data: any): string {
+    return JSON.stringify(data);
+}
+
+// Berechnet Tiefe eines JSON-Objekts
+fn calculateDepth(obj: any, currentDepth: number): number {
+    if (typeof(obj) != "object" || obj == null) {
+        return currentDepth;
+    }
+    
+    let maxChildDepth = currentDepth;
+    
+    if (isArray(obj)) {
+        for (let item in obj) {
+            let depth = calculateDepth(item, currentDepth + 1);
+            if (depth > maxChildDepth) {
+                maxChildDepth = depth;
+            }
+        }
+    } else {
+        for (let key in obj.keys()) {
+            let depth = calculateDepth(obj[key], currentDepth + 1);
+            if (depth > maxChildDepth) {
+                maxChildDepth = depth;
+            }
+        }
+    }
+    
+    return maxChildDepth;
+}
+
+// Zählt Werte nach Typ
+fn countValuesByType(obj: any, stats: JsonStatistics): void {
+    let t = typeof(obj);
+    
+    if (obj == null) {
+        stats.nullCount = stats.nullCount + 1;
+    } else if (t == "string") {
+        stats.stringCount = stats.stringCount + 1;
+    } else if (t == "number") {
+        stats.numberCount = stats.numberCount + 1;
+    } else if (t == "boolean") {
+        stats.booleanCount = stats.booleanCount + 1;
+    } else if (isArray(obj)) {
+        stats.arrayCount = stats.arrayCount + 1;
+        for (let item in obj) {
+            countValuesByType(item, stats);
+        }
+    } else if (t == "object") {
+        stats.objectCount = stats.objectCount + 1;
+        for (let key in obj.keys()) {
+            stats.totalKeys = stats.totalKeys + 1;
+            countValuesByType(obj[key], stats);
+        }
+    }
+}
+
+// -------- API Endpoints --------
+
+// Validiert JSON-String
+@POST("/api/json/validate")
+fn validateJson(jsonString: string): JsonValidationResult {
+    let errors: List<string> = [];
+    let warnings: List<string> = [];
+    
+    if (jsonString.trim().length() == 0) {
+        errors.push("JSON-String ist leer");
+        return JsonValidationResult {
+            isValid: false,
+            errors: errors,
+            warnings: warnings,
+            structure: "",
+        };
+    }
+    
+    let data: any;
+    try {
+        data = JSON.parse(jsonString);
+    } catch (error) {
+        errors.push("Ungültiges JSON-Format: {error.message}");
+        return JsonValidationResult {
+            isValid: false,
+            errors: errors,
+            warnings: warnings,
+            structure: "",
+        };
+    }
+    
+    // Prüfe auf potenzielle Probleme
+    if (calculateDepth(data, 0) > 10) {
+        warnings.push("JSON-Struktur ist sehr tief (> 10 Ebenen)");
+    }
+    
+    let structure = getStructureDescription(data);
+    
+    return JsonValidationResult {
+        isValid: true,
+        errors: errors,
+        warnings: warnings,
+        structure: structure,
+    };
+}
+
+// Formatiert JSON (Pretty Print)
+@POST("/api/json/format")
+fn formatJsonEndpoint(jsonString: string, indent: number): string {
+    let data = JSON.parse(jsonString);
+    return formatJson(data, indent);
+}
+
+// Minimiert JSON
+@POST("/api/json/minify")
+fn minifyJsonEndpoint(jsonString: string): string {
+    let data = JSON.parse(jsonString);
+    return minifyJson(data);
+}
+
+// Extrahiert Wert nach JSON-Path
+@POST("/api/json/extract")
+fn extractValue(jsonString: string, path: string): any {
+    let data = JSON.parse(jsonString);
+    
+    // Einfacher JSONPath: z.B. "user.address.city"
+    let parts = path.split(".");
+    let current = data;
+    
+    for (let part in parts) {
+        if (current == null) {
+            throw NotFoundError("Pfad {path} nicht gefunden");
+        }
+        
+        // Prüfe Array-Index: z.B. "users[0]"
+        if (part.contains("[")) {
+            let bracketIndex = part.indexOf("[");
+            let fieldName = part.substring(0, bracketIndex);
+            let indexStr = part.substring(bracketIndex + 1, part.length() - 1);
+            let index = parseInt(indexStr);
+            
+            current = current[fieldName][index];
+        } else {
+            current = current[part];
+        }
+    }
+    
+    return current;
+}
+
+// Setzt Wert an JSON-Path
+@POST("/api/json/set")
+fn setValue(jsonString: string, path: string, value: any): string {
+    let data = JSON.parse(jsonString);
+    
+    let parts = path.split(".");
+    let current = data;
+    
+    // Navigate bis zum vorletzten Element
+    for (let i = 0; i < parts.length() - 1; i = i + 1) {
+        let part = parts[i];
+        
+        if (current[part] == null) {
+            current[part] = {};
+        }
+        
+        current = current[part];
+    }
+    
+    // Setze Wert am Ziel
+    let lastPart = parts[parts.length() - 1];
+    current[lastPart] = value;
+    
+    return formatJson(data, 2);
+}
+
+// Merged zwei JSON-Objekte
+@POST("/api/json/merge")
+fn mergeJson(json1: string, json2: string): string {
+    let obj1 = JSON.parse(json1);
+    let obj2 = JSON.parse(json2);
+    
+    // Kopiere alle Keys von obj2 nach obj1
+    for (let key in obj2.keys()) {
+        obj1[key] = obj2[key];
+    }
+    
+    return formatJson(obj1, 2);
+}
+
+// Vergleicht zwei JSON-Objekte
+@POST("/api/json/diff")
+fn diffJson(json1: string, json2: string): JsonDiff {
+    let obj1 = JSON.parse(json1);
+    let obj2 = JSON.parse(json2);
+    
+    let added: List<string> = [];
+    let removed: List<string> = [];
+    let changed: List<string> = [];
+    
+    let keys1 = obj1.keys();
+    let keys2 = obj2.keys();
+    
+    // Finde hinzugefügte Keys
+    for (let key in keys2) {
+        if (!keys1.contains(key)) {
+            added.push(key);
+        }
+    }
+    
+    // Finde entfernte Keys
+    for (let key in keys1) {
+        if (!keys2.contains(key)) {
+            removed.push(key);
+        }
+    }
+    
+    // Finde geänderte Keys
+    for (let key in keys1) {
+        if (keys2.contains(key)) {
+            if (obj1[key] != obj2[key]) {
+                changed.push(key);
+            }
+        }
+    }
+    
+    return JsonDiff {
+        added: added,
+        removed: removed,
+        changed: changed,
+    };
+}
+
+// Erstellt Statistiken über JSON-Struktur
+@POST("/api/json/statistics")
+fn getJsonStatistics(jsonString: string): JsonStatistics {
+    let data = JSON.parse(jsonString);
+    
+    let stats = JsonStatistics {
+        totalKeys: 0,
+        maxDepth: calculateDepth(data, 0),
+        arrayCount: 0,
+        objectCount: 0,
+        stringCount: 0,
+        numberCount: 0,
+        booleanCount: 0,
+        nullCount: 0,
+    };
+    
+    countValuesByType(data, stats);
+    
+    return stats;
+}
+
+// Flattened JSON (nested → flat)
+@POST("/api/json/flatten")
+fn flattenJson(jsonString: string): Map<string, any> {
+    let data = JSON.parse(jsonString);
+    let result: Map<string, any> = Map::new();
+    
+    flattenRecursive(data, "", result);
+    
+    return result;
+}
+
+// Hilfsfunktion für Flatten
+fn flattenRecursive(obj: any, prefix: string, result: Map<string, any>): void {
+    if (typeof(obj) != "object" || obj == null) {
+        result.set(prefix, obj);
+        return;
+    }
+    
+    if (isArray(obj)) {
+        for (let i = 0; i < obj.length(); i = i + 1) {
+            let newPrefix = if (prefix == "") { "[{i}]" } else { "{prefix}[{i}]" };
+            flattenRecursive(obj[i], newPrefix, result);
+        }
+    } else {
+        for (let key in obj.keys()) {
+            let newPrefix = if (prefix == "") { key } else { "{prefix}.{key}" };
+            flattenRecursive(obj[key], newPrefix, result);
+        }
+    }
+}
+
+// Konvertiert JSON zu CSV (nur flache Objekte)
+@POST("/api/json/to-csv")
+fn jsonToCsv(jsonString: string): string {
+    let data = JSON.parse(jsonString);
+    
+    if (!isArray(data) || data.length() == 0) {
+        throw ValidationError("JSON muss ein nicht-leeres Array sein");
+    }
+    
+    // Header aus erstem Objekt
+    let firstItem = data[0];
+    let headers = firstItem.keys();
+    let csv = headers.join(",") + "\n";
+    
+    // Zeilen
+    for (let item in data) {
+        let row: List<string> = [];
+        for (let header in headers) {
+            let value = item[header];
+            row.push(value.toString());
+        }
+        csv = csv + row.join(",") + "\n";
+    }
+    
+    return csv;
+}
+
+// Hilfsfunktion: Beschreibt Struktur
+fn getStructureDescription(data: any): string {
+    let t = typeof(data);
+    
+    if (data == null) {
+        return "null";
+    } else if (isArray(data)) {
+        return "Array[{data.length()}]";
+    } else if (t == "object") {
+        return "Object({data.keys().length()} keys)";
+    } else {
+        return t;
+    }
+}
+
+// Prüft ob Variable ein Array ist
+fn isArray(obj: any): boolean {
+    return Array.isArray(obj);
+}
+
+// String zu Integer
+fn parseInt(str: string): number {
+    return str.toInt();
+}

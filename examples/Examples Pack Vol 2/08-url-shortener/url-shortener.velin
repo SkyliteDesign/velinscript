@@ -1,0 +1,373 @@
+// ================================================
+// VelinScript Beispiel: URL-Shortener
+// ================================================
+// Ein einfacher URL-Verkürzer mit Analytics
+// Zeigt Hashing, Redirects und Statistiken
+
+// -------- Datenstrukturen --------
+
+struct ShortUrl {
+    id: string,
+    shortCode: string,
+    originalUrl: string,
+    createdAt: string,
+    expiresAt: string,
+    clickCount: number,
+    createdBy: string,
+}
+
+struct CreateShortUrlRequest {
+    url: string,
+    customCode: string, // Optional: eigener Code statt zufällig
+    expiresInDays: number, // 0 = nie
+}
+
+struct UrlClick {
+    id: string,
+    shortCode: string,
+    clickedAt: string,
+    ipAddress: string,
+    userAgent: string,
+    referer: string,
+}
+
+struct UrlStatistics {
+    shortCode: string,
+    originalUrl: string,
+    totalClicks: number,
+    uniqueVisitors: number,
+    clicksByDay: Map<string, number>,
+    topReferers: List<string>,
+    createdAt: string,
+}
+
+// -------- Hilfsfunktionen --------
+
+// Generiert einen zufälligen Short-Code (6 Zeichen)
+fn generateShortCode(): string {
+    let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
+    
+    for (let i = 0; i < 6; i = i + 1) {
+        let index = randomInt(0, chars.length() - 1);
+        code = code + chars.substring(index, index + 1);
+    }
+    
+    return code;
+}
+
+// Prüft ob URL gültig ist
+fn isValidUrl(url: string): boolean {
+    // Einfache Prüfung: muss mit http:// oder https:// beginnen
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        return false;
+    }
+    
+    // Muss mindestens Domain enthalten
+    if (url.length() < 12) { // http://a.co = 12 Zeichen
+        return false;
+    }
+    
+    return true;
+}
+
+// Prüft ob Short-Code gültig ist
+fn isValidShortCode(code: string): boolean {
+    // 3-10 Zeichen, nur alphanumerisch
+    if (code.length() < 3 || code.length() > 10) {
+        return false;
+    }
+    
+    return code.matches("^[a-zA-Z0-9]+$");
+}
+
+// Berechnet Ablaufdatum
+fn calculateExpiryDate(days: number): string {
+    if (days == 0) {
+        return ""; // Kein Ablauf
+    }
+    
+    let now = now();
+    let expiry = now.addDays(days);
+    return expiry.format("YYYY-MM-DD HH:mm:ss");
+}
+
+// Prüft ob URL abgelaufen ist
+fn isExpired(expiresAt: string): boolean {
+    if (expiresAt == "") {
+        return false; // Keine Ablaufzeit = nie abgelaufen
+    }
+    
+    let now = now();
+    let expiry = parseDate(expiresAt);
+    
+    return now > expiry;
+}
+
+// Extrahiert Domain aus URL
+fn extractDomain(url: string): string {
+    let withoutProtocol = url.replace("https://", "").replace("http://", "");
+    let parts = withoutProtocol.split("/");
+    return parts[0];
+}
+
+// -------- API Endpoints --------
+
+// Erstellt eine verkürzte URL
+@POST("/api/shorten")
+fn createShortUrl(request: CreateShortUrlRequest, userId: string): ShortUrl {
+    // Validiere URL
+    if (!isValidUrl(request.url)) {
+        throw ValidationError("Ungültige URL. Muss mit http:// oder https:// beginnen");
+    }
+    
+    // Bestimme Short-Code
+    let shortCode: string;
+    
+    if (request.customCode != "") {
+        // Prüfe Custom-Code
+        if (!isValidShortCode(request.customCode)) {
+            throw ValidationError("Ungültiger Short-Code. 3-10 alphanumerische Zeichen erlaubt");
+        }
+        
+        // Prüfe ob bereits verwendet
+        let existing = db.query(ShortUrl)
+            .where("shortCode", "=", request.customCode)
+            .first();
+        
+        if (existing != null) {
+            throw ValidationError("Short-Code '{request.customCode}' ist bereits vergeben");
+        }
+        
+        shortCode = request.customCode;
+    } else {
+        // Generiere zufälligen Code
+        shortCode = generateShortCode();
+        
+        // Stelle sicher, dass Code eindeutig ist
+        let attempts = 0;
+        while (attempts < 10) {
+            let existing = db.query(ShortUrl)
+                .where("shortCode", "=", shortCode)
+                .first();
+            
+            if (existing == null) {
+                break;
+            }
+            
+            shortCode = generateShortCode();
+            attempts = attempts + 1;
+        }
+        
+        if (attempts >= 10) {
+            throw InternalError("Konnte keinen eindeutigen Short-Code generieren");
+        }
+    }
+    
+    // Erstelle Short-URL
+    let shortUrl = ShortUrl {
+        id: generateId(),
+        shortCode: shortCode,
+        originalUrl: request.url,
+        createdAt: getCurrentTimestamp(),
+        expiresAt: calculateExpiryDate(request.expiresInDays),
+        clickCount: 0,
+        createdBy: userId,
+    };
+    
+    db.save(shortUrl);
+    
+    return shortUrl;
+}
+
+// Redirect zu Original-URL
+@GET("/s/:shortCode")
+fn redirectToUrl(shortCode: string, ipAddress: string, userAgent: string, referer: string): void {
+    let shortUrl = db.query(ShortUrl)
+        .where("shortCode", "=", shortCode)
+        .first();
+    
+    if (shortUrl == null) {
+        throw NotFoundError("Short-URL nicht gefunden");
+    }
+    
+    // Prüfe Ablauf
+    if (isExpired(shortUrl.expiresAt)) {
+        throw GoneError("Diese URL ist abgelaufen");
+    }
+    
+    // Erhöhe Click-Counter
+    shortUrl.clickCount = shortUrl.clickCount + 1;
+    db.update(shortUrl);
+    
+    // Speichere Click-Event für Analytics
+    let click = UrlClick {
+        id: generateId(),
+        shortCode: shortCode,
+        clickedAt: getCurrentTimestamp(),
+        ipAddress: ipAddress,
+        userAgent: userAgent,
+        referer: referer,
+    };
+    db.save(click);
+    
+    // Redirect
+    redirect(shortUrl.originalUrl);
+}
+
+// Zeigt URL-Details
+@GET("/api/url/:shortCode")
+fn getUrlDetails(shortCode: string): ShortUrl {
+    let shortUrl = db.query(ShortUrl)
+        .where("shortCode", "=", shortCode)
+        .first();
+    
+    if (shortUrl == null) {
+        throw NotFoundError("Short-URL nicht gefunden");
+    }
+    
+    return shortUrl;
+}
+
+// Zeigt Statistiken für eine URL
+@GET("/api/url/:shortCode/stats")
+fn getUrlStatistics(shortCode: string): UrlStatistics {
+    let shortUrl = getUrlDetails(shortCode);
+    
+    // Hole alle Clicks
+    let clicks = db.query(UrlClick)
+        .where("shortCode", "=", shortCode)
+        .all();
+    
+    // Zähle Clicks pro Tag
+    let clicksByDay: Map<string, number> = Map::new();
+    let uniqueIPs: List<string> = [];
+    let referers: Map<string, number> = Map::new();
+    
+    for (let click in clicks) {
+        // Clicks pro Tag
+        let day = click.clickedAt.substring(0, 10);
+        let count = clicksByDay.get(day).orElse(0);
+        clicksByDay.set(day, count + 1);
+        
+        // Unique Visitors (basierend auf IP)
+        if (!uniqueIPs.contains(click.ipAddress)) {
+            uniqueIPs.push(click.ipAddress);
+        }
+        
+        // Referer zählen
+        if (click.referer != "") {
+            let refCount = referers.get(click.referer).orElse(0);
+            referers.set(click.referer, refCount + 1);
+        }
+    }
+    
+    // Top Referers (sortiert nach Anzahl)
+    let topReferers: List<string> = [];
+    let referersList = referers.entries();
+    
+    // Einfache Sortierung (Top 5)
+    for (let i = 0; i < min(5, referersList.length()); i = i + 1) {
+        let maxEntry = referersList[0];
+        let maxIndex = 0;
+        
+        for (let j = 0; j < referersList.length(); j = j + 1) {
+            if (referersList[j].value > maxEntry.value) {
+                maxEntry = referersList[j];
+                maxIndex = j;
+            }
+        }
+        
+        topReferers.push("{maxEntry.key} ({maxEntry.value} clicks)");
+        referersList.removeAt(maxIndex);
+    }
+    
+    return UrlStatistics {
+        shortCode: shortCode,
+        originalUrl: shortUrl.originalUrl,
+        totalClicks: clicks.length(),
+        uniqueVisitors: uniqueIPs.length(),
+        clicksByDay: clicksByDay,
+        topReferers: topReferers,
+        createdAt: shortUrl.createdAt,
+    };
+}
+
+// Listet alle URLs eines Users auf
+@GET("/api/urls/my")
+@Auth
+fn getMyUrls(userId: string): List<ShortUrl> {
+    return db.query(ShortUrl)
+        .where("createdBy", "=", userId)
+        .orderBy("createdAt", "DESC")
+        .all();
+}
+
+// Löscht eine Short-URL
+@DELETE("/api/url/:shortCode")
+@Auth
+fn deleteShortUrl(shortCode: string, userId: string): void {
+    let shortUrl = db.query(ShortUrl)
+        .where("shortCode", "=", shortCode)
+        .first();
+    
+    if (shortUrl == null) {
+        throw NotFoundError("Short-URL nicht gefunden");
+    }
+    
+    // Prüfe Berechtigung
+    if (shortUrl.createdBy != userId) {
+        throw ForbiddenError("Keine Berechtigung diese URL zu löschen");
+    }
+    
+    // Lösche Short-URL und alle Clicks
+    let clicks = db.query(UrlClick)
+        .where("shortCode", "=", shortCode)
+        .all();
+    
+    for (let click in clicks) {
+        db.delete(click);
+    }
+    
+    db.delete(shortUrl);
+}
+
+// Zeigt Top-URLs nach Clicks
+@GET("/api/urls/popular")
+fn getPopularUrls(limit: number): List<ShortUrl> {
+    return db.query(ShortUrl)
+        .orderBy("clickCount", "DESC")
+        .limit(limit)
+        .all();
+}
+
+// Prüft ob Short-Code verfügbar ist
+@GET("/api/check-availability/:shortCode")
+fn checkAvailability(shortCode: string): boolean {
+    if (!isValidShortCode(shortCode)) {
+        return false;
+    }
+    
+    let existing = db.query(ShortUrl)
+        .where("shortCode", "=", shortCode)
+        .first();
+    
+    return existing == null;
+}
+
+// Hilfsfunktionen
+fn generateId(): string {
+    return uuid();
+}
+
+fn getCurrentTimestamp(): string {
+    return now().format("YYYY-MM-DD HH:mm:ss");
+}
+
+fn randomInt(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+fn min(a: number, b: number): number {
+    return if (a < b) { a } else { b };
+}

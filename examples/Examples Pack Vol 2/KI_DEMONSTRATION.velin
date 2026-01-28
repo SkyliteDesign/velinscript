@@ -1,0 +1,257 @@
+// ================================================
+// 🤖 KI-Demonstration: VelinScript in Aktion
+// ================================================
+// Zeigt wie künstliche Intelligenz mit VelinScript
+// arbeitet - basierend auf den Examples Pack Vol 2
+
+// ====== BEISPIEL 1: EMAIL-VALIDIERUNG ======
+// KI kann E-Mail-Adressen smart validieren
+
+fn demoEmailValidation(): void {
+    // Test-Emails
+    let testEmails = [
+        "user@example.com",      // ✅ Gültig
+        "invalid.email",         // ❌ Ungültig
+        "test@gmial.com",        // ⚠️ Tippfehler erkannt
+    ];
+    
+    print("🔍 EMAIL-VALIDIERUNG DEMO\n");
+    
+    for (let email in testEmails) {
+        let isValid = validateEmailFormat(email);
+        let status = if (isValid) { "✅ GÜLTIG" } else { "❌ UNGÜLTIG" };
+        
+        print("E-Mail: {email}");
+        print("Status: {status}\n");
+    }
+}
+
+fn validateEmailFormat(email: string): boolean {
+    return email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+}
+
+// ====== BEISPIEL 2: PASSWORT-STÄRKE-ANALYSE ======
+// KI bewertet Passwörter auf Sicherheit
+
+fn demoPasswordStrength(): void {
+    let testPasswords = [
+        "123456",                  // Schwach
+        "MyPass123",               // Mittel
+        "K9$mX2n#Yz4Lq!",          // Stark
+    ];
+    
+    print("🔐 PASSWORT-STÄRKE DEMO\n");
+    
+    for (let pwd in testPasswords) {
+        let score = calculatePasswordScore(pwd);
+        let level = getStrengthLevel(score);
+        
+        print("Passwort: {'*' + pwd.substring(1)}");
+        print("Stärke: {level} (Score: {score}%)\n");
+    }
+}
+
+fn calculatePasswordScore(password: string): number {
+    let score = 0;
+    
+    // Längen-Score
+    if (password.length() >= 12) {
+        score = score + 30;
+    } else if (password.length() >= 8) {
+        score = score + 20;
+    } else {
+        score = score + 10;
+    }
+    
+    // Großbuchstaben
+    if (password.matches(".*[A-Z].*")) { score = score + 15; }
+    
+    // Kleinbuchstaben
+    if (password.matches(".*[a-z].*")) { score = score + 15; }
+    
+    // Zahlen
+    if (password.matches(".*[0-9].*")) { score = score + 15; }
+    
+    // Symbole
+    if (password.matches(".*[^a-zA-Z0-9].*")) { score = score + 25; }
+    
+    return min(score, 100);
+}
+
+fn getStrengthLevel(score: number): string {
+    if (score >= 85) { return "🌟 SEHR STARK"; }
+    else if (score >= 70) { return "💪 STARK"; }
+    else if (score >= 50) { return "😐 MITTEL"; }
+    else if (score >= 30) { return "⚠️ SCHWACH"; }
+    else { return "🚨 SEHR SCHWACH"; }
+}
+
+// ====== BEISPIEL 3: TEXT-ANALYSE ======
+// KI analysiert und verarbeitet Texte
+
+fn demoTextAnalysis(): void {
+    let text = "VelinScript ist eine moderne Programmiersprache für KI und APIs!";
+    
+    print("📝 TEXT-ANALYSE DEMO\n");
+    print("Original: {text}\n");
+    
+    // Statistiken
+    let words = text.split(" ");
+    let charCount = text.length();
+    let wordCount = words.length();
+    let avgWordLength = charCount / wordCount;
+    
+    print("📊 Statistiken:");
+    print("  - Zeichen: {charCount}");
+    print("  - Wörter: {wordCount}");
+    print("  - Durchschn. Wortlänge: {avgWordLength.round(1)}\n");
+    
+    // Sentiment (vereinfacht)
+    let sentiment = analyzeSentiment(text);
+    print("😊 Sentiment: {sentiment}\n");
+}
+
+fn analyzeSentiment(text: string): string {
+    let lower = text.toLowerCase();
+    
+    let positive = 0;
+    if (lower.contains("modern")) { positive = positive + 1; }
+    if (lower.contains("super")) { positive = positive + 1; }
+    if (lower.contains("großartig")) { positive = positive + 1; }
+    if (lower.contains("toll")) { positive = positive + 1; }
+    
+    if (positive > 1) {
+        return "😄 Sehr positiv";
+    } else if (positive > 0) {
+        return "😊 Positiv";
+    } else {
+        return "😐 Neutral";
+    }
+}
+
+// ====== BEISPIEL 4: DATEN-PROCESSING ======
+// KI verarbeitet und kategorisiert Daten
+
+fn demoDataProcessing(): void {
+    print("🔄 DATEN-PROCESSING DEMO\n");
+    
+    // Kategorisiere verschiedene Eingaben
+    let items = ["hello", "test123", "password!", "user@domain.com"];
+    
+    for (let item in items) {
+        let category = categorizeInput(item);
+        print("'{item}' → {category}");
+    }
+    
+    print("\n");
+}
+
+fn categorizeInput(input: string): string {
+    if (input.matches(".*@.*\\..*")) {
+        return "📧 E-Mail";
+    } else if (input.matches(".*[0-9].*")) {
+        return "🔢 Mit Zahlen";
+    } else if (input.matches(".*[^a-zA-Z0-9].*")) {
+        return "🔐 Mit Symbolen";
+    } else {
+        return "📝 Text";
+    }
+}
+
+// ====== BEISPIEL 5: INTELLIGENTE EMPFEHLUNGEN ======
+// KI gibt Verbesserungsvorschläge
+
+fn demoSmartSuggestions(): void {
+    let userInput = "passwort123";
+    
+    print("💡 INTELLIGENTE EMPFEHLUNGEN DEMO\n");
+    print("User-Input: '{userInput}'\n");
+    
+    let suggestions = generateSuggestions(userInput);
+    
+    print("📋 Empfehlungen:\n");
+    for (let suggestion in suggestions) {
+        print("  ✨ {suggestion}");
+    }
+    
+    print("\n");
+}
+
+fn generateSuggestions(input: string): List<string> {
+    let suggestions: List<string> = [];
+    
+    if (input.length() < 8) {
+        suggestions.push("Mindestens 8 Zeichen verwenden");
+    }
+    
+    if (!input.matches(".*[A-Z].*")) {
+        suggestions.push("Großbuchstaben hinzufügen");
+    }
+    
+    if (!input.matches(".*[0-9].*")) {
+        suggestions.push("Zahlen hinzufügen");
+    }
+    
+    if (!input.matches(".*[^a-zA-Z0-9].*")) {
+        suggestions.push("Sonderzeichen (!@#$) hinzufügen");
+    }
+    
+    if (input.contains("password")) {
+        suggestions.push("Das Wort 'password' vermeiden - zu häufig!");
+    }
+    
+    return suggestions;
+}
+
+// ====== HAUPTPROGRAMM ======
+fn main(): void {
+    print("╔══════════════════════════════════════════╗\n");
+    print("║ 🤖 KI-DEMONSTRATION: VelinScript Edition ║\n");
+    print("║    Künstliche Intelligenz in Aktion     ║\n");
+    print("╚══════════════════════════════════════════╝\n\n");
+    
+    // Führe alle Demos aus
+    demoEmailValidation();
+    print("─────────────────────────────────────\n\n");
+    
+    demoPasswordStrength();
+    print("─────────────────────────────────────\n\n");
+    
+    demoTextAnalysis();
+    print("─────────────────────────────────────\n\n");
+    
+    demoDataProcessing();
+    print("─────────────────────────────────────\n\n");
+    
+    demoSmartSuggestions();
+    
+    print("╔══════════════════════════════════════════╗\n");
+    print("║ ✅ Alle Demos abgeschlossen!            ║\n");
+    print("║                                          ║\n");
+    print("║ 🎯 VelinScript Features gezeigt:        ║\n");
+    print("║   ✓ String-Verarbeitung                ║\n");
+    print("║   ✓ Regular Expressions                ║\n");
+    print("║   ✓ Datenstrukturen & Logik            ║\n");
+    print("║   ✓ Listen & Iteration                 ║\n");
+    print("║   ✓ Intelligente Algorithmen           ║\n");
+    print("╚══════════════════════════════════════════╝\n");
+}
+
+// Hilfsfunktionen
+fn round(value: number, decimals: number): number {
+    let factor = pow(10, decimals);
+    return Math.round(value * factor) / factor;
+}
+
+fn pow(base: number, exponent: number): number {
+    return Math.pow(base, exponent);
+}
+
+fn min(a: number, b: number): number {
+    return if (a < b) { a } else { b };
+}
+
+fn print(text: string): void {
+    // VelinScript print/echo
+    echo(text);
+}

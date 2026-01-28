@@ -1,0 +1,444 @@
+// ================================================
+// VelinScript Beispiel: Quiz-Spiel
+// ================================================
+// Ein interaktives Quiz mit verschiedenen Kategorien
+// Zeigt Game-Logic, Scoring und User-Interaktion
+
+// -------- Datenstrukturen --------
+
+struct Question {
+    id: string,
+    category: string,
+    question: string,
+    options: List<string>,
+    correctAnswer: number, // Index der richtigen Antwort
+    difficulty: string, // "Leicht", "Mittel", "Schwer"
+    points: number,
+}
+
+struct QuizSession {
+    id: string,
+    userId: string,
+    category: string,
+    startedAt: string,
+    completedAt: string,
+    currentQuestionIndex: number,
+    score: number,
+    correctAnswers: number,
+    wrongAnswers: number,
+    status: string, // "active", "completed"
+}
+
+struct QuizAnswer {
+    sessionId: string,
+    questionId: string,
+    userAnswer: number,
+    isCorrect: boolean,
+    timeSpent: number, // Sekunden
+}
+
+struct StartQuizRequest {
+    category: string,
+    difficulty: string,
+    questionCount: number,
+}
+
+struct AnswerRequest {
+    sessionId: string,
+    answer: number,
+}
+
+struct QuizResult {
+    session: QuizSession,
+    answers: List<QuizAnswer>,
+    percentage: number,
+    grade: string,
+    timeTotal: number,
+}
+
+struct Leaderboard {
+    topScores: List<LeaderboardEntry>,
+    category: string,
+}
+
+struct LeaderboardEntry {
+    userId: string,
+    username: string,
+    score: number,
+    percentage: number,
+    completedAt: string,
+}
+
+// -------- Beispiel-Fragen --------
+
+// Initialisiert Fragen-Datenbank (normalerweise aus DB geladen)
+fn initializeQuestions(): void {
+    let questions = [
+        Question {
+            id: "q1",
+            category: "Programmierung",
+            question: "Was bedeutet 'API'?",
+            options: [
+                "Application Programming Interface",
+                "Advanced Programming Integration",
+                "Automated Process Integration",
+                "Application Process Interface"
+            ],
+            correctAnswer: 0,
+            difficulty: "Leicht",
+            points: 10,
+        },
+        Question {
+            id: "q2",
+            category: "Programmierung",
+            question: "Welche Datenstruktur folgt dem LIFO-Prinzip?",
+            options: ["Queue", "Stack", "Tree", "Graph"],
+            correctAnswer: 1,
+            difficulty: "Mittel",
+            points: 15,
+        },
+        Question {
+            id: "q3",
+            category: "Geografie",
+            question: "Was ist die Hauptstadt von Frankreich?",
+            options: ["London", "Berlin", "Paris", "Madrid"],
+            correctAnswer: 2,
+            difficulty: "Leicht",
+            points: 10,
+        },
+        Question {
+            id: "q4",
+            category: "Wissenschaft",
+            question: "Welches chemische Element hat das Symbol 'Au'?",
+            options: ["Silber", "Gold", "Aluminium", "Argon"],
+            correctAnswer: 1,
+            difficulty: "Mittel",
+            points: 15,
+        },
+    ];
+    
+    // Speichere in DB (würde normalerweise beim Setup passieren)
+    for (let q in questions) {
+        let existing = db.find(Question, q.id);
+        if (existing == null) {
+            db.save(q);
+        }
+    }
+}
+
+// -------- Hilfsfunktionen --------
+
+// Berechnet Punkte basierend auf Schwierigkeit
+fn getPointsForDifficulty(difficulty: string): number {
+    if (difficulty == "Leicht") {
+        return 10;
+    } else if (difficulty == "Mittel") {
+        return 15;
+    } else if (difficulty == "Schwer") {
+        return 25;
+    } else {
+        return 10;
+    }
+}
+
+// Bestimmt Note basierend auf Prozentsatz
+fn calculateGrade(percentage: number): string {
+    if (percentage >= 90) {
+        return "Ausgezeichnet 🌟";
+    } else if (percentage >= 75) {
+        return "Sehr gut 👍";
+    } else if (percentage >= 60) {
+        return "Gut 😊";
+    } else if (percentage >= 50) {
+        return "Befriedigend 😐";
+    } else {
+        return "Nicht bestanden 😔";
+    }
+}
+
+// Berechnet Zeit zwischen zwei Timestamps
+fn calculateTimeDiff(start: string, end: string): number {
+    let startDate = parseDate(start);
+    let endDate = parseDate(end);
+    return endDate.diff(startDate, "seconds");
+}
+
+// -------- API Endpoints --------
+
+// Startet eine neue Quiz-Session
+@POST("/api/quiz/start")
+@Auth
+fn startQuiz(request: StartQuizRequest, userId: string): QuizSession {
+    // Hole Fragen basierend auf Kategorie und Schwierigkeit
+    let query = db.query(Question)
+        .where("category", "=", request.category);
+    
+    if (request.difficulty != "Alle") {
+        query = query.where("difficulty", "=", request.difficulty);
+    }
+    
+    let availableQuestions = query.all();
+    
+    if (availableQuestions.length() == 0) {
+        throw NotFoundError("Keine Fragen für diese Kategorie/Schwierigkeit gefunden");
+    }
+    
+    // Mische Fragen und wähle gewünschte Anzahl
+    let shuffled = shuffleList(availableQuestions);
+    let count = min(request.questionCount, shuffled.length());
+    
+    // Erstelle Session
+    let session = QuizSession {
+        id: generateId(),
+        userId: userId,
+        category: request.category,
+        startedAt: getCurrentTimestamp(),
+        completedAt: "",
+        currentQuestionIndex: 0,
+        score: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        status: "active",
+    };
+    
+    db.save(session);
+    
+    return session;
+}
+
+// Holt die aktuelle Frage
+@GET("/api/quiz/:sessionId/question")
+@Auth
+fn getCurrentQuestion(sessionId: string, userId: string): Question {
+    let session = db.find(QuizSession, sessionId);
+    
+    if (session == null) {
+        throw NotFoundError("Quiz-Session nicht gefunden");
+    }
+    
+    if (session.userId != userId) {
+        throw ForbiddenError("Keine Berechtigung für diese Session");
+    }
+    
+    if (session.status != "active") {
+        throw ValidationError("Quiz ist bereits beendet");
+    }
+    
+    // Hole alle Fragen für diese Session
+    let questions = db.query(Question)
+        .where("category", "=", session.category)
+        .all();
+    
+    if (session.currentQuestionIndex >= questions.length()) {
+        throw ValidationError("Alle Fragen wurden bereits beantwortet");
+    }
+    
+    return questions[session.currentQuestionIndex];
+}
+
+// Beantwortet die aktuelle Frage
+@POST("/api/quiz/:sessionId/answer")
+@Auth
+fn answerQuestion(sessionId: string, request: AnswerRequest, userId: string): boolean {
+    let session = db.find(QuizSession, sessionId);
+    
+    if (session == null || session.userId != userId) {
+        throw ForbiddenError("Keine Berechtigung");
+    }
+    
+    let question = getCurrentQuestion(sessionId, userId);
+    let isCorrect = request.answer == question.correctAnswer;
+    
+    // Speichere Antwort
+    let answer = QuizAnswer {
+        sessionId: sessionId,
+        questionId: question.id,
+        userAnswer: request.answer,
+        isCorrect: isCorrect,
+        timeSpent: 0, // Vereinfacht
+    };
+    db.save(answer);
+    
+    // Update Session
+    if (isCorrect) {
+        session.correctAnswers = session.correctAnswers + 1;
+        session.score = session.score + question.points;
+    } else {
+        session.wrongAnswers = session.wrongAnswers + 1;
+    }
+    
+    session.currentQuestionIndex = session.currentQuestionIndex + 1;
+    db.update(session);
+    
+    return isCorrect;
+}
+
+// Beendet das Quiz und gibt Ergebnis zurück
+@POST("/api/quiz/:sessionId/complete")
+@Auth
+fn completeQuiz(sessionId: string, userId: string): QuizResult {
+    let session = db.find(QuizSession, sessionId);
+    
+    if (session == null || session.userId != userId) {
+        throw ForbiddenError("Keine Berechtigung");
+    }
+    
+    // Markiere als beendet
+    session.status = "completed";
+    session.completedAt = getCurrentTimestamp();
+    db.update(session);
+    
+    // Hole alle Antworten
+    let answers = db.query(QuizAnswer)
+        .where("sessionId", "=", sessionId)
+        .all();
+    
+    // Berechne Prozentsatz
+    let totalQuestions = session.correctAnswers + session.wrongAnswers;
+    let percentage = if (totalQuestions > 0) {
+        (session.correctAnswers * 100) / totalQuestions
+    } else {
+        0
+    };
+    
+    let grade = calculateGrade(percentage);
+    let timeTotal = calculateTimeDiff(session.startedAt, session.completedAt);
+    
+    return QuizResult {
+        session: session,
+        answers: answers,
+        percentage: percentage,
+        grade: grade,
+        timeTotal: timeTotal,
+    };
+}
+
+// Zeigt verfügbare Kategorien
+@GET("/api/quiz/categories")
+fn getCategories(): List<string> {
+    let questions = db.findAll(Question);
+    let categories: List<string> = [];
+    
+    for (let q in questions) {
+        if (!categories.contains(q.category)) {
+            categories.push(q.category);
+        }
+    }
+    
+    return categories;
+}
+
+// Zeigt Leaderboard für eine Kategorie
+@GET("/api/quiz/leaderboard/:category")
+fn getLeaderboard(category: string, limit: number): Leaderboard {
+    let sessions = db.query(QuizSession)
+        .where("category", "=", category)
+        .where("status", "=", "completed")
+        .orderBy("score", "DESC")
+        .limit(limit)
+        .all();
+    
+    let entries: List<LeaderboardEntry> = [];
+    
+    for (let session in sessions) {
+        let totalQuestions = session.correctAnswers + session.wrongAnswers;
+        let percentage = if (totalQuestions > 0) {
+            (session.correctAnswers * 100) / totalQuestions
+        } else {
+            0
+        };
+        
+        let entry = LeaderboardEntry {
+            userId: session.userId,
+            username: "User-{session.userId.substring(0, 8)}", // Vereinfacht
+            score: session.score,
+            percentage: percentage,
+            completedAt: session.completedAt,
+        };
+        
+        entries.push(entry);
+    }
+    
+    return Leaderboard {
+        topScores: entries,
+        category: category,
+    };
+}
+
+// Zeigt User-Statistiken
+@GET("/api/quiz/stats")
+@Auth
+fn getUserStatistics(userId: string): Map<string, any> {
+    let sessions = db.query(QuizSession)
+        .where("userId", "=", userId)
+        .where("status", "=", "completed")
+        .all();
+    
+    let totalQuizzes = sessions.length();
+    let totalScore = 0;
+    let totalCorrect = 0;
+    let totalWrong = 0;
+    
+    for (let session in sessions) {
+        totalScore = totalScore + session.score;
+        totalCorrect = totalCorrect + session.correctAnswers;
+        totalWrong = totalWrong + session.wrongAnswers;
+    }
+    
+    let totalQuestions = totalCorrect + totalWrong;
+    let avgPercentage = if (totalQuestions > 0) {
+        (totalCorrect * 100) / totalQuestions
+    } else {
+        0
+    };
+    
+    let stats: Map<string, any> = Map::new();
+    stats.set("totalQuizzes", totalQuizzes);
+    stats.set("totalScore", totalScore);
+    stats.set("totalCorrect", totalCorrect);
+    stats.set("totalWrong", totalWrong);
+    stats.set("averagePercentage", avgPercentage);
+    
+    return stats;
+}
+
+// Fügt eine neue Frage hinzu (Admin)
+@POST("/api/quiz/questions")
+@Auth
+@Role("admin")
+fn addQuestion(question: Question): Question {
+    question.id = generateId();
+    question.points = getPointsForDifficulty(question.difficulty);
+    db.save(question);
+    return question;
+}
+
+// Hilfsfunktionen
+fn generateId(): string {
+    return uuid();
+}
+
+fn getCurrentTimestamp(): string {
+    return now().format("YYYY-MM-DD HH:mm:ss");
+}
+
+fn min(a: number, b: number): number {
+    return if (a < b) { a } else { b };
+}
+
+fn shuffleList<T>(list: List<T>): List<T> {
+    let shuffled: List<T> = [];
+    let remaining = list;
+    
+    while (remaining.length() > 0) {
+        let index = randomInt(0, remaining.length() - 1);
+        shuffled.push(remaining[index]);
+        remaining.removeAt(index);
+    }
+    
+    return shuffled;
+}
+
+fn randomInt(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}

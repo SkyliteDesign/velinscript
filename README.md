@@ -16,7 +16,11 @@
 
 **Eine moderne Programmiersprache für KI-APIs, die zu Rust, PHP, Python, TypeScript, JavaScript, Go, Java und C# kompiliert.**
 
-[![Version](https://img.shields.io/badge/version-3.1.0-blue?style=for-the-badge&logo=rust)](https://github.com/SkyliteDesign/velinscript)
+**English:** A modern programming language for AI-APIs that compiles to Rust, PHP, Python, TypeScript, JavaScript, Go, Java, and C#.
+
+> **Hinweis:** Die Dokumentation ist derzeit nur auf Deutsch verfügbar. Englische Dokumentation folgt im nächsten Release.
+>
+> **Note:** Documentation is currently available in German only. English documentation coming in the next release.
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 [![Build](https://github.com/SkyliteDesign/velinscript/workflows/CI/badge.svg?style=for-the-badge)](https://github.com/SkyliteDesign/velinscript/actions)
@@ -41,11 +45,17 @@
 
 ---
 
-## ✨ Warum VelinScript?
+## ✨ Warum VelinScript? / Why VelinScript?
 
+### 🇩🇪 Deutsch
 - KI-first, multi-target, production-ready Toolchain in 5 Minuten erlebbar
 - Hello-Wow-Endpoint mit Streaming, Metrics und Prompt-Optimizer
 - Kurz-Pitch, 3-Zeilen-Example, 5-Minuten-Tutorial: [bauplan/VELINSCRIPT_PITCH_START.md](bauplan/VELINSCRIPT_PITCH_START.md)
+
+### 🇬🇧 English
+- AI-first, multi-target, production-ready toolchain experienceable in 5 minutes
+- Hello-Wow endpoint with streaming, metrics, and prompt optimizer
+- Short pitch, 3-line example, 5-minute tutorial: [bauplan/VELINSCRIPT_PITCH_START.md](bauplan/VELINSCRIPT_PITCH_START.md)
 
 ---
 
@@ -61,50 +71,74 @@
 
 ---
 
-## 🎯 VelinScript 3.1.0 - Die Zukunft der KI-API-Entwicklung
+## 🎯 VelinScript 3.1.0 - Die Zukunft der KI-API-Entwicklung / The Future of AI-API Development
+
+### 🇩🇪 Deutsch
 
 VelinScript (Velisch) ist eine moderne, speziell für KI-API-Entwicklung optimierte Programmiersprache. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
 
-### 🆕 Verbesserungen in Version 3.1.0 → Patch 0.5
+### 🇬🇧 English
+
+VelinScript (Velisch) is a modern programming language specifically optimized for AI-API development. It combines the simplicity of modern languages with the performance of Rust and provides a comprehensive toolchain for professional API development.
+
+---
+
+## 🆕 Verbesserungen in Version 3.1.0 → Patch 0.5 / Improvements in Version 3.1.0 → Patch 0.5
 
 - ✅ **Infos im Änderungsprotokoll** - [CHANGELOG](CHANGELOG.md)
+  - **Info in Changelog** - [CHANGELOG](CHANGELOG.md)
 - ✅ **10 VelinScript Example-Tools (komplett mit Code & Dokumentation)** - [examples/Examples Pack Vol 2](/examples/Examples%20Pack%20Vol%202/)
+  - **10 VelinScript Example Tools (complete with code & documentation)** - [examples/Examples Pack Vol 2](/examples/Examples%20Pack%20Vol%202/)
 
 
-### 🆕 Neu in Version 3.1.0
+### 🆕 Neu in Version 3.1.0 / New in Version 3.1.0
 
 - ✅ **Multi-Target Compilation** - Kompiliert zu Rust, PHP, Python, TypeScript, JavaScript, Go, Java, C#
+  - **Multi-Target Compilation** - Compiles to Rust, PHP, Python, TypeScript, JavaScript, Go, Java, C#
 - ✅ **Type Inference System** - Automatische Type-Inference mit Member-Access und Result-Type-Auflösung
+  - **Type Inference System** - Automatic type inference with member-access and result-type resolution
 - ✅ **Automatic Code Ordering** - Automatische Sortierung basierend auf Abhängigkeiten
+  - **Automatic Code Ordering** - Automatic sorting based on dependencies
 - ✅ **IR Representation** - SSA-Format für optimierte Code-Generierung
+  - **IR Representation** - SSA format for optimized code generation
 - ✅ **Borrow Checker** - Ownership & Borrowing System für Memory Safety
+  - **Borrow Checker** - Ownership & borrowing system for memory safety
 - ✅ **Prompt Optimizer** - 90%+ Token-Ersparnis bei LLM-API-Calls
+  - **Prompt Optimizer** - 90%+ token savings on LLM API calls
 - ✅ **Vollständige CLI-Referenz** - Alle Befehle dokumentiert
+  - **Complete CLI Reference** - All commands documented
 - ✅ **Vektor-Datenbanken** - Vollständige Dokumentation für semantische Suche & RAG
+  - **Vector Databases** - Complete documentation for semantic search & RAG
 
-### 🆕 Neu in Version 3.0.1
+### 🆕 Neu in Version 3.0.1 / New in Version 3.0.1
 
 - ✅ **IR Representation** - SSA-Format für optimierte Code-Generierung
+  - **IR Representation** - SSA format for optimized code generation
 - ✅ **Borrow Checker** - Ownership & Borrowing System
+  - **Borrow Checker** - Ownership & borrowing system
 - ✅ **Prompt Optimizer** - 90%+ Token-Ersparnis
+  - **Prompt Optimizer** - 90%+ token savings
 - ✅ **KI-Compiler-Passes** - Automatische Code-Analyse und -Generierung
+  - **AI Compiler Passes** - Automatic code analysis and generation
 - ✅ **System-Generierung** - Boilerplate-freie Systeme
+  - **System Generation** - Boilerplate-free systems
 - ✅ **Automatische Parallelisierung** - Multithreading, GPU, Async, SIMD
+  - **Automatic Parallelization** - Multithreading, GPU, Async, SIMD
 
-### ✨ Kernpunkte
+### ✨ Kernpunkte / Core Features
 
 <div align="center">
 
-| Feature | Beschreibung | Status |
-|---------|-------------|--------|
-| 🎯 **KI-First Design** | Native Unterstützung für Machine Learning, LLM-Integration und Vector Databases | ✅ |
-| ⚡ **Multi-Target Compilation** | Kompiliert zu 8 Zielsprachen (Rust, PHP, Python, TS, JS, Go, Java, C#) | ✅ |
-| 🔒 **Velin Security** | Eingebaute Security-Features von Anfang an (Auth, Rate Limiting, Validation) | ✅ |
-| 🛠️ **Developer Excellence** | Vollständige Toolchain mit Linter, Formatter, Hot Reload, Debugger und mehr | ✅ |
-| 📚 **Erweiterte Standardbibliothek** | 50+ Module mit 200+ Funktionen für alle Anwendungsfälle | ✅ |
-| 🧠 **Type Inference** | Automatische Type-Inference für bessere Entwicklererfahrung | ✅ |
-| 🔄 **Code Ordering** | Automatische Sortierung basierend auf Abhängigkeiten | ✅ |
-| 💾 **Memory Safety** | Borrow Checker für Ownership & Borrowing | ✅ |
+| Feature | Beschreibung / Description | Status |
+|---------|---------------------------|--------|
+| 🎯 **KI-First Design** | Native Unterstützung für ML, LLM-Integration und Vector DBs / Native support for ML, LLM integration and vector DBs | ✅ |
+| ⚡ **Multi-Target Compilation** | Kompiliert zu 8 Zielsprachen / Compiles to 8 target languages | ✅ |
+| 🔒 **Security** | Eingebaute Security-Features / Built-in security features | ✅ |
+| 🛠️ **Developer Excellence** | Vollständige Toolchain / Complete toolchain | ✅ |
+| 📚 **Standard Library** | 50+ Module mit 200+ Funktionen / 50+ modules with 200+ functions | ✅ |
+| 🧠 **Type Inference** | Automatische Type-Erkennung / Automatic type inference | ✅ |
+| 🔄 **Code Ordering** | Automatische Sortierung / Automatic sorting | ✅ |
+| 💾 **Memory Safety** | Borrow Checker / Borrow checker | ✅ |
 
 </div>
 

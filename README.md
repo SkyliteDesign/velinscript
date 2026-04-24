@@ -44,6 +44,10 @@
 </div>
 
 ---
+> ### 📢 Nutzt du VelinScript?
+> Ich würde mich freuen, von deinem Projekt zu hören! Beteilige dich hier an der Diskussion: [Showcase & Feedback Thread](https://github.com/SkyliteDesign/velinscript/issues/10)
+
+---
 
 ## ✨ Warum VelinScript? / Why VelinScript?
 

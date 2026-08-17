@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub items: Vec<Item>,
@@ -43,7 +42,10 @@ pub enum DecoratorArg {
     Number(f64),
     Boolean(bool),
     Identifier(String),
-    Named { name: String, value: Box<DecoratorArg> },
+    Named {
+        name: String,
+        value: Box<DecoratorArg>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -256,6 +258,7 @@ pub enum BinaryOperator {
     GtEq,     // >=
     And,      // &&
     Or,       // ||
+    In,       // in (membership test)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -364,29 +367,29 @@ pub enum Type {
     
     // Named types
     Named(String),
-    
+
     // Generic types
     Generic {
         name: String,
         params: Vec<Type>,
     },
-    
+
     // Function types
     Function {
         params: Vec<Type>,
         return_type: Box<Type>,
     },
-    
+
     // Collection types
     List(Box<Type>),
     Map {
         key: Box<Type>,
         value: Box<Type>,
     },
-    
+
     // Tuple types
     Tuple(Vec<Type>),
-    
+
     // Optional types
     Optional(Box<Type>),
     
@@ -415,7 +418,10 @@ impl Type {
                     .join(", ");
                 format!("{}<{}>", name, params_str)
             }
-            Type::Function { params, return_type } => {
+            Type::Function {
+                params,
+                return_type,
+            } => {
                 let params_str = params
                     .iter()
                     .map(|p| p.to_string())

@@ -9,6 +9,8 @@ pub mod csharp;
 pub mod openapi;
 pub mod boilerplate;
 pub mod client;
+pub mod csharp;
+pub mod distributed;
 pub mod framework;
 pub mod autodoc;
 pub mod autotest;

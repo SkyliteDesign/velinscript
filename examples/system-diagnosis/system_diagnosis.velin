@@ -1,0 +1,975 @@
+// VelinScript Systemdiagnose - Vollständiges Diagnose-System
+// Version: 1.0.0
+// Erstellt: 2024
+//
+// Dieses Modul bietet eine umfassende Systemdiagnose mit:
+// - Systemressourcen-Überprüfung (CPU, Memory, Disk, Network)
+// - Sicherheitsprüfungen
+// - Service-Status-Überprüfung
+// - Log-Analyse
+// - Metriken-Sammlung
+
+use std::process;
+use std::fs;
+use std::log;
+use std::json;
+use std::math;
+use std::datetime;
+use std::metrics;
+use security_checks;
+
+// ============================================================================
+// DATENSTRUKTUREN
+// ============================================================================
+
+/// Vollständiger Systemdiagnose-Report
+struct SystemDiagnosisReport {
+    timestamp: string,
+    overallStatus: string,  // "healthy" | "degraded" | "critical" | "unknown"
+    systemInfo: SystemInfo,
+    resources: ResourceStatus,
+    security: SecurityStatus,
+    services: ServiceStatusList,
+    logs: LogAnalysis,
+    recommendations: List<string>,
+    score: number,  // 0-100
+}
+
+/// System-Informationen
+struct SystemInfo {
+    hostname: string,
+    os: string,
+    osVersion: string,
+    architecture: string,
+    uptime: number,
+    kernelVersion: string,
+    compilerVersion: string,
+    velinVersion: string,
+}
+
+/// Ressourcen-Status
+struct ResourceStatus {
+    cpu: CPUStatus,
+    memory: MemoryStatus,
+    disk: DiskStatus,
+    network: NetworkStatus,
+}
+
+/// CPU-Status
+struct CPUStatus {
+    usage: number,  // Prozent (0-100)
+    cores: number,
+    loadAverage: List<number>,  // 1min, 5min, 15min
+    temperature: number,  // Celsius (optional)
+    status: string,  // "healthy" | "warning" | "critical"
+}
+
+/// Memory-Status
+struct MemoryStatus {
+    total: number,  // Bytes
+    used: number,   // Bytes
+    free: number,   // Bytes
+    cached: number, // Bytes
+    usagePercent: number,  // Prozent (0-100)
+    status: string,  // "healthy" | "warning" | "critical"
+}
+
+/// Disk-Status
+struct DiskStatus {
+    total: number,  // Bytes
+    used: number,   // Bytes
+    free: number,   // Bytes
+    usagePercent: number,  // Prozent (0-100)
+    ioRead: number,  // Bytes/s
+    ioWrite: number, // Bytes/s
+    status: string,  // "healthy" | "warning" | "critical"
+    partitions: List<PartitionInfo>,
+}
+
+/// Partition-Informationen
+struct PartitionInfo {
+    mountPoint: string,
+    total: number,
+    used: number,
+    free: number,
+    usagePercent: number,
+    filesystem: string,
+}
+
+/// Network-Status
+struct NetworkStatus {
+    interfaces: List<NetworkInterface>,
+    totalBytesIn: number,
+    totalBytesOut: number,
+    packetsIn: number,
+    packetsOut: number,
+    latency: number,  // ms
+    status: string,  // "healthy" | "warning" | "critical"
+}
+
+/// Network-Interface
+struct NetworkInterface {
+    name: string,
+    bytesIn: number,
+    bytesOut: number,
+    packetsIn: number,
+    packetsOut: number,
+    status: string,  // "up" | "down"
+}
+
+/// Sicherheits-Status
+struct SecurityStatus {
+    overallStatus: string,  // "secure" | "warning" | "vulnerable"
+    checks: List<SecurityCheck>,
+    vulnerabilities: List<Vulnerability>,
+    score: number,  // 0-100
+}
+
+/// Sicherheits-Check
+struct SecurityCheck {
+    name: string,
+    status: string,  // "passed" | "failed" | "warning"
+    severity: string,  // "low" | "medium" | "high" | "critical"
+    message: string,
+    timestamp: string,
+}
+
+/// Sicherheitslücke
+struct Vulnerability {
+    id: string,
+    name: string,
+    severity: string,  // "low" | "medium" | "high" | "critical"
+    description: string,
+    affectedComponents: List<string>,
+    recommendation: string,
+    cve: string,  // Optional
+}
+
+/// Service-Status-Liste
+struct ServiceStatusList {
+    services: List<ServiceInfo>,
+    healthyCount: number,
+    unhealthyCount: number,
+    totalCount: number,
+}
+
+/// Service-Informationen
+struct ServiceInfo {
+    name: string,
+    status: string,
+    pid: number,
+    cpuUsage: number,
+    memoryUsage: number,
+    uptime: number,
+    lastCheck: string,
+    health: string,
+}
+
+/// Log-Eintrag
+struct LogEntry {
+    timestamp: string,
+    level: string,
+    message: string,
+    source: string,
+    context: Map<string, string>,
+}
+
+/// Log-Pattern
+struct LogPattern {
+    pattern: string,
+    count: number,
+    severity: string,
+    description: string,
+}
+
+/// Log-Analyse
+struct LogAnalysis {
+    totalLogs: number,
+    errorCount: number,
+    warningCount: number,
+    criticalErrors: List<LogEntry>,
+    recentErrors: List<LogEntry>,
+    patterns: List<LogPattern>
+}
+
+// ============================================================================
+// GLOBALE VARIABLEN
+// ============================================================================
+
+// Globale Variablen werden in init() initialisiert
+let mut healthCheck: metrics.HealthCheck;
+let mut metricsCollector: metrics.MetricsCollector;
+let mut performanceMonitor: metrics.PerformanceMonitor;
+
+// ============================================================================
+// HAUPTFUNKTIONEN
+// ============================================================================
+
+/// Führt eine vollständige Systemdiagnose durch
+fn runFullDiagnosis(): SystemDiagnosisReport {
+    // performanceMonitor.start_operation("full_diagnosis");
+    
+    let systemInfo = collectSystemInfo();
+    let resources = checkResources();
+    let securityStatus = security_checks.runSecurityChecks();
+    let services = checkServices();
+    let logs = analyzeLogs();
+    
+    let overallStatus = determineOverallStatus(resources, securityStatus, services);
+    let score = calculateHealthScore(resources, securityStatus, services, logs);
+    let recommendations = generateRecommendations(resources, securityStatus, services, logs);
+    
+    return SystemDiagnosisReport {
+        timestamp: getCurrentTimestamp(),
+        overallStatus: overallStatus,
+        systemInfo: systemInfo,
+        resources: resources,
+        security: securityStatus,
+        services: services,
+        logs: logs,
+        recommendations: recommendations,
+        score: score,
+    };
+}
+
+/// Bestimmt den Gesamtstatus basierend auf allen Checks
+fn determineOverallStatus(
+    resources: ResourceStatus,
+    security: SecurityStatus,
+    services: ServiceStatusList
+): string {
+    let criticalIssues = 0;
+    let warnings = 0;
+    
+    // Prüfe Ressourcen
+    if (resources.cpu.status == "critical") {
+        criticalIssues = criticalIssues + 1;
+    } else {
+        if (resources.cpu.status == "warning") {
+            warnings = warnings + 1;
+        }
+    }
+    
+    if (resources.memory.status == "critical") {
+        criticalIssues = criticalIssues + 1;
+    } else {
+        if (resources.memory.status == "warning") {
+            warnings = warnings + 1;
+        }
+    }
+    
+    if (resources.disk.status == "critical") {
+        criticalIssues = criticalIssues + 1;
+    } else {
+        if (resources.disk.status == "warning") {
+            warnings = warnings + 1;
+        }
+    }
+    
+    if (resources.network.status == "critical") {
+        criticalIssues = criticalIssues + 1;
+    } else {
+        if (resources.network.status == "warning") {
+            warnings = warnings + 1;
+        }
+    }
+    
+    // Prüfe Sicherheit
+    if (security.overallStatus == "vulnerable") {
+        criticalIssues = criticalIssues + 1;
+    } else {
+        if (security.overallStatus == "warning") {
+            warnings = warnings + 1;
+        }
+    }
+    
+    // Prüfe Services
+    if (services.unhealthyCount > 0) {
+        warnings = warnings + 1;
+    }
+    if (services.unhealthyCount > services.healthyCount) {
+        criticalIssues = criticalIssues + 1;
+    }
+    
+    if (criticalIssues > 0) {
+        return "critical";
+    }
+    if (warnings > 2) {
+        return "degraded";
+    }
+    if (warnings > 0) {
+        return "degraded";
+    }
+    return "healthy";
+}
+
+/// Berechnet einen Health Score (0-100)
+fn calculateHealthScore(
+    resources: ResourceStatus,
+    security: SecurityStatus,
+    services: ServiceStatusList,
+    logs: LogAnalysis
+): number {
+    let totalScore = 100.0;
+    
+    // Ressourcen-Score (40%)
+    let resourceScore = 100.0;
+    if (resources.cpu.status == "critical") {
+        resourceScore = resourceScore - 20;
+    } else {
+        if (resources.cpu.status == "warning") {
+            resourceScore = resourceScore - 10;
+        }
+    }
+    
+    if (resources.memory.status == "critical") {
+        resourceScore = resourceScore - 20;
+    } else {
+        if (resources.memory.status == "warning") {
+            resourceScore = resourceScore - 10;
+        }
+    }
+    
+    if (resources.disk.status == "critical") {
+        resourceScore = resourceScore - 20;
+    } else {
+        if (resources.disk.status == "warning") {
+            resourceScore = resourceScore - 10;
+        }
+    }
+    
+    if (resources.network.status == "critical") {
+        resourceScore = resourceScore - 20;
+    } else {
+        if (resources.network.status == "warning") {
+            resourceScore = resourceScore - 10;
+        }
+    }
+    
+    totalScore = totalScore * 0.4 * (resourceScore / 100.0);
+    
+    // Sicherheits-Score (30%)
+    totalScore = totalScore + (security.score * 0.3);
+    
+    // Services-Score (20%)
+    let serviceScore = 100.0;
+    if (services.totalCount > 0) {
+        let healthyRatio = services.healthyCount / services.totalCount;
+        serviceScore = healthyRatio * 100.0;
+    }
+    totalScore = totalScore + (serviceScore * 0.2);
+    
+    // Logs-Score (10%)
+    let logScore = 100.0;
+    if (logs.totalLogs > 0) {
+        let errorRatio = logs.errorCount / logs.totalLogs;
+        logScore = logScore - (errorRatio * 50.0);
+    }
+    totalScore = totalScore + (logScore * 0.1);
+    
+    let minScore = totalScore;
+    if (0.0 > totalScore) {
+        minScore = 0.0;
+    }
+    let maxScore = minScore;
+    if (100.0 < minScore) {
+        maxScore = 100.0;
+    }
+    return maxScore;
+}
+
+// ============================================================================
+// SYSTEM-INFORMATIONEN SAMMELN
+// ============================================================================
+
+/// Sammelt System-Informationen
+fn collectSystemInfo(): SystemInfo {
+    return SystemInfo {
+        hostname: getHostname(),
+        os: getOS(),
+        osVersion: getOSVersion(),
+        architecture: getArchitecture(),
+        uptime: getSystemUptime(),
+        kernelVersion: getKernelVersion(),
+        compilerVersion: getCompilerVersion(),
+        velinVersion: getVelinVersion(),
+    };
+}
+
+fn getHostname(): string {
+    // In Production: Verwende echte System-API
+    let v = process.getHostname();
+    if (v == null) {
+        return "unknown";
+    }
+    return v;
+}
+
+fn getOS(): string {
+    // In Production: Verwende echte System-API
+    let v = process.getOS();
+    if (v == null) {
+        return "Unknown";
+    }
+    return v;
+}
+
+fn getOSVersion(): string {
+    // In Production: Verwende echte System-API
+    let v = process.getOSVersion();
+    if (v == null) {
+        return "unknown";
+    }
+    return v;
+}
+
+fn getArchitecture(): string {
+    // In Production: Verwende echte System-API
+    let v = process.getArchitecture();
+    if (v == null) {
+        return "unknown";
+    }
+    return v;
+}
+
+fn getSystemUptime(): number {
+    // In Production: Verwende echte System-API
+    let v = process.getSystemUptime();
+    if (v == null) {
+        return 0;
+    }
+    return v;
+}
+
+fn getKernelVersion(): string {
+    // In Production: Verwende echte System-API
+    let v = process.getKernelVersion();
+    if (v == null) {
+        return "unknown";
+    }
+    return v;
+}
+
+fn getCompilerVersion(): string {
+    // In Production: Verwende echte System-API
+    return "rustc 1.70+";
+}
+
+fn getVelinVersion(): string {
+    return "3.1.0";
+}
+
+// ============================================================================
+// RESSOURCEN-ÜBERPRÜFUNG
+// ============================================================================
+
+/// Überprüft alle Systemressourcen
+fn checkResources(): ResourceStatus {
+    return ResourceStatus {
+        cpu: checkCPU(),
+        memory: checkMemory(),
+        disk: checkDisk(),
+        network: checkNetwork(),
+    };
+}
+
+/// Überprüft CPU-Status
+fn checkCPU(): CPUStatus {
+    let usage = getCPUUsage();
+    let cores = getCPUCores();
+    let loadAverage = getLoadAverage();
+    let temperature = getCPUTemperature();
+    
+    let status = "healthy";
+    if (usage > 90) {
+        status = "critical";
+    } else {
+        if (usage > 75) {
+            status = "warning";
+        }
+    }
+    
+    return CPUStatus {
+        usage: usage,
+        cores: cores,
+        loadAverage: loadAverage,
+        temperature: temperature,
+        status: status,
+    };
+}
+
+fn getCPUUsage(): number {
+    // In Production: Verwende echte System-API (z.B. sysinfo crate)
+    let v = process.getCPUUsage();
+    if (v == null) {
+        return 0.0;
+    }
+    return v;
+}
+
+fn getCPUCores(): number {
+    // In Production: Verwende echte System-API
+    let v = process.getCPUCores();
+    if (v == null) {
+        return 1;
+    }
+    return v;
+}
+
+fn getLoadAverage(): List<number> {
+    // In Production: Verwende echte System-API
+    let v = process.getLoadAverage();
+    if (v == null) {
+        return [0.0, 0.0, 0.0];
+    }
+    return v;
+}
+
+fn getCPUTemperature(): number {
+    // In Production: Verwende echte System-API (optional)
+    let v = process.getCPUTemperature();
+    if (v == null) {
+        return 0.0;
+    }
+    return v;
+}
+
+/// Überprüft Memory-Status
+fn checkMemory(): MemoryStatus {
+    let total = getTotalMemory();
+    let used = getUsedMemory();
+    let free = total - used;
+    let cached = getCachedMemory();
+    let usagePercent = (used / total) * 100.0;
+    
+    let status = "healthy";
+    if (usagePercent > 90) {
+        status = "critical";
+    } else {
+        if (usagePercent > 75) {
+            status = "warning";
+        }
+    }
+    
+    return MemoryStatus {
+        total: total,
+        used: used,
+        free: free,
+        cached: cached,
+        usagePercent: usagePercent,
+        status: status,
+    };
+}
+
+fn getTotalMemory(): number {
+    // In Production: Verwende echte System-API
+    let v = process.getTotalMemory();
+    if (v == null) {
+        return 0;
+    }
+    return v;
+}
+
+fn getUsedMemory(): number {
+    // In Production: Verwende echte System-API
+    let v = process.getUsedMemory();
+    if (v == null) {
+        return 0;
+    }
+    return v;
+}
+
+fn getCachedMemory(): number {
+    // In Production: Verwende echte System-API
+    let v = process.getCachedMemory();
+    if (v == null) {
+        return 0;
+    }
+    return v;
+}
+
+/// Überprüft Disk-Status
+fn checkDisk(): DiskStatus {
+    let partitions = getDiskPartitions();
+    let total = 0;
+    let used = 0;
+    let free = 0;
+    
+    for (partition in partitions) {
+        total = total + partition.total;
+        used = used + partition.used;
+        free = free + partition.free;
+    }
+    
+    let usagePercent = 0.0;
+    if (total > 0) {
+        usagePercent = (used / total) * 100.0;
+    }
+    let ioRead = getDiskIORead();
+    let ioWrite = getDiskIOWrite();
+    
+    let status = "healthy";
+    if (usagePercent > 90) {
+        status = "critical";
+    } else {
+        if (usagePercent > 75) {
+            status = "warning";
+        }
+    }
+    
+    return DiskStatus {
+        total: total,
+        used: used,
+        free: free,
+        usagePercent: usagePercent,
+        ioRead: ioRead,
+        ioWrite: ioWrite,
+        status: status,
+        partitions: partitions,
+    };
+}
+
+fn getDiskPartitions(): List<PartitionInfo> {
+    // In Production: Verwende echte System-API
+    let v = process.getDiskPartitions();
+    if (v == null) {
+        return [];
+    }
+    return v;
+}
+
+fn getDiskIORead(): number {
+    // In Production: Verwende echte System-API
+    let v = process.getDiskIORead();
+    if (v == null) {
+        return 0;
+    }
+    return v;
+}
+
+fn getDiskIOWrite(): number {
+    // In Production: Verwende echte System-API
+    let v = process.getDiskIOWrite();
+    if (v == null) {
+        return 0;
+    }
+    return v;
+}
+
+/// Überprüft Network-Status
+fn checkNetwork(): NetworkStatus {
+    let interfaces = getNetworkInterfaces();
+    let totalBytesIn = 0;
+    let totalBytesOut = 0;
+    let packetsIn = 0;
+    let packetsOut = 0;
+    
+    for (iface in interfaces) {
+        totalBytesIn = totalBytesIn + iface.bytesIn;
+        totalBytesOut = totalBytesOut + iface.bytesOut;
+        packetsIn = packetsIn + iface.packetsIn;
+        packetsOut = packetsOut + iface.packetsOut;
+    }
+    
+    let latency = getNetworkLatency();
+    
+    let status = "healthy";
+    if (latency > 1000) {
+        status = "critical";
+    } else {
+        if (latency > 500) {
+            status = "warning";
+        }
+    }
+    
+    return NetworkStatus {
+        interfaces: interfaces,
+        totalBytesIn: totalBytesIn,
+        totalBytesOut: totalBytesOut,
+        packetsIn: packetsIn,
+        packetsOut: packetsOut,
+        latency: latency,
+        status: status,
+    };
+}
+
+fn getNetworkInterfaces(): List<NetworkInterface> {
+    // In Production: Verwende echte System-API
+    let v = process.getNetworkInterfaces();
+    if (v == null) {
+        return [];
+    }
+    return v;
+}
+
+fn getNetworkLatency(): number {
+    // In Production: Teste echte Netzwerk-Latenz
+    let v = process.getNetworkLatency();
+    if (v == null) {
+        return 0.0;
+    }
+    return v;
+}
+
+// ============================================================================
+// SERVICE-ÜBERPRÜFUNG
+// ============================================================================
+
+/// Überprüft alle Services
+fn checkServices(): ServiceStatusList {
+    let services = getServiceList();
+    let healthyCount = 0;
+    let unhealthyCount = 0;
+    
+    for (service in services) {
+        let health = checkServiceHealth(service.name);
+        service.health = health;
+        service.lastCheck = getCurrentTimestamp();
+        
+        if (health == "healthy") {
+            healthyCount = healthyCount + 1;
+        } else {
+            unhealthyCount = unhealthyCount + 1;
+        }
+    }
+    
+    return ServiceStatusList {
+        services: services,
+        healthyCount: healthyCount,
+        unhealthyCount: unhealthyCount,
+        totalCount: services.length,
+    };
+}
+
+fn getServiceList(): List<ServiceInfo> {
+    // In Production: Liste echte Services
+    let v = process.getServiceList();
+    if (v == null) {
+        return [];
+    }
+    return v;
+}
+
+fn checkServiceHealth(serviceName: string): string {
+    // In Production: Prüfe echten Service-Status
+    let status = process.getServiceStatus(serviceName);
+    
+    if (status == "running") {
+        return "healthy";
+    }
+    if (status == "stopped") {
+        return "unhealthy";
+    }
+    return "degraded";
+}
+
+// ============================================================================
+// LOG-ANALYSE
+// ============================================================================
+
+/// Analysiert System-Logs
+fn analyzeLogs(): LogAnalysis {
+    let logs = getRecentLogs();
+    let errorCount = 0;
+    let warningCount = 0;
+    let criticalErrors: List<LogEntry> = [];
+    let recentErrors: List<LogEntry> = [];
+    let patterns: List<LogPattern> = [];
+    
+    for (log in logs) {
+        if (log.level == "error") {
+            errorCount = errorCount + 1;
+            recentErrors.push(log);
+            
+            if (isCriticalError(log)) {
+                criticalErrors.push(log);
+            }
+        } else {
+            if (log.level == "warning") {
+                warningCount = warningCount + 1;
+            }
+        }
+    }
+    
+    // Behalte nur letzte 50 Errors
+    if (recentErrors.length > 50) {
+        recentErrors = recentErrors.take(50);
+    }
+    
+    // Analysiere Patterns
+    patterns = detectLogPatterns(logs);
+    
+    return LogAnalysis {
+        totalLogs: logs.length,
+        errorCount: errorCount,
+        warningCount: warningCount,
+        criticalErrors: criticalErrors,
+        recentErrors: recentErrors,
+        patterns: patterns,
+    };
+}
+
+fn getRecentLogs(): List<LogEntry> {
+    // In Production: Lese echte Log-Dateien
+    let v = log.getRecentLogs(1000);
+    if (v == null) {
+        return [];
+    }
+    return v;
+}
+
+fn isCriticalError(logEntry: LogEntry): boolean {
+    // Prüfe auf kritische Fehlermuster
+    let criticalPatterns = [
+        "out of memory",
+        "disk full",
+        "connection refused",
+        "authentication failed",
+        "security violation",
+    ];
+    
+    for (pattern in criticalPatterns) {
+        if (logEntry.message.contains(pattern)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+fn detectLogPatterns(logs: List<LogEntry>): List<LogPattern> {
+    // In Production: Implementiere Pattern-Erkennung
+    let patterns: List<LogPattern> = [];
+    
+    // Beispiel: Zähle häufige Fehlermeldungen
+    let patternCounts = createEmptyMapStringNumber();
+    let keysList: List<string> = [];
+    
+    for (log in logs) {
+        if (log.level == "error") {
+            let key = log.message.substring(0, 50);
+            let exists = false;
+            for (k in keysList) {
+                if (k == key) {
+                    exists = true;
+                }
+            }
+            if (exists == false) {
+                keysList.push(key);
+                patternCounts[key] = 0;
+            }
+            patternCounts[key] = patternCounts[key] + 1;
+        }
+    }
+    
+    for (pattern in keysList) {
+        let count = patternCounts[pattern];
+        if (count > 5) {
+            let sev = "medium";
+            if (count > 20) {
+                sev = "high";
+            }
+            patterns.push(LogPattern {
+                pattern: pattern,
+                count: count,
+                severity: sev,
+                description: "Häufiger Fehler: {{pattern}}",
+            });
+        }
+    }
+    
+    return patterns;
+}
+
+// ============================================================================
+// EMPFEHLUNGEN GENERIEREN
+// ============================================================================
+
+/// Generiert Empfehlungen basierend auf der Diagnose
+fn generateRecommendations(
+    resources: ResourceStatus,
+    security: SecurityStatus,
+    services: ServiceStatusList,
+    logs: LogAnalysis
+): List<string> {
+    let recommendations: List<string> = [];
+    
+    // Ressourcen-Empfehlungen
+    if (resources.cpu.usage > 90) {
+        recommendations.push("CPU-Auslastung ist kritisch (>90%). Prüfen Sie laufende Prozesse und erwägen Sie eine Skalierung.");
+    }
+    if (resources.cpu.usage > 75 && resources.cpu.usage <= 90) {
+        recommendations.push("CPU-Auslastung ist erhöht (>75%). Überwachen Sie die Auslastung.");
+    }
+    
+    if (resources.memory.usagePercent > 90) {
+        recommendations.push("Speicherauslastung ist kritisch (>90%). Prüfen Sie Memory-Leaks und erwägen Sie mehr RAM.");
+    }
+    if (resources.memory.usagePercent > 75 && resources.memory.usagePercent <= 90) {
+        recommendations.push("Speicherauslastung ist erhöht (>75%). Überwachen Sie die Auslastung.");
+    }
+    
+    if (resources.disk.usagePercent > 90) {
+        recommendations.push("Festplattenauslastung ist kritisch (>90%). Bereinigen Sie alte Dateien oder erweitern Sie den Speicher.");
+    }
+    if (resources.disk.usagePercent > 75 && resources.disk.usagePercent <= 90) {
+        recommendations.push("Festplattenauslastung ist erhöht (>75%). Planen Sie eine Bereinigung.");
+    }
+    
+    // Sicherheits-Empfehlungen
+    if (security.overallStatus == "vulnerable") {
+        recommendations.push("Sicherheitsprüfung hat Schwachstellen gefunden. Prüfen Sie die Sicherheits-Checks.");
+    }
+    
+    for (vuln in security.vulnerabilities) {
+        if (vuln.severity == "critical" || vuln.severity == "high") {
+            let vulnName: string = vuln.name;
+            let vulnRec: string = vuln.recommendation;
+            recommendations.push("KRITISCH: {{vulnName}} - {{vulnRec}}");
+        }
+    }
+    
+    // Service-Empfehlungen
+    if (services.unhealthyCount > 0) {
+        let countStr: string = ""; // Mock: In Production: services.unhealthyCount.toString();
+        recommendations.push(countStr + " Service(s) sind nicht gesund. Prüfen Sie die Service-Status.");
+    }
+    
+    // Log-Empfehlungen
+    if (logs.errorCount > 100) {
+        let errorCountStr: string = ""; // Mock: In Production: logs.errorCount.toString();
+        recommendations.push("Viele Fehler in den Logs ({{errorCountStr}}) . Analysieren Sie die Fehlermuster.");
+    }
+    
+    if (logs.criticalErrors.length > 0) {
+        let criticalCountStr: string = ""; // Mock: In Production: logs.criticalErrors.length.toString();
+        recommendations.push(criticalCountStr + " kritische Fehler gefunden. Prüfen Sie diese sofort.");
+    }
+    
+    return recommendations;
+}
+
+// ============================================================================
+// HELPER-FUNKTIONEN
+// ============================================================================
+
+fn getCurrentTimestamp(): string {
+    return datetime.now().toISOString();
+}
+
+fn createEmptyMapStringNumber(): Map<string, number> {
+    return {};
+}
+
+// ============================================================================
+// INITIALISIERUNG
+// ============================================================================
+
+fn init() {
+    healthCheck = metrics.HealthCheck.new();
+    metricsCollector = metrics.MetricsCollector.new();
+    performanceMonitor = metrics.PerformanceMonitor.new();
+}
+
+// Initialisiere beim Laden des Moduls
+init();

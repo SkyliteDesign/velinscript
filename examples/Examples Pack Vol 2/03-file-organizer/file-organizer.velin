@@ -1,0 +1,240 @@
+// ================================================
+// VelinScript Beispiel: Datei-Organizer
+// ================================================
+// Organisiert Dateien nach Typ, Datum oder Größe
+// Zeigt Dateioperationen und String-Verarbeitung
+
+// -------- Datenstrukturen --------
+
+struct FileInfo {
+    name: string,
+    path: string,
+    extension: string,
+    sizeBytes: number,
+    createdAt: string,
+    category: string,
+}
+
+struct OrganizeResult {
+    totalFiles: number,
+    movedFiles: number,
+    categoriesCreated: List<string>,
+    errors: List<string>,
+}
+
+struct FileStatistics {
+    totalFiles: number,
+    totalSizeBytes: number,
+    largestFile: string,
+    smallestFile: string,
+    filesByType: Map<string, number>,
+}
+
+// -------- Hilfsfunktionen --------
+
+// Bestimmt die Kategorie basierend auf der Dateierweiterung
+fn getCategoryByExtension(extension: string): string {
+    let ext = extension.toLowerCase();
+    
+    if (ext == "jpg" || ext == "jpeg" || ext == "png" || ext == "gif" || ext == "svg") {
+        return "Bilder";
+    } else if (ext == "mp4" || ext == "avi" || ext == "mkv" || ext == "mov") {
+        return "Videos";
+    } else if (ext == "mp3" || ext == "wav" || ext == "flac" || ext == "ogg") {
+        return "Musik";
+    } else if (ext == "pdf" || ext == "doc" || ext == "docx" || ext == "txt" || ext == "md") {
+        return "Dokumente";
+    } else if (ext == "zip" || ext == "rar" || ext == "7z" || ext == "tar" || ext == "gz") {
+        return "Archive";
+    } else if (ext == "exe" || ext == "msi" || ext == "dmg" || ext == "app") {
+        return "Programme";
+    } else if (ext == "js" || ext == "ts" || ext == "py" || ext == "rs" || ext == "velin") {
+        return "Code";
+    } else {
+        return "Sonstiges";
+    }
+}
+
+// Konvertiert Bytes in lesbare Größe
+fn formatFileSize(bytes: number): string {
+    if (bytes < 1024) {
+        return "{bytes} B";
+    } else if (bytes < 1048576) { // 1024 * 1024
+        return "{(bytes / 1024).round(2)} KB";
+    } else if (bytes < 1073741824) { // 1024 * 1024 * 1024
+        return "{(bytes / 1048576).round(2)} MB";
+    } else {
+        return "{(bytes / 1073741824).round(2)} GB";
+    }
+}
+
+// Extrahiert die Dateierweiterung
+fn getFileExtension(filename: string): string {
+    let parts = filename.split(".");
+    if (parts.length() > 1) {
+        return parts[parts.length() - 1];
+    }
+    return "";
+}
+
+// -------- API Endpoints --------
+
+// Listet alle Dateien in einem Verzeichnis auf
+@GET("/api/files/list")
+fn listFiles(directory: string): List<FileInfo> {
+    let files: List<FileInfo> = [];
+    let entries = fs.readDir(directory);
+    
+    for (let entry in entries) {
+        if (entry.isFile) {
+            let extension = getFileExtension(entry.name);
+            let category = getCategoryByExtension(extension);
+            
+            let fileInfo = FileInfo {
+                name: entry.name,
+                path: entry.path,
+                extension: extension,
+                sizeBytes: entry.size,
+                createdAt: entry.createdAt.format("YYYY-MM-DD HH:mm:ss"),
+                category: category,
+            };
+            
+            files.push(fileInfo);
+        }
+    }
+    
+    return files;
+}
+
+// Organisiert Dateien nach Kategorie
+@POST("/api/files/organize")
+fn organizeFilesByType(sourceDir: string, targetDir: string): OrganizeResult {
+    let files = listFiles(sourceDir);
+    let movedCount = 0;
+    let categories: List<string> = [];
+    let errors: List<string> = [];
+    
+    for (let file in files) {
+        try {
+            // Erstelle Zielverzeichnis falls nicht vorhanden
+            let categoryPath = "{targetDir}/{file.category}";
+            
+            if (!categories.contains(file.category)) {
+                fs.createDir(categoryPath);
+                categories.push(file.category);
+            }
+            
+            // Verschiebe Datei
+            let targetPath = "{categoryPath}/{file.name}";
+            fs.move(file.path, targetPath);
+            movedCount = movedCount + 1;
+            
+        } catch (error) {
+            errors.push("Fehler bei {file.name}: {error.message}");
+        }
+    }
+    
+    return OrganizeResult {
+        totalFiles: files.length(),
+        movedFiles: movedCount,
+        categoriesCreated: categories,
+        errors: errors,
+    };
+}
+
+// Organisiert Dateien nach Erstellungsdatum (Jahr/Monat)
+@POST("/api/files/organize-by-date")
+fn organizeFilesByDate(sourceDir: string, targetDir: string): OrganizeResult {
+    let files = listFiles(sourceDir);
+    let movedCount = 0;
+    let folders: List<string> = [];
+    let errors: List<string> = [];
+    
+    for (let file in files) {
+        try {
+            // Extrahiere Jahr und Monat
+            let date = parseDate(file.createdAt);
+            let yearMonth = date.format("YYYY-MM");
+            
+            let datePath = "{targetDir}/{yearMonth}";
+            
+            if (!folders.contains(yearMonth)) {
+                fs.createDir(datePath);
+                folders.push(yearMonth);
+            }
+            
+            let targetPath = "{datePath}/{file.name}";
+            fs.move(file.path, targetPath);
+            movedCount = movedCount + 1;
+            
+        } catch (error) {
+            errors.push("Fehler bei {file.name}: {error.message}");
+        }
+    }
+    
+    return OrganizeResult {
+        totalFiles: files.length(),
+        movedFiles: movedCount,
+        categoriesCreated: folders,
+        errors: errors,
+    };
+}
+
+// Erstellt Statistiken über Dateien
+@GET("/api/files/statistics")
+fn getFileStatistics(directory: string): FileStatistics {
+    let files = listFiles(directory);
+    let totalSize: number = 0;
+    let largest = files[0];
+    let smallest = files[0];
+    let typeCount: Map<string, number> = Map::new();
+    
+    for (let file in files) {
+        totalSize = totalSize + file.sizeBytes;
+        
+        if (file.sizeBytes > largest.sizeBytes) {
+            largest = file;
+        }
+        
+        if (file.sizeBytes < smallest.sizeBytes) {
+            smallest = file;
+        }
+        
+        // Zähle Dateitypen
+        let count = typeCount.get(file.extension).orElse(0);
+        typeCount.set(file.extension, count + 1);
+    }
+    
+    return FileStatistics {
+        totalFiles: files.length(),
+        totalSizeBytes: totalSize,
+        largestFile: "{largest.name} ({formatFileSize(largest.sizeBytes)})",
+        smallestFile: "{smallest.name} ({formatFileSize(smallest.sizeBytes)})",
+        filesByType: typeCount,
+    };
+}
+
+// Findet Duplikate basierend auf Dateiname
+@GET("/api/files/find-duplicates")
+fn findDuplicates(directory: string): List<List<FileInfo>> {
+    let files = listFiles(directory);
+    let nameMap: Map<string, List<FileInfo>> = Map::new();
+    
+    // Gruppiere nach Dateiname
+    for (let file in files) {
+        let list = nameMap.get(file.name).orElse([]);
+        list.push(file);
+        nameMap.set(file.name, list);
+    }
+    
+    // Finde Duplikate (mehr als 1 Datei mit gleichem Namen)
+    let duplicates: List<List<FileInfo>> = [];
+    
+    for (let entry in nameMap.entries()) {
+        if (entry.value.length() > 1) {
+            duplicates.push(entry.value);
+        }
+    }
+    
+    return duplicates;
+}

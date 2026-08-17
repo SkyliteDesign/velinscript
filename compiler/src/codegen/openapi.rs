@@ -128,16 +128,16 @@ impl OpenAPIGenerator {
         // Generate JSON
         self.generate_json(&spec)
     }
-    
+
     fn extract_struct_schema(&self, spec: &mut OpenAPISpec, struct_def: &Struct) {
         if let Some(ref mut components) = spec.components {
             let mut properties = std::collections::HashMap::new();
-            
+
             for field in &struct_def.fields {
                 let field_schema = self.type_to_schema(&field.field_type);
                 properties.insert(field.name.clone(), field_schema);
             }
-            
+
             let schema = Schema {
                 schema_type: "object".to_string(),
                 format: None,
@@ -145,15 +145,15 @@ impl OpenAPIGenerator {
                 properties: Some(properties),
                 ref_path: None,
             };
-            
+
             components.schemas.insert(struct_def.name.clone(), schema);
         }
     }
-    
+
     fn extract_security_schemes(&self, spec: &mut OpenAPISpec, program: &Program) {
         let mut has_auth = false;
         let mut has_oauth2 = false;
-        
+
         for item in &program.items {
             if let Item::Function(f) = item {
                 for decorator in &f.decorators {
@@ -165,7 +165,7 @@ impl OpenAPIGenerator {
                 }
             }
         }
-        
+
         if let Some(ref mut components) = spec.components {
             if has_auth {
                 components.security_schemes.insert(
@@ -179,7 +179,7 @@ impl OpenAPIGenerator {
                     },
                 );
             }
-            
+
             if has_oauth2 {
                 components.security_schemes.insert(
                     "oauth2".to_string(),
@@ -241,13 +241,16 @@ impl OpenAPIGenerator {
         }
 
         if let (Some(path_str), Some(method_str)) = (path, method) {
-            let path_item = spec.paths.entry(path_str.clone()).or_insert_with(|| PathItem {
-                get: None,
-                post: None,
-                put: None,
-                delete: None,
-                patch: None,
-            });
+            let path_item = spec
+                .paths
+                .entry(path_str.clone())
+                .or_insert_with(|| PathItem {
+                    get: None,
+                    post: None,
+                    put: None,
+                    delete: None,
+                    patch: None,
+                });
 
             let operation = Operation {
                 summary: summary.or(Some(function.name.clone())),
@@ -279,18 +282,21 @@ impl OpenAPIGenerator {
 
     fn extract_parameters(&self, function: &Function) -> Vec<Parameter> {
         let mut params = Vec::new();
-        
+
         // Extract path from decorators to identify path parameters
         let mut path_str: Option<String> = None;
         for decorator in &function.decorators {
-            if matches!(decorator.name.as_str(), "GET" | "POST" | "PUT" | "DELETE" | "PATCH") {
+            if matches!(
+                decorator.name.as_str(),
+                "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
+            ) {
                 if let Some(DecoratorArg::String(p)) = decorator.args.first() {
                     path_str = Some(p.clone());
                     break;
                 }
             }
         }
-        
+
         let path_params: Vec<String> = if let Some(ref path) = path_str {
             path.split('/')
                 .filter(|s| s.starts_with(':'))
@@ -299,7 +305,7 @@ impl OpenAPIGenerator {
         } else {
             Vec::new()
         };
-        
+
         for param in &function.params {
             let param_schema = self.type_to_schema(&param.param_type);
             let location = if path_params.contains(&param.name) {
@@ -307,7 +313,7 @@ impl OpenAPIGenerator {
             } else {
                 "query".to_string()
             };
-            
+
             params.push(Parameter {
                 name: param.name.clone(),
                 location,
@@ -315,7 +321,7 @@ impl OpenAPIGenerator {
                 schema: param_schema,
             });
         }
-        
+
         params
     }
 
@@ -328,27 +334,24 @@ impl OpenAPIGenerator {
         if let Some(first_param) = function.params.first() {
             let schema = self.type_to_schema(&first_param.param_type);
             let mut content = std::collections::HashMap::new();
-            content.insert(
-                "application/json".to_string(),
-                MediaType { schema },
-            );
+            content.insert("application/json".to_string(), MediaType { schema });
             Some(RequestBody { content })
         } else {
             None
         }
     }
 
-    fn extract_responses(&self, function: &Function) -> std::collections::HashMap<String, Response> {
+    fn extract_responses(
+        &self,
+        function: &Function,
+    ) -> std::collections::HashMap<String, Response> {
         let mut responses = std::collections::HashMap::new();
-        
+
         // Success response (200)
         if let Some(ref return_type) = function.return_type {
             let schema = self.type_to_schema(return_type);
             let mut content = std::collections::HashMap::new();
-            content.insert(
-                "application/json".to_string(),
-                MediaType { schema },
-            );
+            content.insert("application/json".to_string(), MediaType { schema });
             responses.insert(
                 "200".to_string(),
                 Response {
@@ -365,7 +368,7 @@ impl OpenAPIGenerator {
                 },
             );
         }
-        
+
         // Error responses (400, 401, 403, 404, 500)
         let error_schema = Schema {
             schema_type: "object".to_string(),
@@ -373,62 +376,88 @@ impl OpenAPIGenerator {
             items: None,
             properties: Some({
                 let mut props = std::collections::HashMap::new();
-                props.insert("error".to_string(), Schema {
-                    schema_type: "string".to_string(),
-                    format: None,
-                    items: None,
-                    properties: None,
-                    ref_path: None,
-                });
-                props.insert("errors".to_string(), Schema {
-                    schema_type: "array".to_string(),
-                    format: None,
-                    items: Some(Box::new(Schema {
-                        schema_type: "object".to_string(),
+                props.insert(
+                    "error".to_string(),
+                    Schema {
+                        schema_type: "string".to_string(),
                         format: None,
                         items: None,
                         properties: None,
                         ref_path: None,
-                    })),
-                    properties: None,
-                    ref_path: None,
-                });
+                    },
+                );
+                props.insert(
+                    "errors".to_string(),
+                    Schema {
+                        schema_type: "array".to_string(),
+                        format: None,
+                        items: Some(Box::new(Schema {
+                            schema_type: "object".to_string(),
+                            format: None,
+                            items: None,
+                            properties: None,
+                            ref_path: None,
+                        })),
+                        properties: None,
+                        ref_path: None,
+                    },
+                );
                 props
             }),
             ref_path: None,
         };
-        
+
         let error_content = {
             let mut content = std::collections::HashMap::new();
-            content.insert("application/json".to_string(), MediaType { schema: error_schema });
+            content.insert(
+                "application/json".to_string(),
+                MediaType {
+                    schema: error_schema,
+                },
+            );
             content
         };
-        
-        responses.insert("400".to_string(), Response {
-            description: "Bad Request - Validation Error".to_string(),
-            content: Some(error_content.clone()),
-        });
-        
-        responses.insert("401".to_string(), Response {
-            description: "Unauthorized".to_string(),
-            content: Some(error_content.clone()),
-        });
-        
-        responses.insert("403".to_string(), Response {
-            description: "Forbidden".to_string(),
-            content: Some(error_content.clone()),
-        });
-        
-        responses.insert("404".to_string(), Response {
-            description: "Not Found".to_string(),
-            content: Some(error_content.clone()),
-        });
-        
-        responses.insert("500".to_string(), Response {
-            description: "Internal Server Error".to_string(),
-            content: Some(error_content),
-        });
-        
+
+        responses.insert(
+            "400".to_string(),
+            Response {
+                description: "Bad Request - Validation Error".to_string(),
+                content: Some(error_content.clone()),
+            },
+        );
+
+        responses.insert(
+            "401".to_string(),
+            Response {
+                description: "Unauthorized".to_string(),
+                content: Some(error_content.clone()),
+            },
+        );
+
+        responses.insert(
+            "403".to_string(),
+            Response {
+                description: "Forbidden".to_string(),
+                content: Some(error_content.clone()),
+            },
+        );
+
+        responses.insert(
+            "404".to_string(),
+            Response {
+                description: "Not Found".to_string(),
+                content: Some(error_content.clone()),
+            },
+        );
+
+        responses.insert(
+            "500".to_string(),
+            Response {
+                description: "Internal Server Error".to_string(),
+                content: Some(error_content),
+            },
+        );
+
         responses
     }
 
@@ -515,10 +544,10 @@ impl OpenAPIGenerator {
         }
         json.push_str("  },\n");
         json.push_str("  \"paths\": {\n");
-        
+
         for (path, path_item) in &spec.paths {
             json.push_str(&format!("    \"{}\": {{\n", path));
-            
+
             if let Some(ref op) = path_item.get {
                 json.push_str("      \"get\": ");
                 json.push_str(&self.operation_to_json(op));
@@ -544,16 +573,16 @@ impl OpenAPIGenerator {
                 json.push_str(&self.operation_to_json(op));
                 json.push_str(",\n");
             }
-            
+
             json.push_str("    },\n");
         }
-        
+
         json.push_str("  },\n");
-        
+
         // Add components section
         if let Some(ref components) = spec.components {
             json.push_str("  \"components\": {\n");
-            
+
             // Security Schemes
             if !components.security_schemes.is_empty() {
                 json.push_str("    \"securitySchemes\": {\n");
@@ -570,50 +599,58 @@ impl OpenAPIGenerator {
                 }
                 json.push_str("    },\n");
             }
-            
+
             // Schemas
             if !components.schemas.is_empty() {
                 json.push_str("    \"schemas\": {\n");
                 for (name, schema) in &components.schemas {
-                    json.push_str(&format!("      \"{}\": {},\n", name, self.schema_to_json(schema)));
+                    json.push_str(&format!(
+                        "      \"{}\": {},\n",
+                        name,
+                        self.schema_to_json(schema)
+                    ));
                 }
                 json.push_str("    }\n");
             }
-            
+
             json.push_str("  }\n");
         }
-        
+
         json.push_str("}\n");
         json
     }
-    
+
     fn schema_to_json(&self, schema: &Schema) -> String {
         if let Some(ref ref_path) = schema.ref_path {
             return format!("{{\"$ref\": \"{}\"}}", ref_path);
         }
-        
+
         let mut json = String::new();
         json.push_str("{\n");
         json.push_str(&format!("        \"type\": \"{}\",\n", schema.schema_type));
-        
+
         if let Some(ref format) = schema.format {
             json.push_str(&format!("        \"format\": \"{}\",\n", format));
         }
-        
+
         if let Some(ref items) = schema.items {
             json.push_str("        \"items\": ");
             json.push_str(&self.schema_to_json(items));
             json.push_str(",\n");
         }
-        
+
         if let Some(ref properties) = schema.properties {
             json.push_str("        \"properties\": {\n");
             for (name, prop_schema) in properties {
-                json.push_str(&format!("          \"{}\": {},\n", name, self.schema_to_json(prop_schema)));
+                json.push_str(&format!(
+                    "          \"{}\": {},\n",
+                    name,
+                    self.schema_to_json(prop_schema)
+                ));
             }
             json.push_str("        },\n");
         }
-        
+
         json.push_str("      }");
         json
     }
@@ -624,7 +661,10 @@ impl OpenAPIGenerator {
         if let Some(ref summary) = op.summary {
             json.push_str(&format!("        \"summary\": \"{}\",\n", summary));
         }
-        json.push_str(&format!("        \"operationId\": \"{}\",\n", op.operation_id));
+        json.push_str(&format!(
+            "        \"operationId\": \"{}\",\n",
+            op.operation_id
+        ));
         json.push_str("        \"responses\": {\n");
         json.push_str("          \"200\": {\n");
         json.push_str("            \"description\": \"Success\"\n");

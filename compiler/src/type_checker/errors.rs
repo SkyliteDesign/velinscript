@@ -51,12 +51,12 @@ impl TypeError {
             location: None,
         }
     }
-    
+
     pub fn with_location(mut self, location: ErrorLocation) -> Self {
         self.location = Some(location);
         self
     }
-    
+
     pub fn type_mismatch(expected: &str, found: &str) -> Self {
         let message = format!("Type mismatch: expected {}, found {}", expected, found);
         TypeError::new(
@@ -67,27 +67,27 @@ impl TypeError {
             message,
         )
     }
-    
+
     pub fn undefined_variable(name: &str) -> Self {
         let message = format!("Undefined variable: {}", name);
         TypeError::new(TypeErrorKind::UndefinedVariable(name.to_string()), message)
     }
-    
+
     pub fn undefined_function(name: &str) -> Self {
         let message = format!("Undefined function: {}", name);
         TypeError::new(TypeErrorKind::UndefinedFunction(name.to_string()), message)
     }
-    
+
     pub fn undefined_type(name: &str) -> Self {
         let message = format!("Undefined type: {}", name);
         TypeError::new(TypeErrorKind::UndefinedType(name.to_string()), message)
     }
-    
+
     pub fn cannot_infer_type() -> Self {
         let message = "Cannot infer type. Please provide explicit type annotation.".to_string();
         TypeError::new(TypeErrorKind::CannotInferType, message)
     }
-    
+
     pub fn invalid_operation(operation: &str, operand_type: &str) -> Self {
         let message = format!("Invalid operation '{}' on type {}", operation, operand_type);
         TypeError::new(
@@ -98,14 +98,17 @@ impl TypeError {
             message,
         )
     }
-    
+
     pub fn missing_return() -> Self {
         let message = "Function must return a value".to_string();
         TypeError::new(TypeErrorKind::MissingReturn, message)
     }
-    
+
     pub fn wrong_argument_count(expected: usize, found: usize) -> Self {
-        let message = format!("Wrong argument count: expected {}, found {}", expected, found);
+        let message = format!(
+            "Wrong argument count: expected {}, found {}",
+            expected, found
+        );
         TypeError::new(
             TypeErrorKind::WrongArgumentCount { expected, found },
             message,

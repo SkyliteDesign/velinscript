@@ -222,6 +222,51 @@ Nutze `velin check` um Type-Fehler zu finden:
 velin check -i main.velin
 ```
 
-### Parsing Errors
+**Beispiel-Ausgabe:**
+```
+❌ Type error: Type mismatch at line 12, column 15
+📁 Datei: main.velin
+📍 Position: Zeile 12, Spalte 15
+
+💡 Did you mean: 'length'?
+💡 Beispiel für explizite Typ-Annotation:
+   let x: number = 42;
+   let name: string = "John";
+
+🔧 Lösungsvorschläge:
+   - Prüfe die Typen deiner Variablen
+   - Nutze explizite Typ-Annotationen bei Unsicherheit
+   - Siehe: docs/guides/tutorial-1-basics.md
+```
+
+#### Parsing Errors
 
 Prüfe die Syntax in der Language Specification.
+
+**Beispiel-Ausgabe:**
+```
+❌ Parse error: Unexpected token at line 5, column 10
+📁 Datei: main.velin
+📍 Position: Zeile 5, Spalte 10
+
+💡 Did you mean: 'fn'?
+💡 Tip: Function declarations use 'fn', not 'function'
+   Beispiel: fn myFunction(): string { return "hello"; }
+
+🔧 Lösungsvorschläge:
+   - Prüfe auf fehlende oder überflüssige Klammern
+   - Nutze 'velin check --autofix' für automatische Korrekturen
+   - Siehe: docs/language/specification.md
+```
+
+### Weitere Fehlertypen ✅ (Neu in 3.1.0)
+
+Der Compiler bietet jetzt intelligente Lösungsvorschläge für alle Fehlertypen:
+
+- **CodeGen Errors** - Code-Generierungsfehler mit spezifischen Hinweisen
+- **IO Errors** - Datei-/IO-Fehler mit Berechtigungs- und Pfad-Hinweisen
+- **Validation Errors** - Validierungsfehler mit Feld-spezifischen Tipps
+- **Config Errors** - Konfigurationsfehler mit JSON-Syntax-Hilfen
+- **Internal Errors** - Interne Compiler-Fehler mit Bug-Report-Hinweisen
+
+**Siehe:** [Fehlerbehandlung & Lösungsvorschläge](../architecture/error-handling.md) ✅ (Neu in 3.1.0) für vollständige Dokumentation.

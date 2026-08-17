@@ -49,7 +49,7 @@ impl Environment {
             parent: None,
         }
     }
-    
+
     pub fn with_parent(parent: Environment) -> Self {
         Environment {
             variables: HashMap::new(),
@@ -106,7 +106,7 @@ impl Environment {
     pub fn define_variable(&mut self, name: String, var_type: Type) {
         self.variables.insert(name, var_type);
     }
-    
+
     pub fn get_variable(&self, name: &str) -> Option<Type> {
         if let Some((module_name, rest)) = name.split_once('.') {
             if let Some(module_env) = self.get_module(module_name) {
@@ -122,11 +122,11 @@ impl Environment {
             None
         }
     }
-    
+
     pub fn define_function(&mut self, name: String, signature: FunctionSignature) {
         self.functions.insert(name, signature);
     }
-    
+
     pub fn get_function(&self, name: &str) -> Option<FunctionSignature> {
         // Debug logging for function lookup
         {
@@ -164,11 +164,11 @@ impl Environment {
             None
         }
     }
-    
+
     pub fn define_type(&mut self, name: String, type_def: Type) {
         self.types.insert(name, type_def);
     }
-    
+
     pub fn get_type(&self, name: &str) -> Option<Type> {
         if let Some((module_name, rest)) = name.split_once('.') {
             if let Some(module_env) = self.get_module(module_name) {
@@ -184,15 +184,15 @@ impl Environment {
             None
         }
     }
-    
+
     pub fn has_variable(&self, name: &str) -> bool {
         self.get_variable(name).is_some()
     }
-    
+
     pub fn has_function(&self, name: &str) -> bool {
         self.get_function(name).is_some()
     }
-    
+
     pub fn has_type(&self, name: &str) -> bool {
         self.get_type(name).is_some()
     }

@@ -103,7 +103,8 @@ impl From<String> for SecretString {
     fn from(s: String) -> Self {
         Secret::new(s)
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert PII-Detection für Felder
@@ -124,7 +125,8 @@ pub fn mask_pii_value(value: &str) -> String {
     } else {
         format!("{}***{}", &value[..2], &value[value.len()-2..])
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Logging-Filter für PII-Daten
@@ -143,7 +145,8 @@ impl<S: Subscriber> tracing_subscriber::Layer<S> for PIILoggingFilter {
 
 pub fn create_privacy_aware_logger() -> impl tracing_subscriber::Layer {
     PIILoggingFilter
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Secure Deletion
@@ -172,43 +175,54 @@ impl<T: Zeroize> SecureDelete for Vec<T> {
 
 pub fn secure_delete_user_data<T: SecureDelete>(data: &mut T) {
     data.secure_delete();
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Privacy-konforme Struct-Generierung
     pub fn generate_privacy_struct(struct_def: &Struct) -> String {
-        let mut code = format!("#[derive(Clone, Debug, Serialize, Deserialize)]\npub struct {} {{\n", struct_def.name);
-        
+        let mut code = format!(
+            "#[derive(Clone, Debug, Serialize, Deserialize)]\npub struct {} {{\n",
+            struct_def.name
+        );
+
         for field in &struct_def.fields {
             let is_privacy = Self::is_privacy_field(field);
             let rust_type = Self::velin_to_rust_type(&field.field_type);
-            
+
             if is_privacy {
-                code.push_str(&format!("    #[serde(skip_serializing_if = \"Option::is_none\")]\n"));
-                code.push_str(&format!("    pub {}: PrivacyWrapper<{}>,\n", field.name, rust_type));
+                code.push_str(&format!(
+                    "    #[serde(skip_serializing_if = \"Option::is_none\")]\n"
+                ));
+                code.push_str(&format!(
+                    "    pub {}: PrivacyWrapper<{}>,\n",
+                    field.name, rust_type
+                ));
             } else {
                 code.push_str(&format!("    pub {}: {},\n", field.name, rust_type));
             }
         }
-        
+
         code.push_str("}\n");
         code
     }
 
     /// Prüft ob ein Feld Privacy-markiert ist
     fn is_privacy_field(field: &StructField) -> bool {
-        // Prüfe @Privacy Decorator
-        // StructField has no decorators field - skip
-        // for decorator in &field.decorators {
-            if decorator.name == "Privacy" || decorator.name == "@Privacy" {
-                return true;
-            }
-        }
-        
         // Prüfe Feldname auf PII-Keywords
         let field_lower = field.name.to_lowercase();
-        let pii_keywords = vec!["email", "phone", "ssn", "passport", "credit_card", "ip", "address"];
-        pii_keywords.iter().any(|keyword| field_lower.contains(keyword))
+        let pii_keywords = vec![
+            "email",
+            "phone",
+            "ssn",
+            "passport",
+            "credit_card",
+            "ip",
+            "address",
+        ];
+        pii_keywords
+            .iter()
+            .any(|keyword| field_lower.contains(keyword))
     }
 
     /// Konvertiert VelinScript Type zu Rust Type
@@ -264,7 +278,8 @@ pub mod confidential {
         // In production, use Intel SGX or AMD SEV
         f(data)
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Prüft ob ein Decorator ein Privacy-Decorator ist

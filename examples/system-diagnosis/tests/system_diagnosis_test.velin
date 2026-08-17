@@ -1,0 +1,629 @@
+// VelinScript Systemdiagnose - Test-Suite
+// Version: 1.0.0
+//
+// Vollständige Test-Suite für das Systemdiagnose-System
+
+use system_diagnosis;
+use security_checks;
+use testing;
+
+// ============================================================================
+// TEST-KONFIGURATION
+// ============================================================================
+
+let testResults: List<TestResult> = [];
+
+// ============================================================================
+// HAUPT-TESTS
+// ============================================================================
+
+/// Führt alle Tests aus
+fn runAllTests(): TestSuiteResult {
+    testing.startTestSuite("Systemdiagnose-Tests");
+    
+    // Systemdiagnose-Tests
+    testSystemInfoCollection();
+    testResourceChecking();
+    testServiceChecking();
+    testLogAnalysis();
+    testOverallStatusDetermination();
+    testHealthScoreCalculation();
+    testRecommendationsGeneration();
+    
+    // Sicherheits-Tests
+    testSecurityChecks();
+    testAuthenticationCheck();
+    testEncryptionCheck();
+    testCertificateCheck();
+    testFirewallCheck();
+    testFilePermissionsCheck();
+    testVulnerabilityScanning();
+    
+    // Integration-Tests
+    testFullDiagnosisFlow();
+    testSecurityStatusCalculation();
+    testReportGeneration();
+    
+    return testing.endTestSuite();
+}
+
+// ============================================================================
+// SYSTEMDIAGNOSE-TESTS
+// ============================================================================
+
+/// Test: System-Informationen sammeln
+fn testSystemInfoCollection() {
+    testing.startTest("System-Informationen sammeln");
+    
+    try {
+        let systemInfo = system_diagnosis.collectSystemInfo();
+        
+        // Prüfe dass alle Felder gesetzt sind
+        testing.assert(systemInfo.hostname != "", "Hostname sollte gesetzt sein");
+        testing.assert(systemInfo.os != "", "OS sollte gesetzt sein");
+        testing.assert(systemInfo.architecture != "", "Architektur sollte gesetzt sein");
+        testing.assert(systemInfo.velinVersion == "3.1.0", "Velin-Version sollte korrekt sein");
+        
+        testing.pass("System-Informationen werden korrekt gesammelt");
+    } catch (error) {
+        testing.fail("Fehler beim Sammeln von System-Informationen: " + error.message);
+    }
+}
+
+/// Test: Ressourcen-Überprüfung
+fn testResourceChecking() {
+    testing.startTest("Ressourcen-Überprüfung");
+    
+    try {
+        let resources = system_diagnosis.checkResources();
+        
+        // Prüfe CPU
+        testing.assert(resources.cpu.usage >= 0 && resources.cpu.usage <= 100, 
+            "CPU-Auslastung sollte zwischen 0 und 100% liegen");
+        testing.assert(resources.cpu.cores > 0, "CPU-Kerne sollten > 0 sein");
+        testing.assert(resources.cpu.status in ["healthy", "warning", "critical"],
+            "CPU-Status sollte gültig sein");
+        
+        // Prüfe Memory
+        testing.assert(resources.memory.total > 0, "Gesamtspeicher sollte > 0 sein");
+        testing.assert(resources.memory.used >= 0, "Verwendeter Speicher sollte >= 0 sein");
+        testing.assert(resources.memory.free >= 0, "Freier Speicher sollte >= 0 sein");
+        testing.assert(resources.memory.usagePercent >= 0 && resources.memory.usagePercent <= 100,
+            "Speicherauslastung sollte zwischen 0 und 100% liegen");
+        
+        // Prüfe Disk
+        testing.assert(resources.disk.total > 0, "Gesamtspeicherplatz sollte > 0 sein");
+        testing.assert(resources.disk.usagePercent >= 0 && resources.disk.usagePercent <= 100,
+            "Festplattenauslastung sollte zwischen 0 und 100% liegen");
+        
+        // Prüfe Network
+        testing.assert(resources.network.latency >= 0, "Netzwerk-Latenz sollte >= 0 sein");
+        testing.assert(resources.network.status in ["healthy", "warning", "critical"],
+            "Netzwerk-Status sollte gültig sein");
+        
+        testing.pass("Ressourcen werden korrekt überprüft");
+    } catch (error) {
+        testing.fail("Fehler bei Ressourcen-Überprüfung: " + error.message);
+    }
+}
+
+/// Test: Service-Überprüfung
+fn testServiceChecking() {
+    testing.startTest("Service-Überprüfung");
+    
+    try {
+        let services = system_diagnosis.checkServices();
+        
+        testing.assert(services.totalCount >= 0, "Gesamtanzahl Services sollte >= 0 sein");
+        testing.assert(services.healthyCount >= 0, "Gesunde Services sollten >= 0 sein");
+        testing.assert(services.unhealthyCount >= 0, "Ungesunde Services sollten >= 0 sein");
+        testing.assert(services.healthyCount + services.unhealthyCount == services.totalCount,
+            "Gesunde + ungesunde Services sollten Gesamtanzahl ergeben");
+        
+        for (service in services.services) {
+            testing.assert(service.name != "", "Service-Name sollte gesetzt sein");
+            testing.assert(service.status in ["running", "stopped", "failed", "unknown"],
+                "Service-Status sollte gültig sein");
+            testing.assert(service.health in ["healthy", "degraded", "unhealthy"],
+                "Service-Health sollte gültig sein");
+        }
+        
+        testing.pass("Services werden korrekt überprüft");
+    } catch (error) {
+        testing.fail("Fehler bei Service-Überprüfung: " + error.message);
+    }
+}
+
+/// Test: Log-Analyse
+fn testLogAnalysis() {
+    testing.startTest("Log-Analyse");
+    
+    try {
+        let logs = system_diagnosis.analyzeLogs();
+        
+        testing.assert(logs.totalLogs >= 0, "Gesamtanzahl Logs sollte >= 0 sein");
+        testing.assert(logs.errorCount >= 0, "Fehleranzahl sollte >= 0 sein");
+        testing.assert(logs.warningCount >= 0, "Warnungsanzahl sollte >= 0 sein");
+        testing.assert(logs.errorCount <= logs.totalLogs,
+            "Fehleranzahl sollte <= Gesamtanzahl sein");
+        
+        for (error in logs.criticalErrors) {
+            testing.assert(error.level == "error", "Kritische Fehler sollten Level 'error' haben");
+            testing.assert(error.message != "", "Fehlermeldung sollte gesetzt sein");
+        }
+        
+        testing.pass("Logs werden korrekt analysiert");
+    } catch (error) {
+        testing.fail("Fehler bei Log-Analyse: " + error.message);
+    }
+}
+
+/// Test: Gesamtstatus-Bestimmung
+fn testOverallStatusDetermination() {
+    testing.startTest("Gesamtstatus-Bestimmung");
+    
+    try {
+        // Test: Gesunder Status
+        let healthyResources = createHealthyResources();
+        let healthySecurity = createHealthySecurity();
+        let healthyServices = createHealthyServices();
+        
+        let status = system_diagnosis.determineOverallStatus(
+            healthyResources,
+            healthySecurity,
+            healthyServices
+        );
+        
+        testing.assert(status == "healthy", "Gesunder Status sollte 'healthy' sein");
+        
+        // Test: Degradierter Status
+        let degradedResources = createDegradedResources();
+        let status2 = system_diagnosis.determineOverallStatus(
+            degradedResources,
+            healthySecurity,
+            healthyServices
+        );
+        
+        testing.assert(status2 == "degraded", "Degradierter Status sollte 'degraded' sein");
+        
+        // Test: Kritischer Status
+        let criticalResources = createCriticalResources();
+        let status3 = system_diagnosis.determineOverallStatus(
+            criticalResources,
+            healthySecurity,
+            healthyServices
+        );
+        
+        testing.assert(status3 == "critical", "Kritischer Status sollte 'critical' sein");
+        
+        testing.pass("Gesamtstatus wird korrekt bestimmt");
+    } catch (error) {
+        testing.fail("Fehler bei Gesamtstatus-Bestimmung: " + error.message);
+    }
+}
+
+/// Test: Health-Score-Berechnung
+fn testHealthScoreCalculation() {
+    testing.startTest("Health-Score-Berechnung");
+    
+    try {
+        let resources = system_diagnosis.checkResources();
+        let security = security_checks.runSecurityChecks();
+        let services = system_diagnosis.checkServices();
+        let logs = system_diagnosis.analyzeLogs();
+        
+        let score = system_diagnosis.calculateHealthScore(
+            resources,
+            security,
+            services,
+            logs
+        );
+        
+        testing.assert(score >= 0 && score <= 100, "Health-Score sollte zwischen 0 und 100 liegen");
+        
+        // Test mit perfekten Werten
+        let perfectResources = createHealthyResources();
+        let perfectSecurity = createPerfectSecurity();
+        let perfectServices = createHealthyServices();
+        let perfectLogs = createPerfectLogs();
+        
+        let perfectScore = system_diagnosis.calculateHealthScore(
+            perfectResources,
+            perfectSecurity,
+            perfectServices,
+            perfectLogs
+        );
+        
+        testing.assert(perfectScore >= 90, "Perfekter Score sollte >= 90 sein");
+        
+        testing.pass("Health-Score wird korrekt berechnet");
+    } catch (error) {
+        testing.fail("Fehler bei Health-Score-Berechnung: " + error.message);
+    }
+}
+
+/// Test: Empfehlungen-Generierung
+fn testRecommendationsGeneration() {
+    testing.startTest("Empfehlungen-Generierung");
+    
+    try {
+        let resources = system_diagnosis.checkResources();
+        let security = security_checks.runSecurityChecks();
+        let services = system_diagnosis.checkServices();
+        let logs = system_diagnosis.analyzeLogs();
+        
+        let recommendations = system_diagnosis.generateRecommendations(
+            resources,
+            security,
+            services,
+            logs
+        );
+        
+        testing.assert(recommendations.length >= 0, "Empfehlungen sollten eine Liste sein");
+        
+        for (rec in recommendations) {
+            testing.assert(rec != "", "Empfehlung sollte nicht leer sein");
+        }
+        
+        testing.pass("Empfehlungen werden korrekt generiert");
+    } catch (error) {
+        testing.fail("Fehler bei Empfehlungen-Generierung: " + error.message);
+    }
+}
+
+// ============================================================================
+// SICHERHEITS-TESTS
+// ============================================================================
+
+/// Test: Sicherheitsprüfungen
+fn testSecurityChecks() {
+    testing.startTest("Sicherheitsprüfungen");
+    
+    try {
+        let security = security_checks.runSecurityChecks();
+        
+        testing.assert(security.overallStatus in ["secure", "warning", "vulnerable"],
+            "Sicherheitsstatus sollte gültig sein");
+        testing.assert(security.score >= 0 && security.score <= 100,
+            "Sicherheits-Score sollte zwischen 0 und 100 liegen");
+        testing.assert(security.checks.length > 0,
+            "Es sollten Sicherheits-Checks durchgeführt werden");
+        
+        testing.pass("Sicherheitsprüfungen werden korrekt durchgeführt");
+    } catch (error) {
+        testing.fail("Fehler bei Sicherheitsprüfungen: " + error.message);
+    }
+}
+
+/// Test: Authentifizierungs-Check
+fn testAuthenticationCheck() {
+    testing.startTest("Authentifizierungs-Check");
+    
+    try {
+        let check = security_checks.checkAuthentication();
+        
+        testing.assert(check.name == "Authentication", "Check-Name sollte korrekt sein");
+        testing.assert(check.status in ["passed", "failed", "warning"],
+            "Check-Status sollte gültig sein");
+        testing.assert(check.severity in ["low", "medium", "high", "critical"],
+            "Check-Schweregrad sollte gültig sein");
+        testing.assert(check.message != "", "Check-Nachricht sollte gesetzt sein");
+        
+        testing.pass("Authentifizierungs-Check funktioniert korrekt");
+    } catch (error) {
+        testing.fail("Fehler bei Authentifizierungs-Check: " + error.message);
+    }
+}
+
+/// Test: Verschlüsselungs-Check
+fn testEncryptionCheck() {
+    testing.startTest("Verschlüsselungs-Check");
+    
+    try {
+        let check = security_checks.checkEncryption();
+        
+        testing.assert(check.name == "Encryption", "Check-Name sollte korrekt sein");
+        testing.assert(check.status in ["passed", "failed", "warning"],
+            "Check-Status sollte gültig sein");
+        
+        testing.pass("Verschlüsselungs-Check funktioniert korrekt");
+    } catch (error) {
+        testing.fail("Fehler bei Verschlüsselungs-Check: " + error.message);
+    }
+}
+
+/// Test: Zertifikats-Check
+fn testCertificateCheck() {
+    testing.startTest("Zertifikats-Check");
+    
+    try {
+        let check = security_checks.checkCertificates();
+        
+        testing.assert(check.name == "Certificates", "Check-Name sollte korrekt sein");
+        testing.assert(check.status in ["passed", "failed", "warning"],
+            "Check-Status sollte gültig sein");
+        
+        testing.pass("Zertifikats-Check funktioniert korrekt");
+    } catch (error) {
+        testing.fail("Fehler bei Zertifikats-Check: " + error.message);
+    }
+}
+
+/// Test: Firewall-Check
+fn testFirewallCheck() {
+    testing.startTest("Firewall-Check");
+    
+    try {
+        let check = security_checks.checkFirewall();
+        
+        testing.assert(check.name == "Firewall", "Check-Name sollte korrekt sein");
+        testing.assert(check.status in ["passed", "failed", "warning"],
+            "Check-Status sollte gültig sein");
+        
+        testing.pass("Firewall-Check funktioniert korrekt");
+    } catch (error) {
+        testing.fail("Fehler bei Firewall-Check: " + error.message);
+    }
+}
+
+/// Test: Dateiberechtigungs-Check
+fn testFilePermissionsCheck() {
+    testing.startTest("Dateiberechtigungs-Check");
+    
+    try {
+        let check = security_checks.checkFilePermissions();
+        
+        testing.assert(check.name == "File Permissions", "Check-Name sollte korrekt sein");
+        testing.assert(check.status in ["passed", "failed", "warning"],
+            "Check-Status sollte gültig sein");
+        
+        testing.pass("Dateiberechtigungs-Check funktioniert korrekt");
+    } catch (error) {
+        testing.fail("Fehler bei Dateiberechtigungs-Check: " + error.message);
+    }
+}
+
+/// Test: Vulnerability-Scanning
+fn testVulnerabilityScanning() {
+    testing.startTest("Vulnerability-Scanning");
+    
+    try {
+        let vulnerabilities = security_checks.scanVulnerabilities();
+        
+        testing.assert(vulnerabilities.length >= 0,
+            "Vulnerabilities sollten eine Liste sein");
+        
+        for (vuln in vulnerabilities) {
+            testing.assert(vuln.id != "", "Vulnerability-ID sollte gesetzt sein");
+            testing.assert(vuln.name != "", "Vulnerability-Name sollte gesetzt sein");
+            testing.assert(vuln.severity in ["low", "medium", "high", "critical"],
+                "Vulnerability-Schweregrad sollte gültig sein");
+            testing.assert(vuln.description != "", "Vulnerability-Beschreibung sollte gesetzt sein");
+            testing.assert(vuln.recommendation != "", "Vulnerability-Empfehlung sollte gesetzt sein");
+        }
+        
+        testing.pass("Vulnerability-Scanning funktioniert korrekt");
+    } catch (error) {
+        testing.fail("Fehler bei Vulnerability-Scanning: " + error.message);
+    }
+}
+
+// ============================================================================
+// INTEGRATION-TESTS
+// ============================================================================
+
+/// Test: Vollständiger Diagnose-Flow
+fn testFullDiagnosisFlow() {
+    testing.startTest("Vollständiger Diagnose-Flow");
+    
+    try {
+        let report = system_diagnosis.runFullDiagnosis();
+        
+        testing.assert(report.timestamp != "", "Report-Timestamp sollte gesetzt sein");
+        testing.assert(report.overallStatus in ["healthy", "degraded", "critical", "unknown"],
+            "Gesamtstatus sollte gültig sein");
+        testing.assert(report.score >= 0 && report.score <= 100,
+            "Report-Score sollte zwischen 0 und 100 liegen");
+        testing.assert(report.systemInfo.hostname != "",
+            "System-Info sollte gesetzt sein");
+        testing.assert(report.resources != null,
+            "Ressourcen sollten vorhanden sein");
+        testing.assert(report.security != null,
+            "Sicherheit sollte vorhanden sein");
+        testing.assert(report.services != null,
+            "Services sollten vorhanden sein");
+        testing.assert(report.logs != null,
+            "Logs sollten vorhanden sein");
+        testing.assert(report.recommendations.length >= 0,
+            "Empfehlungen sollten eine Liste sein");
+        
+        testing.pass("Vollständiger Diagnose-Flow funktioniert korrekt");
+    } catch (error) {
+        testing.fail("Fehler bei vollständigem Diagnose-Flow: " + error.message);
+    }
+}
+
+/// Test: Sicherheitsstatus-Berechnung
+fn testSecurityStatusCalculation() {
+    testing.startTest("Sicherheitsstatus-Berechnung");
+    
+    try {
+        let security = security_checks.runSecurityChecks();
+        
+        let status = security_checks.determineSecurityStatus(
+            security.checks,
+            security.vulnerabilities
+        );
+        
+        testing.assert(status in ["secure", "warning", "vulnerable"],
+            "Sicherheitsstatus sollte gültig sein");
+        
+        let score = security_checks.calculateSecurityScore(
+            security.checks,
+            security.vulnerabilities
+        );
+        
+        testing.assert(score >= 0 && score <= 100,
+            "Sicherheits-Score sollte zwischen 0 und 100 liegen");
+        
+        testing.pass("Sicherheitsstatus wird korrekt berechnet");
+    } catch (error) {
+        testing.fail("Fehler bei Sicherheitsstatus-Berechnung: " + error.message);
+    }
+}
+
+/// Test: Report-Generierung
+fn testReportGeneration() {
+    testing.startTest("Report-Generierung");
+    
+    try {
+        let report = system_diagnosis.runFullDiagnosis();
+        
+        // Test JSON-Export
+        let jsonReport = json.stringify(report);
+        testing.assert(jsonReport != "", "JSON-Report sollte nicht leer sein");
+        
+        // Test dass alle wichtigen Felder vorhanden sind
+        testing.assert(jsonReport.contains("overallStatus"),
+            "JSON-Report sollte 'overallStatus' enthalten");
+        testing.assert(jsonReport.contains("score"),
+            "JSON-Report sollte 'score' enthalten");
+        testing.assert(jsonReport.contains("systemInfo"),
+            "JSON-Report sollte 'systemInfo' enthalten");
+        
+        testing.pass("Report wird korrekt generiert");
+    } catch (error) {
+        testing.fail("Fehler bei Report-Generierung: " + error.message);
+    }
+}
+
+// ============================================================================
+// HELPER-FUNKTIONEN FÜR TESTS
+// ============================================================================
+
+/// Erstellt gesunde Ressourcen für Tests
+fn createHealthyResources(): ResourceStatus {
+    return ResourceStatus {
+        cpu: CPUStatus {
+            usage: 30.0,
+            cores: 4,
+            loadAverage: [0.5, 0.6, 0.7],
+            temperature: 45.0,
+            status: "healthy",
+        },
+        memory: MemoryStatus {
+            total: 16777216000,  // 16 GB
+            used: 8388608000,    // 8 GB
+            free: 8388608000,    // 8 GB
+            cached: 2097152000,  // 2 GB
+            usagePercent: 50.0,
+            status: "healthy",
+        },
+        disk: DiskStatus {
+            total: 107374182400,  // 100 GB
+            used: 53687091200,   // 50 GB
+            free: 53687091200,    // 50 GB
+            usagePercent: 50.0,
+            ioRead: 0,
+            ioWrite: 0,
+            status: "healthy",
+            partitions: [],
+        },
+        network: NetworkStatus {
+            interfaces: [],
+            totalBytesIn: 0,
+            totalBytesOut: 0,
+            packetsIn: 0,
+            packetsOut: 0,
+            latency: 10.0,
+            status: "healthy",
+        },
+    };
+}
+
+/// Erstellt degradierte Ressourcen für Tests
+fn createDegradedResources(): ResourceStatus {
+    let resources = createHealthyResources();
+    resources.cpu.usage = 80.0;
+    resources.cpu.status = "warning";
+    resources.memory.usagePercent = 80.0;
+    resources.memory.status = "warning";
+    return resources;
+}
+
+/// Erstellt kritische Ressourcen für Tests
+fn createCriticalResources(): ResourceStatus {
+    let resources = createHealthyResources();
+    resources.cpu.usage = 95.0;
+    resources.cpu.status = "critical";
+    resources.memory.usagePercent = 95.0;
+    resources.memory.status = "critical";
+    resources.disk.usagePercent = 95.0;
+    resources.disk.status = "critical";
+    return resources;
+}
+
+/// Erstellt gesunden Sicherheitsstatus für Tests
+fn createHealthySecurity(): SecurityStatus {
+    return SecurityStatus {
+        overallStatus: "secure",
+        checks: [],
+        vulnerabilities: [],
+        score: 95.0,
+    };
+}
+
+/// Erstellt perfekten Sicherheitsstatus für Tests
+fn createPerfectSecurity(): SecurityStatus {
+    return SecurityStatus {
+        overallStatus: "secure",
+        checks: [],
+        vulnerabilities: [],
+        score: 100.0,
+    };
+}
+
+/// Erstellt gesunde Services für Tests
+fn createHealthyServices(): ServiceStatusList {
+    return ServiceStatusList {
+        services: [],
+        healthyCount: 5,
+        unhealthyCount: 0,
+        totalCount: 5,
+    };
+}
+
+/// Erstellt perfekte Logs für Tests
+fn createPerfectLogs(): LogAnalysis {
+    return LogAnalysis {
+        totalLogs: 1000,
+        errorCount: 0,
+        warningCount: 10,
+        criticalErrors: [],
+        recentErrors: [],
+        patterns: [],
+    };
+}
+
+// ============================================================================
+// TEST-AUSFÜHRUNG
+// ============================================================================
+
+/// Führt alle Tests aus und gibt Ergebnisse zurück
+fn main() {
+    let results = runAllTests();
+    
+    println("=== Systemdiagnose Test-Ergebnisse ===");
+    println("Gesamt: " + results.total + " Tests");
+    println("Erfolgreich: " + results.passed);
+    println("Fehlgeschlagen: " + results.failed);
+    println("Dauer: " + results.duration + "ms");
+    
+    if (results.failed > 0) {
+        println("\n⚠️  Einige Tests sind fehlgeschlagen!");
+        return 1;
+    } else {
+        println("\n✅ Alle Tests erfolgreich!");
+        return 0;
+    }
+}

@@ -29,7 +29,7 @@ use velin_compiler::optimizer::parallelization::ParallelizationAnalyzer;
 
 fn main() -> AnyhowResult<()> {
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::Compile { input, output, no_type_check, show_code, autofix, ai_semantic, ai_bug_detection, ai_codegen, ai_optimization, ai_provider, ai_api_key, target, framework, codegen } => {
             let mut config = CompilerConfig::default();
@@ -333,29 +333,28 @@ fn main() -> AnyhowResult<()> {
 
 fn format_command(input: PathBuf, in_place: bool) -> AnyhowResult<()> {
     println!("✨ Formatiere: {}\n", input.display());
-    
+
     let code = fs::read_to_string(&input)
         .with_context(|| format!("Failed to read file: {}", input.display()))?;
-    
-    let program = Parser::parse(&code)
-        .map_err(|e| {
-            eprintln!("✗ Parsing-Fehler:");
-            eprintln!("  {}", e.message);
-            eprintln!("  Erwartet: {}", e.expected);
-            eprintln!("  Gefunden: {}", e.found);
-            eprintln!("  Position: Zeile {}, Spalte {}", e.line, e.column);
-            if let Some(ref context) = e.source_context {
-                eprintln!("\n  {}", context);
-            }
-            anyhow::anyhow!("Parse error: {}", e.message)
-        })?;
-    
+
+    let program = Parser::parse(&code).map_err(|e| {
+        eprintln!("✗ Parsing-Fehler:");
+        eprintln!("  {}", e.message);
+        eprintln!("  Erwartet: {}", e.expected);
+        eprintln!("  Gefunden: {}", e.found);
+        eprintln!("  Position: Zeile {}, Spalte {}", e.line, e.column);
+        if let Some(ref context) = e.source_context {
+            eprintln!("\n  {}", context);
+        }
+        anyhow::anyhow!("Parse error: {}", e.message)
+    })?;
+
     println!("✓ Parsing erfolgreich");
-    
+
     let config = FormatConfig::default();
     let mut formatter = Formatter::new(config);
     let formatted = formatter.format(&program);
-    
+
     if in_place {
         fs::write(&input, formatted)
             .with_context(|| format!("Failed to write file: {}", input.display()))?;
@@ -363,33 +362,32 @@ fn format_command(input: PathBuf, in_place: bool) -> AnyhowResult<()> {
     } else {
         println!("{}", formatted);
     }
-    
+
     Ok(())
 }
 
 fn info_command(input: PathBuf) -> AnyhowResult<()> {
     println!("ℹ️  Informationen über: {}\n", input.display());
-    
+
     let code = fs::read_to_string(&input)
         .with_context(|| format!("Failed to read file: {}", input.display()))?;
-    
-    let program = Parser::parse(&code)
-        .map_err(|e| {
-            eprintln!("✗ Parsing-Fehler: {}", e.message);
-            eprintln!("  Position: Zeile {}, Spalte {}", e.line, e.column);
-            if let Some(ref context) = e.source_context {
-                eprintln!("\n  {}", context);
-            }
-            anyhow::anyhow!("Parse error: {}", e.message)
-        })?;
-    
+
+    let program = Parser::parse(&code).map_err(|e| {
+        eprintln!("✗ Parsing-Fehler: {}", e.message);
+        eprintln!("  Position: Zeile {}, Spalte {}", e.line, e.column);
+        if let Some(ref context) = e.source_context {
+            eprintln!("\n  {}", context);
+        }
+        anyhow::anyhow!("Parse error: {}", e.message)
+    })?;
+
     println!("📊 Statistik:");
     println!("  Items: {}", program.items.len());
-    
+
     let mut functions = 0;
     let mut structs = 0;
     let mut enums = 0;
-    
+
     for item in &program.items {
         match item {
             velin_compiler::parser::ast::Item::Function(f) => {
@@ -414,38 +412,74 @@ fn info_command(input: PathBuf) -> AnyhowResult<()> {
             _ => {}
         }
     }
-    
+
     println!("\n📈 Zusammenfassung:");
     println!("  Funktionen: {}", functions);
     println!("  Structs: {}", structs);
     println!("  Enums: {}", enums);
-    
+
     Ok(())
 }
 
 fn openapi_command(input: PathBuf, output: Option<PathBuf>) -> AnyhowResult<()> {
     println!("📄 Generiere OpenAPI Specification: {}\n", input.display());
-    
+
     let code = fs::read_to_string(&input)
         .with_context(|| format!("Failed to read file: {}", input.display()))?;
-    
-    let program = Parser::parse(&code)
-        .map_err(|e| anyhow::anyhow!("Parse error: {}", e.message))?;
-    
+
+    let program =
+        Parser::parse(&code).map_err(|e| anyhow::anyhow!("Parse error: {}", e.message))?;
+
     println!("✓ Parsing erfolgreich");
-    
+
     let mut openapi_gen = OpenAPIGenerator::new();
     let openapi_spec = openapi_gen.generate(&program);
-    
-    let output_file = output.unwrap_or_else(|| {
-        input.with_extension("openapi.json")
-    });
-    
+
+    let output_file = output.unwrap_or_else(|| input.with_extension("openapi.json"));
+
     fs::write(&output_file, openapi_spec)
         .with_context(|| format!("Failed to write file: {}", output_file.display()))?;
-    
-    println!("✓ OpenAPI Specification generiert: {}", output_file.display());
-    
+
+    println!(
+        "✓ OpenAPI Specification generiert: {}",
+        output_file.display()
+    );
+
+    Ok(())
+}
+
+fn serve_command(input: Option<PathBuf>, port: u16, host: String, watch: bool) -> AnyhowResult<()> {
+    let input_file = input.unwrap_or_else(|| {
+        let current_dir = std::env::current_dir().unwrap();
+        current_dir.join("main.velin")
+    });
+
+    if !input_file.exists() {
+        return Err(anyhow::anyhow!(
+            "❌ Datei nicht gefunden: {}\n\n💡 Tipp: Erstelle zuerst ein Projekt mit 'velin new my-project'\n📖 Hilfe: Siehe docs/guides/getting-started.md",
+            input_file.display()
+        ));
+    }
+
+    println!("🚀 Starte Development-Server...\n");
+    println!("📄 Datei: {}", input_file.display());
+    println!("🌐 Server: http://{}:{}", host, port);
+
+    if watch {
+        println!("👀 Watch-Mode: Aktiviert (automatisches Neuladen bei Änderungen)");
+    }
+
+    println!("\n⚠️  Hinweis: Der Server-Befehl kompiliert den Code zu Rust.");
+    println!("   Für die vollständige Ausführung benötigst du:");
+    println!(
+        "   1. Kompilierung: velin compile -i {}",
+        input_file.display()
+    );
+    println!("   2. Rust-Build: cargo build --release");
+    println!("   3. Ausführung: cargo run --release");
+    println!("\n💡 Tipp: Nutze 'velin-hot-reload --server' für vollständigen Hot-Reload-Support");
+    println!("📖 Hilfe: Siehe docs/tools/hot-reload.md für Details");
+
     Ok(())
 }
 
@@ -503,8 +537,7 @@ fn init_command(name: Option<String>, current_dir: bool) -> AnyhowResult<()> {
     println!("Initialisiere Velisch Projekt: {}\n", project_name);
     
     let project_dir = if current_dir {
-        std::env::current_dir()
-            .context("Failed to get current directory")?
+        std::env::current_dir().context("Failed to get current directory")?
     } else {
         PathBuf::from(&project_name)
     };
@@ -520,7 +553,7 @@ fn hello(): string {
     return "Hello, Velisch!";
 }
 "#;
-    
+
     fs::write(&main_file, main_content)
         .with_context(|| format!("Failed to create main.velin: {}", main_file.display()))?;
     
@@ -594,7 +627,7 @@ fn generate_command(
     output: Option<PathBuf>,
 ) -> AnyhowResult<()> {
     println!("🔧 Generiere Code: {}\n", gen_type);
-    
+
     let generator = BoilerplateGenerator::new();
     let generated_code = match gen_type.as_str() {
         "api" => {
@@ -610,37 +643,24 @@ fn generate_command(
             let test_name = name.unwrap_or_else(|| "TestFunction".to_string());
             generator.generate_test(&test_name)
         }
-        "responses" => {
-            generator.generate_responses_module()
-        }
-        "errors" => {
-            generator.generate_errors_module()
-        }
-        "logging" => {
-            generator.generate_logging_module()
-        }
-        "cache" => {
-            generator.generate_cache_module()
-        }
-        "health" => {
-            generator.generate_health_module()
-        }
-        "async" => {
-            generator.generate_async_module()
-        }
-        "security" => {
-            generator.generate_security_module()
-        }
+        "responses" => generator.generate_responses_module(),
+        "errors" => generator.generate_errors_module(),
+        "logging" => generator.generate_logging_module(),
+        "cache" => generator.generate_cache_module(),
+        "health" => generator.generate_health_module(),
+        "async" => generator.generate_async_module(),
+        "security" => generator.generate_security_module(),
         "client" => {
             if let Some(ref openapi_path) = openapi {
                 let client_gen = ClientGenerator::new();
                 let lang = language.as_deref().unwrap_or("typescript");
-                
+
                 match client_gen.generate_from_openapi(openapi_path, lang) {
                     Ok(code) => {
                         if let Some(ref output_path) = output {
-                            fs::write(output_path, &code)
-                                .with_context(|| format!("Failed to write file: {}", output_path.display()))?;
+                            fs::write(output_path, &code).with_context(|| {
+                                format!("Failed to write file: {}", output_path.display())
+                            })?;
                             println!("✓ Client generiert: {}", output_path.display());
                             return Ok(());
                         } else {
@@ -653,7 +673,9 @@ fn generate_command(
                     }
                 }
             } else {
-                return Err(anyhow::anyhow!("--openapi is required for client generation"));
+                return Err(anyhow::anyhow!(
+                    "--openapi is required for client generation"
+                ));
             }
         }
         "system" => {
@@ -724,7 +746,7 @@ fn generate_command(
             ));
         }
     };
-    
+
     if let Some(ref output_path) = output {
         fs::write(output_path, &generated_code)
             .with_context(|| format!("Failed to write file: {}", output_path.display()))?;
@@ -732,28 +754,33 @@ fn generate_command(
     } else {
         println!("{}", generated_code);
     }
-    
+
     Ok(())
 }
 
-fn test_command(directory: Option<PathBuf>, unit: bool, integration: bool, verbose: bool) -> AnyhowResult<()> {
+fn test_command(
+    directory: Option<PathBuf>,
+    unit: bool,
+    integration: bool,
+    verbose: bool,
+) -> AnyhowResult<()> {
     println!("🧪 Führe Tests aus\n");
-    
+
     let test_dir = directory.unwrap_or_else(|| {
         std::env::current_dir()
             .unwrap_or_else(|_| PathBuf::from("."))
             .join("tests")
     });
-    
+
     if !test_dir.exists() {
         return Err(anyhow::anyhow!(
             "Test directory not found: {}. Create tests/ directory or use --directory",
             test_dir.display()
         ));
     }
-    
+
     let mut test_files = Vec::new();
-    
+
     if unit || (!unit && !integration) {
         let unit_dir = test_dir.join("unit");
         if unit_dir.exists() {
@@ -762,10 +789,13 @@ fn test_command(directory: Option<PathBuf>, unit: bool, integration: bool, verbo
             }
             scan_test_files(&unit_dir, &mut test_files, verbose);
         } else if verbose {
-            println!("⚠️  Unit Test-Verzeichnis nicht gefunden: {}", unit_dir.display());
+            println!(
+                "⚠️  Unit Test-Verzeichnis nicht gefunden: {}",
+                unit_dir.display()
+            );
         }
     }
-    
+
     if integration || (!unit && !integration) {
         let integration_dir = test_dir.join("integration");
         if integration_dir.exists() {
@@ -774,47 +804,52 @@ fn test_command(directory: Option<PathBuf>, unit: bool, integration: bool, verbo
             }
             scan_test_files(&integration_dir, &mut test_files, verbose);
         } else if verbose {
-            println!("⚠️  Integration Test-Verzeichnis nicht gefunden: {}", integration_dir.display());
+            println!(
+                "⚠️  Integration Test-Verzeichnis nicht gefunden: {}",
+                integration_dir.display()
+            );
         }
     }
-    
+
     if test_files.is_empty() {
         eprintln!("✗ Keine Test-Dateien gefunden");
         std::process::exit(1);
     }
-    
+
     println!("✓ Gefundene Test-Dateien: {}\n", test_files.len());
-    
+
     let mut passed = 0;
     let mut failed = 0;
-    
+
     for test_file in &test_files {
         if verbose {
             println!("🔍 Prüfe: {}", test_file.display());
         }
-        
+
         match fs::read_to_string(test_file) {
-            Ok(code) => {
-                match Parser::parse(&code) {
-                    Ok(_) => {
-                        if verbose {
-                            println!("  ✓ Parsing erfolgreich");
-                        }
-                        passed += 1;
+            Ok(code) => match Parser::parse(&code) {
+                Ok(_) => {
+                    if verbose {
+                        println!("  ✓ Parsing erfolgreich");
                     }
-                    Err(e) => {
-                        eprintln!("  ✗ Parsing-Fehler in {}: {}", test_file.display(), e.message);
-                        failed += 1;
-                    }
+                    passed += 1;
                 }
-            }
+                Err(e) => {
+                    eprintln!(
+                        "  ✗ Parsing-Fehler in {}: {}",
+                        test_file.display(),
+                        e.message
+                    );
+                    failed += 1;
+                }
+            },
             Err(e) => {
                 eprintln!("  ✗ Fehler beim Lesen: {}", e);
                 failed += 1;
             }
         }
     }
-    
+
     println!("\n📊 Test-Ergebnisse:");
     println!("  ✓ Bestanden: {}", passed);
     if failed > 0 {
@@ -823,7 +858,7 @@ fn test_command(directory: Option<PathBuf>, unit: bool, integration: bool, verbo
     } else {
         println!("  ✓ Alle Tests bestanden!");
     }
-    
+
     Ok(())
 }
 
@@ -842,17 +877,17 @@ fn scan_test_files(dir: &PathBuf, files: &mut Vec<PathBuf>, verbose: bool) {
 
 fn config_init_command(example: bool) -> AnyhowResult<()> {
     println!("⚙️  Initialisiere velin.config.json\n");
-    
+
     let config_file = std::env::current_dir()
         .context("Failed to get current directory")?
         .join("velin.config.json");
-    
+
     if config_file.exists() && !example {
         return Err(anyhow::anyhow!(
             "velin.config.json existiert bereits. Verwende --example um Beispiel-Config zu erstellen"
         ));
     }
-    
+
     let config_content = if example {
         include_str!("../../examples/custom-recommender/velin.config.example.json")
     } else {
@@ -930,64 +965,66 @@ fn config_init_command(example: bool) -> AnyhowResult<()> {
   }
 }"#
     };
-    
+
     fs::write(&config_file, config_content)
         .with_context(|| format!("Failed to create config file: {}", config_file.display()))?;
-    
+
     println!("✓ Config-Datei erstellt: {}", config_file.display());
     Ok(())
 }
 
 fn config_validate_command(file: Option<PathBuf>) -> AnyhowResult<()> {
     println!("✅ Validiere velin.config.json\n");
-    
+
     let config_file = file.unwrap_or_else(|| {
         std::env::current_dir()
             .unwrap_or_else(|_| PathBuf::from("."))
             .join("velin.config.json")
     });
-    
+
     if !config_file.exists() {
         return Err(anyhow::anyhow!(
             "Config-Datei nicht gefunden: {}",
             config_file.display()
         ));
     }
-    
+
     let content = fs::read_to_string(&config_file)
         .with_context(|| format!("Failed to read config file: {}", config_file.display()))?;
-    
+
     // Einfache JSON-Validierung ohne serde_json
     let trimmed = content.trim();
     if trimmed.starts_with('{') && trimmed.ends_with('}') {
         println!("✓ JSON-Syntax gültig (Basis-Check)");
         println!("✓ Config-Datei validiert");
     } else {
-        return Err(anyhow::anyhow!("JSON-Syntax-Fehler: Datei muss gültiges JSON sein"));
+        return Err(anyhow::anyhow!(
+            "JSON-Syntax-Fehler: Datei muss gültiges JSON sein"
+        ));
     }
-    
+
     Ok(())
 }
 
 fn config_show_command(file: Option<PathBuf>) -> AnyhowResult<()> {
     println!("📋 Zeige Config-Werte\n");
-    
+
     let config_file = file.unwrap_or_else(|| {
         std::env::current_dir()
             .unwrap_or_else(|_| PathBuf::from("."))
             .join("velin.config.json")
     });
-    
+
     if !config_file.exists() {
         return Err(anyhow::anyhow!(
             "Config-Datei nicht gefunden: {}",
             config_file.display()
         ));
     }
-    
+
     let content = fs::read_to_string(&config_file)
         .with_context(|| format!("Failed to read config file: {}", config_file.display()))?;
-    
+
     println!("{}", content);
     Ok(())
 }
@@ -1005,7 +1042,7 @@ fn cache_clear_command(pattern: Option<String>) -> AnyhowResult<()> {
     println!("⚠️  Cache-Management erfordert laufende Runtime");
     println!("   Verwende Health-Endpoint für Cache-Operationen");
     println!("\n   Beispiel: velin health --url http://localhost:8080/metrics");
-    
+
     if let Some(p) = pattern {
         println!("   Pattern: {}", p);
     }
@@ -1022,15 +1059,18 @@ fn cache_warm_command() -> AnyhowResult<()> {
 
 fn health_command(url: Option<String>, verbose: bool) -> AnyhowResult<()> {
     println!("🏥 Health Check\n");
-    
+
     let endpoint = url.unwrap_or_else(|| "http://localhost:8080/health".to_string());
-    
+
     println!("📡 Prüfe Endpoint: {}", endpoint);
     println!("⚠️  HTTP-Request erfordert zusätzliche Dependencies");
     println!("   In Production: Verwende curl oder ähnliches Tool");
-    
+
     if verbose {
-        println!("\n   Detaillierte Metriken: {}/metrics", endpoint.trim_end_matches("/health"));
+        println!(
+            "\n   Detaillierte Metriken: {}/metrics",
+            endpoint.trim_end_matches("/health")
+        );
     }
     Ok(())
 }

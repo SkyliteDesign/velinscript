@@ -1,0 +1,262 @@
+// ================================================
+// VelinScript Beispiel: Email-Validator
+// ================================================
+// Validiert E-Mail-Adressen und prüft deren Format
+// Zeigt Regex, String-Operationen und Validierung
+
+// -------- Datenstrukturen --------
+
+struct EmailValidationResult {
+    email: string,
+    isValid: boolean,
+    errors: List<string>,
+    warnings: List<string>,
+    suggestions: List<string>,
+}
+
+struct EmailComponents {
+    localPart: string,
+    domain: string,
+    topLevelDomain: string,
+}
+
+struct BulkValidationResult {
+    totalEmails: number,
+    validEmails: number,
+    invalidEmails: number,
+    results: List<EmailValidationResult>,
+}
+
+// -------- Hilfsfunktionen --------
+
+// Prüft grundlegendes E-Mail-Format mit Regex
+fn hasValidFormat(email: string): boolean {
+    // Einfache Regex für E-Mail-Format
+    let pattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+    return email.matches(pattern);
+}
+
+// Zerlegt E-Mail in Komponenten
+fn parseEmail(email: string): EmailComponents {
+    let parts = email.split("@");
+    
+    if (parts.length() != 2) {
+        throw ValidationError("Ungültiges E-Mail-Format");
+    }
+    
+    let localPart = parts[0];
+    let domainPart = parts[1];
+    let domainParts = domainPart.split(".");
+    
+    let tld = domainParts[domainParts.length() - 1];
+    
+    return EmailComponents {
+        localPart: localPart,
+        domain: domainPart,
+        topLevelDomain: tld,
+    };
+}
+
+// Prüft ob Domain-Teil gültig ist
+fn hasValidDomain(domain: string): boolean {
+    // Domain muss mindestens einen Punkt haben
+    if (!domain.contains(".")) {
+        return false;
+    }
+    
+    // Keine aufeinanderfolgenden Punkte
+    if (domain.contains("..")) {
+        return false;
+    }
+    
+    // Darf nicht mit Punkt beginnen oder enden
+    if (domain.startsWith(".") || domain.endsWith(".")) {
+        return false;
+    }
+    
+    return true;
+}
+
+// Prüft Local-Part (vor dem @)
+fn hasValidLocalPart(localPart: string): boolean {
+    // Darf nicht leer sein
+    if (localPart.length() == 0 || localPart.length() > 64) {
+        return false;
+    }
+    
+    // Darf nicht mit Punkt beginnen oder enden
+    if (localPart.startsWith(".") || localPart.endsWith(".")) {
+        return false;
+    }
+    
+    // Keine aufeinanderfolgenden Punkte
+    if (localPart.contains("..")) {
+        return false;
+    }
+    
+    return true;
+}
+
+// Prüft TLD (Top Level Domain)
+fn hasValidTLD(tld: string): boolean {
+    let validTLDs = ["com", "de", "org", "net", "edu", "gov", "io", "co", "uk", "eu"];
+    let tldLower = tld.toLowerCase();
+    
+    return validTLDs.contains(tldLower) || tld.length() >= 2;
+}
+
+// Generiert Vorschläge für häufige Tippfehler
+fn generateSuggestions(email: string): List<string> {
+    let suggestions: List<string> = [];
+    let lower = email.toLowerCase();
+    
+    // Häufige Tippfehler bei Domains
+    let commonDomains = [
+        ["gmial.com", "gmail.com"],
+        ["gmai.com", "gmail.com"],
+        ["yahooo.com", "yahoo.com"],
+        ["hotmial.com", "hotmail.com"],
+        ["outlok.com", "outlook.com"],
+    ];
+    
+    for (let pair in commonDomains) {
+        if (lower.contains(pair[0])) {
+            let suggestion = lower.replace(pair[0], pair[1]);
+            suggestions.push(suggestion);
+        }
+    }
+    
+    return suggestions;
+}
+
+// -------- API Endpoints --------
+
+// Validiert eine einzelne E-Mail-Adresse
+@POST("/api/email/validate")
+fn validateEmail(email: string): EmailValidationResult {
+    let errors: List<string> = [];
+    let warnings: List<string> = [];
+    let suggestions = generateSuggestions(email);
+    
+    // Trim Whitespace
+    let trimmedEmail = email.trim();
+    
+    // Grundlegende Format-Prüfung
+    if (!hasValidFormat(trimmedEmail)) {
+        errors.push("E-Mail entspricht nicht dem Standard-Format");
+        
+        return EmailValidationResult {
+            email: email,
+            isValid: false,
+            errors: errors,
+            warnings: warnings,
+            suggestions: suggestions,
+        };
+    }
+    
+    // Zerlege E-Mail
+    let components = parseEmail(trimmedEmail);
+    
+    // Prüfe Local-Part
+    if (!hasValidLocalPart(components.localPart)) {
+        errors.push("Ungültiger Local-Part (vor dem @-Zeichen)");
+    }
+    
+    // Prüfe Domain
+    if (!hasValidDomain(components.domain)) {
+        errors.push("Ungültige Domain");
+    }
+    
+    // Prüfe TLD
+    if (!hasValidTLD(components.topLevelDomain)) {
+        warnings.push("Ungewöhnliche Top-Level-Domain: {components.topLevelDomain}");
+    }
+    
+    // Längenprüfung
+    if (trimmedEmail.length() > 254) {
+        errors.push("E-Mail-Adresse zu lang (max. 254 Zeichen)");
+    }
+    
+    // Prüfe auf mehrere @ Zeichen
+    if (trimmedEmail.split("@").length() > 2) {
+        errors.push("E-Mail enthält mehrere @-Zeichen");
+    }
+    
+    return EmailValidationResult {
+        email: trimmedEmail,
+        isValid: errors.length() == 0,
+        errors: errors,
+        warnings: warnings,
+        suggestions: suggestions,
+    };
+}
+
+// Validiert mehrere E-Mails auf einmal
+@POST("/api/email/validate-bulk")
+fn validateBulkEmails(emails: List<string>): BulkValidationResult {
+    let results: List<EmailValidationResult> = [];
+    let validCount = 0;
+    let invalidCount = 0;
+    
+    for (let email in emails) {
+        let result = validateEmail(email);
+        results.push(result);
+        
+        if (result.isValid) {
+            validCount = validCount + 1;
+        } else {
+            invalidCount = invalidCount + 1;
+        }
+    }
+    
+    return BulkValidationResult {
+        totalEmails: emails.length(),
+        validEmails: validCount,
+        invalidEmails: invalidCount,
+        results: results,
+    };
+}
+
+// Extrahiert Domain aus E-Mail
+@GET("/api/email/extract-domain/:email")
+fn extractDomain(email: string): string {
+    let components = parseEmail(email);
+    return components.domain;
+}
+
+// Normalisiert E-Mail-Adresse (Kleinschreibung, Trim)
+@POST("/api/email/normalize")
+fn normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+}
+
+// Prüft ob E-Mail zu einer bestimmten Domain gehört
+@POST("/api/email/check-domain")
+fn checkEmailDomain(email: string, allowedDomains: List<string>): boolean {
+    let components = parseEmail(email);
+    let domain = components.domain.toLowerCase();
+    
+    for (let allowed in allowedDomains) {
+        if (domain == allowed.toLowerCase()) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Maskiert E-Mail für Datenschutz (z.B. j***@example.com)
+@POST("/api/email/mask")
+fn maskEmail(email: string): string {
+    let components = parseEmail(email);
+    let local = components.localPart;
+    
+    if (local.length() <= 2) {
+        return "***@{components.domain}";
+    }
+    
+    let firstChar = local.substring(0, 1);
+    let masked = firstChar + "***";
+    
+    return "{masked}@{components.domain}";
+}

@@ -25,19 +25,19 @@ impl HttpRequest {
             query_params: std::collections::HashMap::new(),
         }
     }
-    
+
     pub fn header(&mut self, key: String, value: String) {
         self.headers.insert(key, value);
     }
-    
+
     pub fn get_header(&self, key: &str) -> Option<&String> {
         self.headers.get(key)
     }
-    
+
     pub fn query_param(&mut self, key: String, value: String) {
         self.query_params.insert(key, value);
     }
-    
+
     pub fn get_query_param(&self, key: &str) -> Option<&String> {
         self.query_params.get(key)
     }
@@ -61,7 +61,7 @@ impl HttpResponse {
             body: Some(body),
         }
     }
-    
+
     pub fn created(body: String) -> Self {
         HttpResponse {
             status: 201,
@@ -69,7 +69,7 @@ impl HttpResponse {
             body: Some(body),
         }
     }
-    
+
     pub fn bad_request(message: String) -> Self {
         HttpResponse {
             status: 400,
@@ -77,7 +77,7 @@ impl HttpResponse {
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
     }
-    
+
     pub fn unauthorized(message: String) -> Self {
         HttpResponse {
             status: 401,
@@ -85,7 +85,7 @@ impl HttpResponse {
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
     }
-    
+
     pub fn forbidden(message: String) -> Self {
         HttpResponse {
             status: 403,
@@ -93,7 +93,7 @@ impl HttpResponse {
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
     }
-    
+
     pub fn not_found(message: String) -> Self {
         HttpResponse {
             status: 404,
@@ -101,7 +101,7 @@ impl HttpResponse {
             body: Some(format!("{{\"error\": \"{}\"}}", message)),
         }
     }
-    
+
     pub fn internal_server_error(message: String) -> Self {
         HttpResponse {
             status: 500,
@@ -147,9 +147,10 @@ pub fn internal_server_error(message: &str) -> impl axum::response::IntoResponse
         "error": message
     }))).into_response()
 }
-"#.to_string()
+"#
+        .to_string()
     }
-    
+
     /// Generiert Rust-Code für HTTP Error-Responses (Actix)
     pub fn generate_actix_error_helpers() -> String {
         r#"
@@ -182,7 +183,78 @@ pub fn internal_server_error(message: &str) -> actix_web::HttpResponse {
         "error": message
     }))
 }
-"#.to_string()
+"#
+        .to_string()
+    }
+}
+
+pub struct HttpStdlib;
+
+impl HttpStdlib {
+    pub fn generate_get_code(url: &str) -> String {
+        format!(
+            "{{
+                reqwest::Client::new()
+                    .get({})
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .json::<serde_json::Value>()
+                    .await
+                    .map_err(|e| e.to_string())
+            }}",
+            url
+        )
+    }
+
+    pub fn generate_post_code(url: &str, body: &str) -> String {
+        format!(
+            "{{
+                reqwest::Client::new()
+                    .post({})
+                    .json(&{})
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .json::<serde_json::Value>()
+                    .await
+                    .map_err(|e| e.to_string())
+            }}",
+            url, body
+        )
+    }
+
+    pub fn generate_put_code(url: &str, body: &str) -> String {
+        format!(
+            "{{
+                reqwest::Client::new()
+                    .put({})
+                    .json(&{})
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .json::<serde_json::Value>()
+                    .await
+                    .map_err(|e| e.to_string())
+            }}",
+            url, body
+        )
+    }
+
+    pub fn generate_delete_code(url: &str) -> String {
+        format!(
+            "{{
+                reqwest::Client::new()
+                    .delete({})
+                    .send()
+                    .await
+                    .map_err(|e| e.to_string())?
+                    .json::<serde_json::Value>()
+                    .await
+                    .map_err(|e| e.to_string())
+            }}",
+            url
+        )
     }
 }
 

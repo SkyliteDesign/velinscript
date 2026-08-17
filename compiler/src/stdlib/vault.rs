@@ -11,7 +11,8 @@ impl VaultStdlib {
         let token_line = if let Some(token) = vault_token {
             format!(r#"    let token = "{}";"#, token)
         } else {
-            r#"    let token = std::env::var("VAULT_TOKEN").expect("VAULT_TOKEN must be set");"#.to_string()
+            r#"    let token = std::env::var("VAULT_TOKEN").expect("VAULT_TOKEN must be set");"#
+                .to_string()
         };
 
         format!(
@@ -77,7 +78,8 @@ pub async fn get_database_credentials(
     let username = get_secret(client, &format!("secret/data/{}", db_name), "username").await?;
     let password = get_secret(client, &format!("secret/data/{}", db_name), "password").await?;
     Ok((username, password))
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Certificate Retrieval
@@ -113,7 +115,8 @@ pub async fn rotate_certificate(
         .await?;
     
     Ok((new_cert.certificate, new_cert.private_key))
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Dynamic Secrets Support
@@ -141,7 +144,8 @@ pub async fn renew_dynamic_secret(
         .await?;
     
     Ok(())
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Vault Health Check
@@ -173,7 +177,8 @@ pub async fn wait_for_vault(
     Err(vaultrs::error::ClientError::Other(
         "Vault not available after retries".to_string()
     ))
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert Vault Config Injection
@@ -211,7 +216,8 @@ impl VaultSecret {
     pub async fn load(client: &VaultClient) -> Result<String, vaultrs::error::ClientError> {
         get_secret(client, &self.path, &self.key).await
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Prüft ob ein Decorator ein Vault-Decorator ist

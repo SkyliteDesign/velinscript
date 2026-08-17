@@ -1,0 +1,173 @@
+// ================================================
+// VelinScript Beispiel: Wetter API Client
+// ================================================
+// Zeigt, wie man externe APIs aufruft und
+// Wetterdaten verarbeitet
+
+// -------- Datenstrukturen --------
+
+struct WeatherData {
+    city: string,
+    temperature: number,
+    feelsLike: number,
+    humidity: number,
+    description: string,
+    windSpeed: number,
+    timestamp: string,
+}
+
+struct ForecastDay {
+    date: string,
+    tempMin: number,
+    tempMax: number,
+    description: string,
+    rainChance: number,
+}
+
+struct WeatherResponse {
+    current: WeatherData,
+    forecast: List<ForecastDay>,
+}
+
+// -------- Hilfsfunktionen --------
+
+// Konvertiert Kelvin zu Celsius
+fn kelvinToCelsius(kelvin: number): number {
+    return kelvin - 273.15;
+}
+
+// Formatiert Temperatur als String
+fn formatTemperature(temp: number): string {
+    return "{temp.round(1)}°C";
+}
+
+// Bestimmt Wetter-Emoji basierend auf Beschreibung
+fn getWeatherEmoji(description: string): string {
+    if (description.contains("sunny") || description.contains("clear")) {
+        return "☀️";
+    } else if (description.contains("cloud")) {
+        return "☁️";
+    } else if (description.contains("rain")) {
+        return "🌧️";
+    } else if (description.contains("snow")) {
+        return "❄️";
+    } else if (description.contains("thunder")) {
+        return "⚡";
+    } else {
+        return "🌤️";
+    }
+}
+
+// Erstellt eine lesbare Wettervorhersage
+fn formatWeatherReport(weather: WeatherData): string {
+    let emoji = getWeatherEmoji(weather.description);
+    return "
+        {emoji} Wetter in {weather.city}
+        🌡️  Temperatur: {formatTemperature(weather.temperature)}
+        🤚 Gefühlt wie: {formatTemperature(weather.feelsLike)}
+        💧 Luftfeuchtigkeit: {weather.humidity}%
+        💨 Windgeschwindigkeit: {weather.windSpeed} km/h
+        📝 Beschreibung: {weather.description}
+    ";
+}
+
+// -------- API Endpoints --------
+
+// Ruft aktuelles Wetter für eine Stadt ab
+@GET("/api/weather/:city")
+fn getCurrentWeather(city: string): WeatherData {
+    // Externe API aufrufen (Beispiel mit OpenWeatherMap)
+    let apiKey = env("WEATHER_API_KEY");
+    let url = "https://api.openweathermap.org/data/2.5/weather?q={city}&appid={apiKey}";
+    
+    let response = http.get(url);
+    
+    if (response.status != 200) {
+        throw APIError("Wetter für {city} konnte nicht abgerufen werden");
+    }
+    
+    let data = response.json();
+    
+    return WeatherData {
+        city: data.name,
+        temperature: kelvinToCelsius(data.main.temp),
+        feelsLike: kelvinToCelsius(data.main.feels_like),
+        humidity: data.main.humidity,
+        description: data.weather[0].description,
+        windSpeed: data.wind.speed * 3.6, // m/s zu km/h
+        timestamp: now().format("YYYY-MM-DD HH:mm:ss"),
+    };
+}
+
+// Ruft 5-Tages-Wettervorhersage ab
+@GET("/api/weather/:city/forecast")
+fn getWeatherForecast(city: string): List<ForecastDay> {
+    let apiKey = env("WEATHER_API_KEY");
+    let url = "https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={apiKey}";
+    
+    let response = http.get(url);
+    
+    if (response.status != 200) {
+        throw APIError("Vorhersage für {city} konnte nicht abgerufen werden");
+    }
+    
+    let data = response.json();
+    let forecast: List<ForecastDay> = [];
+    
+    // Gruppiere nach Tagen und nimm Durchschnittswerte
+    for (let item in data.list) {
+        let forecastDay = ForecastDay {
+            date: item.dt_txt.substring(0, 10),
+            tempMin: kelvinToCelsius(item.main.temp_min),
+            tempMax: kelvinToCelsius(item.main.temp_max),
+            description: item.weather[0].description,
+            rainChance: item.pop * 100, // probability of precipitation
+        };
+        forecast.push(forecastDay);
+    }
+    
+    return forecast;
+}
+
+// Kombinierte Wetter- und Vorhersage-Ansicht
+@GET("/api/weather/:city/complete")
+fn getCompleteWeather(city: string): WeatherResponse {
+    let current = getCurrentWeather(city);
+    let forecast = getWeatherForecast(city);
+    
+    return WeatherResponse {
+        current: current,
+        forecast: forecast,
+    };
+}
+
+// Formatierte Wetterausgabe für Menschen
+@GET("/api/weather/:city/formatted")
+fn getFormattedWeather(city: string): string {
+    let weather = getCurrentWeather(city);
+    return formatWeatherReport(weather);
+}
+
+// Vergleicht Wetter zwischen zwei Städten
+@GET("/api/weather/compare/:city1/:city2")
+fn compareWeather(city1: string, city2: string): string {
+    let weather1 = getCurrentWeather(city1);
+    let weather2 = getCurrentWeather(city2);
+    
+    let tempDiff = weather1.temperature - weather2.temperature;
+    let warmer = if (tempDiff > 0) { city1 } else { city2 };
+    
+    return "
+        Wettervergleich:
+        
+        {formatWeatherReport(weather1)}
+        
+        ---
+        
+        {formatWeatherReport(weather2)}
+        
+        ---
+        
+        🏆 {warmer} ist aktuell wärmer (Unterschied: {tempDiff.abs().round(1)}°C)
+    ";
+}

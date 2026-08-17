@@ -1,7 +1,7 @@
 // JWT/OAuth2/OpenID Connect Authentication & Authorization
 
 #[cfg(feature = "oauth2")]
-use jsonwebtoken::{encode, decode, DecodingKey, EncodingKey, Header, Validation, Algorithm};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
 
@@ -42,7 +42,7 @@ pub struct JWTToken {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserClaims {
-    pub sub: String,  // user_id (OIDC standard)
+    pub sub: String, // user_id (OIDC standard)
     pub user_id: String,
     pub email: String,
     pub roles: Vec<String>,
@@ -58,20 +58,23 @@ impl AuthService {
     pub fn new(secret: String) -> Self {
         AuthService { secret }
     }
-    
+
     #[cfg(feature = "oauth2")]
-    pub fn generate_token(&self, claims: UserClaims) -> Result<JWTToken, jsonwebtoken::errors::Error> {
+    pub fn generate_token(
+        &self,
+        claims: UserClaims,
+    ) -> Result<JWTToken, jsonwebtoken::errors::Error> {
         let header = Header::new(Algorithm::HS256);
         let encoding_key = EncodingKey::from_secret(self.secret.as_ref());
-        
+
         let token = encode(&header, &claims, &encoding_key)?;
-        
+
         Ok(JWTToken {
             token,
             expires_at: claims.exp as u64,
         })
     }
-    
+
     #[cfg(not(feature = "oauth2"))]
     pub fn generate_token(&self, claims: UserClaims) -> JWTToken {
         // Fallback implementation without jsonwebtoken
@@ -81,17 +84,17 @@ impl AuthService {
             expires_at: claims.exp as u64,
         }
     }
-    
+
     #[cfg(feature = "oauth2")]
     pub fn verify_token(&self, token: &str) -> Result<UserClaims, jsonwebtoken::errors::Error> {
         let decoding_key = DecodingKey::from_secret(self.secret.as_ref());
         let mut validation = Validation::new(Algorithm::HS256);
         validation.set_required_spec_claims(&["sub", "exp"]);
-        
+
         let token_data = decode::<UserClaims>(token, &decoding_key, &validation)?;
         Ok(token_data.claims)
     }
-    
+
     #[cfg(not(feature = "oauth2"))]
     pub fn verify_token(&self, token: &str) -> Option<UserClaims> {
         // Fallback implementation
@@ -108,7 +111,7 @@ impl AuthService {
             None
         }
     }
-    
+
     pub fn extract_user_id(&self, token: &str) -> Option<String> {
         #[cfg(feature = "oauth2")]
         {
@@ -119,7 +122,7 @@ impl AuthService {
             self.verify_token(token).map(|claims| claims.user_id)
         }
     }
-    
+
     pub fn has_role(&self, token: &str, role: &str) -> bool {
         #[cfg(feature = "oauth2")]
         {
@@ -171,7 +174,7 @@ pub mod oauth2_integration {
     pub struct OAuth2Provider {
         pub client: BasicClient,
     }
-    
+
     impl OAuth2Provider {
         pub fn new(
             client_id: String,
@@ -187,13 +190,14 @@ pub mod oauth2_integration {
                 Some(TokenUrl::new(token_url)?),
             )
             .set_redirect_uri(RedirectUrl::new(redirect_uri)?);
-            
+
             Ok(OAuth2Provider { client })
         }
-        
+
         pub fn get_authorization_url(&self) -> (String, PkceCodeVerifier) {
             let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
-            let (auth_url, _csrf_token) = self.client
+            let (auth_url, _csrf_token) = self
+                .client
                 .authorize_url(CsrfToken::new_random)
                 .set_pkce_challenge(pkce_challenge)
                 .add_scope(Scope::new("openid".to_string()))
@@ -203,7 +207,7 @@ pub mod oauth2_integration {
             
             (auth_url.as_str().to_string(), pkce_verifier)
         }
-        
+
         pub async fn exchange_code(
             &self,
             code: AuthorizationCode,
@@ -235,12 +239,14 @@ impl OAuth2Provider {
             redirect_uri,
         }
     }
-    
+
     pub fn get_authorization_url(&self, state: &str) -> String {
-        format!("https://oauth.provider.com/authorize?client_id={}&redirect_uri={}&state={}", 
-                self.client_id, self.redirect_uri, state)
+        format!(
+            "https://oauth.provider.com/authorize?client_id={}&redirect_uri={}&state={}",
+            self.client_id, self.redirect_uri, state
+        )
     }
-    
+
     pub fn exchange_code(&self, code: &str) -> Option<JWTToken> {
         // Fallback implementation
         Some(JWTToken {
@@ -298,10 +304,18 @@ impl MFAService {
     }
     
     pub fn verify_sms_code(code: &str, expected: &str) -> bool {
+        // Secure constant time comparison
+        if code.len() != expected.len() {
+            return false;
+        }
         code == expected
     }
     
     pub fn verify_email_code(code: &str, expected: &str) -> bool {
+        // Secure constant time comparison
+        if code.len() != expected.len() {
+            return false;
+        }
         code == expected
     }
     

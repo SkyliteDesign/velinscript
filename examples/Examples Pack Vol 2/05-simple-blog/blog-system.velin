@@ -1,0 +1,348 @@
+// ================================================
+// VelinScript Beispiel: Einfacher Blog
+// ================================================
+// Ein minimalistisches Blog-System mit Posts,
+// Kommentaren und Tags
+
+// -------- Datenstrukturen --------
+
+struct BlogPost {
+    id: string,
+    title: string,
+    content: string,
+    author: string,
+    tags: List<string>,
+    createdAt: string,
+    updatedAt: string,
+    published: boolean,
+    viewCount: number,
+}
+
+struct Comment {
+    id: string,
+    postId: string,
+    author: string,
+    content: string,
+    createdAt: string,
+}
+
+struct CreatePostRequest {
+    title: string,
+    content: string,
+    author: string,
+    tags: List<string>,
+}
+
+struct UpdatePostRequest {
+    title: string,
+    content: string,
+    tags: List<string>,
+}
+
+struct PostSummary {
+    id: string,
+    title: string,
+    author: string,
+    excerpt: string,
+    tags: List<string>,
+    commentCount: number,
+    viewCount: number,
+    createdAt: string,
+}
+
+// -------- Hilfsfunktionen --------
+
+// Erstellt einen Textauszug
+fn createExcerpt(content: string, maxLength: number): string {
+    if (content.length() <= maxLength) {
+        return content;
+    }
+    
+    let excerpt = content.substring(0, maxLength);
+    let lastSpace = excerpt.lastIndexOf(" ");
+    
+    if (lastSpace > 0) {
+        excerpt = excerpt.substring(0, lastSpace);
+    }
+    
+    return excerpt + "...";
+}
+
+// Zählt Kommentare für einen Post
+fn countComments(postId: string): number {
+    return db.query(Comment)
+        .where("postId", "=", postId)
+        .count();
+}
+
+// Konvertiert Post zu Summary
+fn toSummary(post: BlogPost): PostSummary {
+    return PostSummary {
+        id: post.id,
+        title: post.title,
+        author: post.author,
+        excerpt: createExcerpt(post.content, 200),
+        tags: post.tags,
+        commentCount: countComments(post.id),
+        viewCount: post.viewCount,
+        createdAt: post.createdAt,
+    };
+}
+
+// -------- Blog Post Endpoints --------
+
+// Listet alle veröffentlichten Posts auf (mit Pagination)
+@GET("/api/blog/posts")
+fn getAllPosts(page: number, pageSize: number): List<PostSummary> {
+    let offset = page * pageSize;
+    
+    let posts = db.query(BlogPost)
+        .where("published", "=", true)
+        .orderBy("createdAt", "DESC")
+        .limit(pageSize)
+        .offset(offset)
+        .all();
+    
+    let summaries: List<PostSummary> = [];
+    for (let post in posts) {
+        summaries.push(toSummary(post));
+    }
+    
+    return summaries;
+}
+
+// Zeigt einen einzelnen Post an
+@GET("/api/blog/posts/:id")
+fn getPost(id: string): BlogPost {
+    let post = db.find(BlogPost, id);
+    
+    if (post == null) {
+        throw NotFoundError("Post mit ID {id} nicht gefunden");
+    }
+    
+    // Erhöhe View-Count
+    post.viewCount = post.viewCount + 1;
+    db.update(post);
+    
+    return post;
+}
+
+// Erstellt einen neuen Blog-Post
+@POST("/api/blog/posts")
+@Auth
+fn createPost(request: CreatePostRequest): BlogPost {
+    let now = getCurrentTimestamp();
+    
+    let post = BlogPost {
+        id: generateId(),
+        title: request.title,
+        content: request.content,
+        author: request.author,
+        tags: request.tags,
+        createdAt: now,
+        updatedAt: now,
+        published: false, // Standardmäßig als Entwurf
+        viewCount: 0,
+    };
+    
+    db.save(post);
+    return post;
+}
+
+// Aktualisiert einen Post
+@PUT("/api/blog/posts/:id")
+@Auth
+fn updatePost(id: string, request: UpdatePostRequest): BlogPost {
+    let post = db.find(BlogPost, id);
+    
+    if (post == null) {
+        throw NotFoundError("Post mit ID {id} nicht gefunden");
+    }
+    
+    post.title = request.title;
+    post.content = request.content;
+    post.tags = request.tags;
+    post.updatedAt = getCurrentTimestamp();
+    
+    db.update(post);
+    return post;
+}
+
+// Veröffentlicht einen Post
+@PATCH("/api/blog/posts/:id/publish")
+@Auth
+fn publishPost(id: string): BlogPost {
+    let post = db.find(BlogPost, id);
+    
+    if (post == null) {
+        throw NotFoundError("Post mit ID {id} nicht gefunden");
+    }
+    
+    post.published = true;
+    post.updatedAt = getCurrentTimestamp();
+    
+    db.update(post);
+    return post;
+}
+
+// Löscht einen Post
+@DELETE("/api/blog/posts/:id")
+@Auth
+fn deletePost(id: string): void {
+    let post = db.find(BlogPost, id);
+    
+    if (post == null) {
+        throw NotFoundError("Post mit ID {id} nicht gefunden");
+    }
+    
+    // Lösche auch alle Kommentare
+    let comments = db.query(Comment)
+        .where("postId", "=", id)
+        .all();
+    
+    for (let comment in comments) {
+        db.delete(comment);
+    }
+    
+    db.delete(post);
+}
+
+// -------- Kommentar Endpoints --------
+
+// Zeigt Kommentare für einen Post
+@GET("/api/blog/posts/:postId/comments")
+fn getComments(postId: string): List<Comment> {
+    return db.query(Comment)
+        .where("postId", "=", postId)
+        .orderBy("createdAt", "ASC")
+        .all();
+}
+
+// Fügt einen Kommentar hinzu
+@POST("/api/blog/posts/:postId/comments")
+fn addComment(postId: string, author: string, content: string): Comment {
+    // Prüfe ob Post existiert
+    let post = db.find(BlogPost, postId);
+    if (post == null) {
+        throw NotFoundError("Post mit ID {postId} nicht gefunden");
+    }
+    
+    let comment = Comment {
+        id: generateId(),
+        postId: postId,
+        author: author,
+        content: content,
+        createdAt: getCurrentTimestamp(),
+    };
+    
+    db.save(comment);
+    return comment;
+}
+
+// Löscht einen Kommentar
+@DELETE("/api/blog/comments/:id")
+@Auth
+fn deleteComment(id: string): void {
+    let comment = db.find(Comment, id);
+    if (comment == null) {
+        throw NotFoundError("Kommentar mit ID {id} nicht gefunden");
+    }
+    
+    db.delete(comment);
+}
+
+// -------- Such- und Filter-Endpoints --------
+
+// Sucht Posts nach Tag
+@GET("/api/blog/posts/by-tag/:tag")
+fn getPostsByTag(tag: string): List<PostSummary> {
+    let posts = db.query(BlogPost)
+        .where("published", "=", true)
+        .all();
+    
+    let filtered: List<BlogPost> = [];
+    
+    for (let post in posts) {
+        if (post.tags.contains(tag)) {
+            filtered.push(post);
+        }
+    }
+    
+    let summaries: List<PostSummary> = [];
+    for (let post in filtered) {
+        summaries.push(toSummary(post));
+    }
+    
+    return summaries;
+}
+
+// Sucht Posts nach Autor
+@GET("/api/blog/posts/by-author/:author")
+fn getPostsByAuthor(author: string): List<PostSummary> {
+    let posts = db.query(BlogPost)
+        .where("author", "=", author)
+        .where("published", "=", true)
+        .orderBy("createdAt", "DESC")
+        .all();
+    
+    let summaries: List<PostSummary> = [];
+    for (let post in posts) {
+        summaries.push(toSummary(post));
+    }
+    
+    return summaries;
+}
+
+// Volltextsuche in Posts
+@GET("/api/blog/search")
+fn searchPosts(query: string): List<PostSummary> {
+    let posts = db.query(BlogPost)
+        .where("published", "=", true)
+        .all();
+    
+    let results: List<BlogPost> = [];
+    let lowerQuery = query.toLowerCase();
+    
+    for (let post in posts) {
+        let titleMatch = post.title.toLowerCase().contains(lowerQuery);
+        let contentMatch = post.content.toLowerCase().contains(lowerQuery);
+        
+        if (titleMatch || contentMatch) {
+            results.push(post);
+        }
+    }
+    
+    let summaries: List<PostSummary> = [];
+    for (let post in results) {
+        summaries.push(toSummary(post));
+    }
+    
+    return summaries;
+}
+
+// Zeigt beliebteste Posts (nach Views)
+@GET("/api/blog/posts/popular")
+fn getPopularPosts(limit: number): List<PostSummary> {
+    let posts = db.query(BlogPost)
+        .where("published", "=", true)
+        .orderBy("viewCount", "DESC")
+        .limit(limit)
+        .all();
+    
+    let summaries: List<PostSummary> = [];
+    for (let post in posts) {
+        summaries.push(toSummary(post));
+    }
+    
+    return summaries;
+}
+
+// Generiert ID
+fn generateId(): string {
+    return uuid();
+}
+
+// Aktueller Timestamp
+fn getCurrentTimestamp(): string {
+    return now().format("YYYY-MM-DD HH:mm:ss");
+}

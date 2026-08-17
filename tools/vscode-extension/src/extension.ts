@@ -133,6 +133,9 @@ export function activate(context: vscode.ExtensionContext) {
 				framework,
 			});
 
+			const config = vscode.workspace.getConfiguration('velin');
+			const target = config.get<string>('compiler.target', 'rust');
+
 			const terminal = vscode.window.createTerminal('VelinScript Compiler');
 			terminal.sendText(cmd);
 			terminal.show();

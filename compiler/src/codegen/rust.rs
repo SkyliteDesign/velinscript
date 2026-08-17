@@ -1,4 +1,3 @@
-use crate::parser::ast::*;
 use crate::codegen::framework::{Framework, FrameworkSelector};
 use crate::compiler::language::VELISCH_FINGERPRINT;
 use crate::codegen::traits::{CodeGenerator, CodegenConfig, TargetLanguage};
@@ -8,6 +7,8 @@ use crate::stdlib::seaorm::SeaORMStdlib;
 use crate::stdlib::oauth2::OAuth2Stdlib;
 #[cfg(feature = "privacy")]
 use crate::stdlib::privacy::PrivacyStdlib;
+#[cfg(feature = "sea-orm")]
+use crate::stdlib::seaorm::SeaORMStdlib;
 
 pub struct RustCodeGenerator {
     output: String,
@@ -58,7 +59,7 @@ impl RustCodeGenerator {
         self.framework = framework;
         let framework_imports = FrameworkSelector::generate_imports(framework);
         self.writeln(&framework_imports);
-        
+
         // Check for validation usage
         self.has_validation = self.has_validation_decorators(program);
         if self.has_validation {
@@ -68,7 +69,7 @@ impl RustCodeGenerator {
             self.writeln(&validator_code);
             self.writeln("");
         }
-        
+
         // Add necessary imports
         // self.writeln("use serde::{Serialize, Deserialize};"); // Included in framework imports
         self.writeln("use serde_json::Value as Any;");
@@ -107,7 +108,8 @@ where
         }
         
         // Check ORM
-        let use_seaorm = config_orm.map(|s| s == "seaorm").unwrap_or(false) || self.has_seaorm_usage(program);
+        let use_seaorm =
+            config_orm.map(|s| s == "seaorm").unwrap_or(false) || self.has_seaorm_usage(program);
         self.use_seaorm = use_seaorm;
         if self.use_seaorm {
             #[cfg(feature = "sea-orm")]
@@ -117,7 +119,7 @@ where
             }
         }
         self.writeln("");
-        
+
         // Check OAuth2/OIDC
         let has_oauth2 = self.has_oauth2_decorators(program);
         if has_oauth2 {
@@ -167,7 +169,7 @@ where
             }
         }
         self.writeln("");
-        
+
         // Check if security decorators are used
         let has_security = self.has_security_decorators(program);
         if has_security {
@@ -214,7 +216,7 @@ where
         
         self.output.clone()
     }
-    
+
     fn has_security_decorators(&self, program: &Program) -> bool {
         for item in &program.items {
             if let Item::Function(f) = item {
@@ -227,7 +229,7 @@ where
         }
         false
     }
-    
+
     fn has_oauth2_decorators(&self, program: &Program) -> bool {
         for item in &program.items {
             if let Item::Function(f) = item {
@@ -241,7 +243,7 @@ where
         }
         false
     }
-    
+
     fn has_privacy_decorators(&self, program: &Program) -> bool {
         for item in &program.items {
             match item {
@@ -269,18 +271,21 @@ where
         }
         false
     }
-    
+
     fn has_seaorm_usage(&self, _program: &Program) -> bool {
         // Check if db.* calls are used (would use SeaORM)
         // This is a simple check - in production, do more sophisticated analysis
         false
     }
-    
+
     fn has_validation_decorators(&self, program: &Program) -> bool {
         for item in &program.items {
             if let Item::Function(f) = item {
                 for decorator in &f.decorators {
-                    if matches!(decorator.name.as_str(), "Validate" | "@Validate" | "Validation" | "@Validation") {
+                    if matches!(
+                        decorator.name.as_str(),
+                        "Validate" | "@Validate" | "Validation" | "@Validation"
+                    ) {
                         return true;
                     }
                 }
@@ -564,18 +569,18 @@ where
             }
         }
     }
-    
+
     fn generate_function(&mut self, function: &Function, framework: &Framework, _use_seaorm: bool) {
         // Generate decorators as Rust attributes
         for decorator in &function.decorators {
             self.generate_decorator(decorator);
         }
-        
+
         // Generate function signature
         if function.visibility == Visibility::Public {
             self.write("pub ");
         }
-        
+
         if function.is_const {
             self.write("const ");
         }
@@ -591,7 +596,7 @@ where
             self.writeln("#[tracing::instrument]");
             self.write("async ");
         }
-        
+
         self.write("fn ");
         self.write(&self.to_snake_case(&function.name));
         
@@ -631,7 +636,7 @@ where
         }
         
         self.write("(");
-        
+
         // Generate parameters
         let route_info = self.is_route_handler(&function.decorators);
         
@@ -665,9 +670,9 @@ where
                 self.generate_type(&param.param_type);
             }
         }
-        
+
         self.write(")");
-        
+
         // Generate return type
         if let Some(ref return_type) = function.return_type {
             self.write(" -> ");
@@ -689,7 +694,7 @@ where
                 self.generate_type(return_type);
             }
         }
-        
+
         self.writeln(" {");
         self.indent();
 
@@ -711,7 +716,7 @@ where
         if self.has_validation {
             self.generate_validation_code(function, framework);
         }
-        
+
         // Generate function body
         self.generate_block(&function.body);
         
@@ -740,7 +745,7 @@ where
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_decorator(&mut self, decorator: &Decorator) {
         match decorator.name.as_str() {
             "GET" | "POST" | "PUT" | "DELETE" | "PATCH" => {
@@ -757,9 +762,14 @@ where
             "Role" => {
                 if let Some(arg) = decorator.args.first() {
                     if let DecoratorArg::String(role) = arg {
-                        self.writeln(&format!("#[actix_web::web::middleware(RoleMiddleware::new(\"{}\"))]", role));
+                        self.writeln(&format!(
+                            "#[actix_web::web::middleware(RoleMiddleware::new(\"{}\"))]",
+                            role
+                        ));
                     } else {
-                        self.writeln("#[actix_web::web::middleware(RoleMiddleware::new(\"user\"))]");
+                        self.writeln(
+                            "#[actix_web::web::middleware(RoleMiddleware::new(\"user\"))]",
+                        );
                     }
                 } else {
                     self.writeln("#[actix_web::web::middleware(RoleMiddleware::new(\"user\"))]");
@@ -877,14 +887,18 @@ where
                     args.push(self.decorator_arg_to_string(arg));
                 }
                 if !args.is_empty() {
-                    self.writeln(&format!("#[{}({})]", decorator.name.to_lowercase(), args.join(", ")));
+                    self.writeln(&format!(
+                        "#[{}({})]",
+                        decorator.name.to_lowercase(),
+                        args.join(", ")
+                    ));
                 } else {
                     self.writeln(&format!("#[{}]", decorator.name.to_lowercase()));
                 }
             }
         }
     }
-    
+
     fn decorator_arg_to_string(&self, arg: &DecoratorArg) -> String {
         match arg {
             DecoratorArg::String(s) => format!("\"{}\"", s),
@@ -896,12 +910,12 @@ where
             }
         }
     }
-    
+
     fn generate_struct(&mut self, struct_def: &Struct, _use_seaorm: bool) {
         // Prüfe auf @Derive oder @AutoDerive Decorators
         let mut has_auto_derive = false;
         let mut custom_derives = Vec::new();
-        
+
         for decorator in &struct_def.decorators {
             if decorator.name == "AutoDerive" {
                 has_auto_derive = true;
@@ -914,14 +928,15 @@ where
                 }
             }
         }
-        
+
         // Generate struct with derives
         if has_auto_derive {
             // Alle sinnvollen Derives
             self.writeln("#[derive(Debug, Clone, Serialize, Deserialize, validator::Validate, derive_more::Add, derive_more::Display, derive_more::From, derive_more::Into, derive_more::Deref)]");
         } else if !custom_derives.is_empty() {
             // Nur angegebene Derives
-            let derive_list = custom_derives.iter()
+            let derive_list = custom_derives
+                .iter()
                 .map(|d| format!("derive_more::{}", d))
                 .collect::<Vec<_>>()
                 .join(", ");
@@ -930,7 +945,7 @@ where
             // Standard Derives
             self.writeln("#[derive(Debug, Clone, Serialize, Deserialize, validator::Validate)]");
         }
-        
+
         if struct_def.visibility == Visibility::Public {
             self.write("pub ");
         }
@@ -946,14 +961,14 @@ where
 
         self.writeln(" {");
         self.indent();
-        
+
         for field in &struct_def.fields {
             if field.visibility == Visibility::Public {
                 self.write("    pub ");
             } else {
                 self.write("    ");
             }
-            
+
             // Prüfe auf Privacy Decorator
             let is_privacy = self.is_privacy_field(field);
             if is_privacy {
@@ -962,25 +977,25 @@ where
                     self.write("PrivacyWrapper<");
                 }
             }
-            
+
             self.write(&self.to_snake_case(&field.name));
             self.write(": ");
             self.generate_type(&field.field_type);
-            
+
             if is_privacy {
                 #[cfg(feature = "privacy")]
                 {
                     self.write(">");
                 }
             }
-            
+
             self.writeln(",");
         }
-        
+
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_enum(&mut self, enum_def: &Enum) {
         self.writeln("#[derive(Debug, Clone, Serialize, Deserialize)]");
         if enum_def.visibility == Visibility::Public {
@@ -990,13 +1005,13 @@ where
         self.write(&self.to_pascal_case(&enum_def.name));
         self.writeln(" {");
         self.indent();
-        
+
         for (i, variant) in enum_def.variants.iter().enumerate() {
             if i > 0 {
                 self.writeln(",");
             }
             self.write(&self.to_pascal_case(&variant.name));
-            
+
             if let Some(ref types) = variant.data {
                 if types.len() == 1 {
                     self.write("(");
@@ -1014,7 +1029,7 @@ where
                 }
             }
         }
-        
+
         self.writeln("");
         self.unindent();
         self.writeln("}");
@@ -1145,7 +1160,7 @@ where
         self.generate_type(&type_alias.aliased_type);
         self.writeln(";");
     }
-    
+
     fn generate_module(&mut self, module: &Module) {
         if module.visibility == Visibility::Public {
             self.write("pub ");
@@ -1154,17 +1169,17 @@ where
         self.write(&self.to_snake_case(&module.name));
         self.writeln(" {");
         self.indent();
-        
+
         let framework = self.framework.clone();
         let use_seaorm = self.use_seaorm;
         for item in &module.items {
             self.generate_item(item, &framework, use_seaorm);
         }
-        
+
         self.unindent();
         self.writeln("}");
     }
-    
+
     fn generate_type(&mut self, type_def: &Type) {
         match type_def {
             Type::String => self.write("String"),
@@ -1265,7 +1280,7 @@ where
             }
         }
     }
-    
+
     fn generate_block(&mut self, block: &Block) {
         // Check if we are inside a Pipeline function
         // Note: For full pipeline support, we should pass down context. 
@@ -1294,19 +1309,19 @@ where
             self.generate_statement(statement);
         }
     }
-    
+
     fn generate_statement(&mut self, statement: &Statement) {
         match statement {
             Statement::Let(let_stmt) => {
                 // Always make variables mutable to support VelinScript semantics where let is mutable
                 self.write("let mut ");
                 self.write(&self.to_snake_case(&let_stmt.name));
-                
+
                 if let Some(ref var_type) = let_stmt.var_type {
                     self.write(": ");
                     self.generate_type(var_type);
                 }
-                
+
                 self.write(" = ");
                 self.generate_expression(&let_stmt.value);
                 self.writeln(";");
@@ -1330,14 +1345,14 @@ where
                 self.indent();
                 self.generate_block(&if_stmt.then_block);
                 self.unindent();
-                
+
                 if let Some(ref else_block) = if_stmt.else_block {
                     self.writeln("} else {");
                     self.indent();
                     self.generate_block(else_block);
                     self.unindent();
                 }
-                
+
                 self.writeln("}");
             }
             Statement::For(for_stmt) => {
@@ -1365,7 +1380,7 @@ where
                 self.generate_expression(&match_stmt.expression);
                 self.writeln(" {");
                 self.indent();
-                
+
                 for arm in &match_stmt.arms {
                     self.generate_pattern(&arm.pattern);
                     
@@ -1379,7 +1394,7 @@ where
                     self.generate_block(&arm.body);
                     self.writeln(",");
                 }
-                
+
                 self.unindent();
                 self.writeln("}");
             }
@@ -1397,7 +1412,7 @@ where
             }
         }
     }
-    
+
     fn generate_expression(&mut self, expr: &Expression) {
         match expr {
             Expression::Literal(lit) => {
@@ -1407,11 +1422,22 @@ where
                 self.write(&self.to_snake_case(name));
             }
             Expression::BinaryOp { left, op, right } => {
-                self.generate_expression(left);
-                self.write(" ");
-                self.generate_binary_operator(op);
-                self.write(" ");
-                self.generate_expression(right);
+                // Special handling for 'in' operator
+                match op {
+                    BinaryOperator::In => {
+                        self.generate_expression(right);
+                        self.write(".contains(&");
+                        self.generate_expression(left);
+                        self.write(")");
+                    }
+                    _ => {
+                        self.generate_expression(left);
+                        self.write(" ");
+                        self.generate_binary_operator(op);
+                        self.write(" ");
+                        self.generate_expression(right);
+                    }
+                }
             }
             Expression::UnaryOp { op, expr } => {
                 self.generate_unary_operator(op);
@@ -1524,7 +1550,7 @@ where
                         return;
                     }
                 }
-                
+
                 // Check if this is a standard library function call
                 if let Expression::Member { object, member } = callee.as_ref() {
                     // Check for HTTP Client method calls
@@ -1708,10 +1734,23 @@ where
                         // Nested member access wie list.groupBy
                         if let Expression::Identifier(inner_name) = inner_obj.as_ref() {
                             if inner_name == "list" {
-                                self.generate_list_extension_call(inner_member, member, args, object);
+                                self.generate_list_extension_call(
+                                    inner_member,
+                                    member,
+                                    args,
+                                    object,
+                                );
                                 return;
                             } else if inner_name == "string" {
-                                self.generate_string_extension_call(inner_member, member, args, object);
+                                self.generate_string_extension_call(
+                                    inner_member,
+                                    member,
+                                    args,
+                                    object,
+                                );
+                                return;
+                            } else if inner_name == "agent" {
+                                self.generate_agent_nested_call(inner_member, member, args);
                                 return;
                             } else if inner_name == "agent" {
                                 self.generate_agent_nested_call(inner_member, member, args);
@@ -1864,7 +1903,60 @@ where
                 
                 self.write(")");
             }
-            Expression::GenericConstructor { name, type_params, args: _args } => {
+            Expression::LLMCall { method, args } => {
+                // Generiert: llm_client.analyze(text) mit Prompt-Optimierung
+                self.write("llm_client.");
+                self.write(&self.to_snake_case(method));
+                self.write("(");
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        self.write(", ");
+                    }
+                    self.generate_expression(arg);
+                }
+                self.write(").await");
+            }
+            Expression::FormatString { parts } => {
+                // Generate Rust format! macro
+                self.write("format!(");
+
+                // Build format string and arguments
+                let mut format_str = String::new();
+                let mut args = Vec::new();
+                let mut arg_index = 0;
+
+                for part in parts {
+                    match part {
+                        FormatStringPart::Text(text) => {
+                            // Escape special characters for format! macro
+                            let escaped = text.replace('{', "{{").replace('}', "}}");
+                            format_str.push_str(&escaped);
+                        }
+                        FormatStringPart::Expression(expr) => {
+                            format_str.push_str(&format!("{{{}}}", arg_index));
+                            args.push(expr);
+                            arg_index += 1;
+                        }
+                    }
+                }
+
+                // Write format string
+                let escaped_format = format_str.replace('\\', "\\\\").replace('"', "\\\"");
+                self.write(&format!("\"{}\"", escaped_format));
+
+                // Write arguments
+                for arg in args {
+                    self.write(", ");
+                    self.generate_expression(arg);
+                }
+
+                self.write(")");
+            }
+            Expression::GenericConstructor {
+                name,
+                type_params,
+                args: _args,
+            } => {
                 match name.as_str() {
                     "Map" => {
                         if type_params.len() == 2 {
@@ -1905,7 +1997,7 @@ where
             }
         }
     }
-    
+
     fn generate_literal(&mut self, lit: &Literal) {
         match lit {
             Literal::String(s) => {
@@ -1929,7 +2021,7 @@ where
             }
         }
     }
-    
+
     fn generate_binary_operator(&mut self, op: &BinaryOperator) {
         match op {
             BinaryOperator::Add => self.write("+"),
@@ -1945,16 +2037,17 @@ where
             BinaryOperator::GtEq => self.write(">="),
             BinaryOperator::And => self.write("&&"),
             BinaryOperator::Or => self.write("||"),
+            BinaryOperator::In => self.write(".contains(&"), // Will be handled specially in binary op generation
         }
     }
-    
+
     fn generate_unary_operator(&mut self, op: &UnaryOperator) {
         match op {
             UnaryOperator::Not => self.write("!"),
             UnaryOperator::Minus => self.write("-"),
         }
     }
-    
+
     fn generate_pattern(&mut self, pattern: &Pattern) {
         match pattern {
             Pattern::Literal(lit) => {
@@ -2030,45 +2123,45 @@ where
             }
         }
     }
-    
+
     // Helper methods
     fn write(&mut self, s: &str) {
         self.output.push_str(s);
     }
-    
+
     fn writeln(&mut self, s: &str) {
         self.write(s);
         self.write("\n");
     }
-    
+
     fn indent(&mut self) {
         self.indent_level += 1;
     }
-    
+
     fn unindent(&mut self) {
         if self.indent_level > 0 {
             self.indent_level -= 1;
         }
     }
-    
+
     fn to_snake_case(&self, s: &str) -> String {
         let mut result = String::new();
         let mut chars = s.chars().peekable();
-        
+
         while let Some(ch) = chars.next() {
             if ch.is_uppercase() && !result.is_empty() {
                 result.push('_');
             }
             result.push(ch.to_lowercase().next().unwrap_or(ch));
         }
-        
+
         result
     }
-    
+
     fn to_pascal_case(&self, s: &str) -> String {
         let mut result = String::new();
         let mut capitalize = true;
-        
+
         for ch in s.chars() {
             if ch == '_' {
                 capitalize = true;
@@ -2079,25 +2172,35 @@ where
                 result.push(ch);
             }
         }
-        
+
         result
     }
-    
+
     #[allow(dead_code)]
     fn has_privacy_fields(&self, struct_def: &Struct) -> bool {
         struct_def.fields.iter().any(|f| self.is_privacy_field(f))
     }
-    
+
     fn is_privacy_field(&self, field: &StructField) -> bool {
         // StructField has no decorators field
         // Privacy decorators would be on the struct itself, not individual fields
-        
+
         // Prüfe Feldname auf PII-Keywords
         let field_lower = field.name.to_lowercase();
-        let pii_keywords = vec!["email", "phone", "ssn", "passport", "credit_card", "ip", "address"];
-        pii_keywords.iter().any(|keyword| field_lower.contains(keyword))
+        let pii_keywords = vec![
+            "email",
+            "phone",
+            "ssn",
+            "passport",
+            "credit_card",
+            "ip",
+            "address",
+        ];
+        pii_keywords
+            .iter()
+            .any(|keyword| field_lower.contains(keyword))
     }
-    
+
     fn generate_db_call(&mut self, method: &str, args: &[Expression]) {
         if self.use_seaorm {
             #[cfg(feature = "sea-orm")]
@@ -2149,7 +2252,10 @@ where
                         }
                     }
                     "query" => {
-                        if let Some(Expression::Literal(crate::parser::ast::Literal::String(query))) = args.first() {
+                        if let Some(Expression::Literal(crate::parser::ast::Literal::String(
+                            query,
+                        ))) = args.first()
+                        {
                             self.write("sea_orm::Statement::from_sql_and_values(sea_orm::DatabaseBackend::Postgres, ");
                             self.generate_expression(&args[0]);
                             self.write(", vec![]).execute(&db).await");
@@ -2181,7 +2287,7 @@ where
                 return;
             }
         }
-        
+
         // Fallback to sqlx/default
         match method {
             "find" => {
@@ -2362,7 +2468,7 @@ where
             }
         }
     }
-    
+
     fn generate_backup_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "create" => {
@@ -2410,7 +2516,7 @@ where
             }
         }
     }
-    
+
     fn generate_rollback_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "beginTransaction" | "begin_transaction" => {
@@ -2472,7 +2578,7 @@ where
             }
         }
     }
-    
+
     fn generate_file_call(&mut self, method: &str, args: &[Expression]) {
         match method {
             "read" | "readFile" => {
@@ -2797,8 +2903,14 @@ where
             }
         }
     }
-    
-    fn generate_list_extension_call(&mut self, _list_method: &str, method: &str, args: &[Expression], object: &Expression) {
+
+    fn generate_list_extension_call(
+        &mut self,
+        _list_method: &str,
+        method: &str,
+        args: &[Expression],
+        object: &Expression,
+    ) {
         // list.groupBy, list.sorted, etc.
         match method {
             "groupBy" | "group_by" => {
@@ -2836,8 +2948,14 @@ where
             }
         }
     }
-    
-    fn generate_string_extension_call(&mut self, _string_method: &str, method: &str, args: &[Expression], object: &Expression) {
+
+    fn generate_string_extension_call(
+        &mut self,
+        _string_method: &str,
+        method: &str,
+        args: &[Expression],
+        object: &Expression,
+    ) {
         // string.camelCase, etc.
         match method {
             "camelCase" | "camel_case" => {
@@ -2865,34 +2983,43 @@ where
             }
         }
     }
-    
+
     fn generate_validation_code(&mut self, function: &Function, framework: &Framework) {
         // Check if function has @Validate decorator or needs auto-validation
         let has_validate_decorator = function.decorators.iter().any(|d| {
-            matches!(d.name.as_str(), "Validate" | "@Validate" | "Validation" | "@Validation")
+            matches!(
+                d.name.as_str(),
+                "Validate" | "@Validate" | "Validation" | "@Validation"
+            )
         });
-        
+
         if !has_validate_decorator && !self.has_validation {
             return;
         }
-        
+
         // Generate validator initialization
         self.write("    ");
         self.writeln("let mut validator = Validator::new();");
         self.writeln("");
-        
+
         // Generate validation for each parameter
         for param in &function.params {
             let param_name = &self.to_snake_case(&param.name);
-            
+
             match param.param_type {
                 Type::String => {
                     self.write("    ");
-                    self.writeln(&format!("validator.required(\"{}\", Some(&{}));", param_name, param_name));
+                    self.writeln(&format!(
+                        "validator.required(\"{}\", Some(&{}));",
+                        param_name, param_name
+                    ));
                     // Auto-validate email if parameter name contains "email"
                     if param_name.to_lowercase().contains("email") {
                         self.write("    ");
-                        self.writeln(&format!("validator.email(\"{}\", &{});", param_name, param_name));
+                        self.writeln(&format!(
+                            "validator.email(\"{}\", &{});",
+                            param_name, param_name
+                        ));
                     }
                 }
                 Type::Number => {
@@ -2911,14 +3038,14 @@ where
                 }
             }
         }
-        
+
         self.writeln("");
-        
+
         // Generate error handling
         self.write("    ");
         self.writeln("if !validator.is_valid() {");
         self.write("        ");
-        
+
         match framework {
             Framework::Axum => {
                 self.writeln("let errors: Vec<serde_json::Value> = validator.errors()");
@@ -2945,7 +3072,9 @@ where
                 self.write("            ");
                 self.writeln("});");
                 self.write("            ");
-                self.writeln("(axum::http::StatusCode::BAD_REQUEST, axum::Json(response)).into_response()");
+                self.writeln(
+                    "(axum::http::StatusCode::BAD_REQUEST, axum::Json(response)).into_response()",
+                );
                 self.write("        ");
                 self.writeln("});");
             }
@@ -2964,7 +3093,9 @@ where
                 self.write("            ");
                 self.writeln(".collect();");
                 self.write("        ");
-                self.writeln("return Ok(actix_web::HttpResponse::BadRequest().json(serde_json::json!({");
+                self.writeln(
+                    "return Ok(actix_web::HttpResponse::BadRequest().json(serde_json::json!({",
+                );
                 self.write("            ");
                 self.writeln("\"error\": \"Validation failed\",");
                 self.write("            ");
@@ -2977,7 +3108,7 @@ where
                 self.writeln("compile_error!(\"Unsupported framework for Rust target\");");
             }
         }
-        
+
         self.write("    ");
         self.writeln("}");
         self.writeln("");

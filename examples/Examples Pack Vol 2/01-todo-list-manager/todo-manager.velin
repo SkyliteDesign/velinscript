@@ -1,0 +1,127 @@
+// ============================================
+// VelinScript Beispiel: Todo-Listen Manager
+// ============================================
+// Dieses Beispiel zeigt, wie man eine einfache
+// Todo-Listen-API mit CRUD-Operationen erstellt
+
+// -------- Datenstrukturen --------
+
+struct Todo {
+    id: string,
+    title: string,
+    description: string,
+    completed: boolean,
+    createdAt: string,
+}
+
+struct CreateTodoRequest {
+    title: string,
+    description: string,
+}
+
+struct UpdateTodoRequest {
+    title: string,
+    description: string,
+    completed: boolean,
+}
+
+// -------- Hilfsfunktionen --------
+
+// Generiert eine eindeutige ID
+fn generateId(): string {
+    return uuid();
+}
+
+// Gibt das aktuelle Datum als String zurück
+fn getCurrentTimestamp(): string {
+    return now().format("YYYY-MM-DD HH:mm:ss");
+}
+
+// -------- API Endpoints --------
+
+// Listet alle Todos auf
+@GET("/api/todos")
+fn getAllTodos(): List<Todo> {
+    return db.findAll(Todo);
+}
+
+// Zeigt ein einzelnes Todo anhand der ID
+@GET("/api/todos/:id")
+fn getTodoById(id: string): Todo {
+    let todo = db.find(Todo, id);
+    if (todo == null) {
+        throw NotFoundError("Todo mit ID {id} nicht gefunden");
+    }
+    return todo;
+}
+
+// Erstellt ein neues Todo
+@POST("/api/todos")
+fn createTodo(request: CreateTodoRequest): Todo {
+    let newTodo = Todo {
+        id: generateId(),
+        title: request.title,
+        description: request.description,
+        completed: false,
+        createdAt: getCurrentTimestamp(),
+    };
+    
+    db.save(newTodo);
+    return newTodo;
+}
+
+// Aktualisiert ein vorhandenes Todo
+@PUT("/api/todos/:id")
+fn updateTodo(id: string, request: UpdateTodoRequest): Todo {
+    let todo = db.find(Todo, id);
+    if (todo == null) {
+        throw NotFoundError("Todo mit ID {id} nicht gefunden");
+    }
+    
+    todo.title = request.title;
+    todo.description = request.description;
+    todo.completed = request.completed;
+    
+    db.update(todo);
+    return todo;
+}
+
+// Markiert ein Todo als erledigt
+@PATCH("/api/todos/:id/complete")
+fn completeTodo(id: string): Todo {
+    let todo = db.find(Todo, id);
+    if (todo == null) {
+        throw NotFoundError("Todo mit ID {id} nicht gefunden");
+    }
+    
+    todo.completed = true;
+    db.update(todo);
+    return todo;
+}
+
+// Löscht ein Todo
+@DELETE("/api/todos/:id")
+fn deleteTodo(id: string): void {
+    let todo = db.find(Todo, id);
+    if (todo == null) {
+        throw NotFoundError("Todo mit ID {id} nicht gefunden");
+    }
+    
+    db.delete(todo);
+}
+
+// Listet nur erledigte Todos auf
+@GET("/api/todos/completed")
+fn getCompletedTodos(): List<Todo> {
+    return db.query(Todo)
+        .where("completed", "=", true)
+        .all();
+}
+
+// Listet nur offene Todos auf
+@GET("/api/todos/pending")
+fn getPendingTodos(): List<Todo> {
+    return db.query(Todo)
+        .where("completed", "=", false)
+        .all();
+}

@@ -20,15 +20,15 @@ pub enum Commands {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
         input: PathBuf,
-        
+
         /// Ausgabe-Datei (.rs)
         #[arg(short, long)]
         output: Option<PathBuf>,
-        
+
         /// Überspringe Type Checking
         #[arg(long)]
         no_type_check: bool,
-        
+
         /// Zeige generierten Code in der Konsole
         #[arg(long)]
         show_code: bool,
@@ -90,7 +90,7 @@ pub enum Commands {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
         input: PathBuf,
-        
+
         /// Überschreibe die Datei
         #[arg(long)]
         in_place: bool,
@@ -107,7 +107,7 @@ pub enum Commands {
     Init {
         /// Projekt-Name
         name: Option<String>,
-        
+
         /// Erstelle im aktuellen Verzeichnis
         #[arg(long)]
         current_dir: bool,
@@ -167,38 +167,38 @@ pub enum Commands {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
         input: PathBuf,
-        
+
         /// Ausgabe-Datei (.json oder .yaml)
         #[arg(short, long)]
         output: Option<PathBuf>,
     },
-    
+
     /// Generiert Code (Boilerplate, CRUD, etc.)
     Generate {
         /// Art der Generierung (api, crud, test, client)
         #[arg(value_name = "TYPE")]
         gen_type: String,
-        
+
         /// Name/Modell für die Generierung
         #[arg(short, long)]
         name: Option<String>,
-        
+
         /// Felder (für CRUD)
         #[arg(short, long)]
         fields: Option<String>,
-        
+
         /// Pfad (für API)
         #[arg(short, long)]
         path: Option<String>,
-        
+
         /// OpenAPI Datei (für Client)
         #[arg(long)]
         openapi: Option<PathBuf>,
-        
+
         /// Ausgabe-Sprache (für Client)
         #[arg(short, long)]
         language: Option<String>,
-        
+
         /// Ausgabe-Datei
         #[arg(short, long)]
         output: Option<PathBuf>,
@@ -209,20 +209,20 @@ pub enum Commands {
         /// Test-Verzeichnis
         #[arg(short, long)]
         directory: Option<PathBuf>,
-        
+
         /// Nur Unit Tests
         #[arg(long)]
         unit: bool,
-        
+
         /// Nur Integration Tests
         #[arg(long)]
         integration: bool,
-        
+
         /// Verbose Output
         #[arg(short, long)]
         verbose: bool,
     },
-    
+
     /// Verwaltet velin.config.json
     Config {
         /// Subcommand
@@ -244,7 +244,7 @@ pub enum Commands {
         /// Endpoint-URL
         #[arg(short, long)]
         url: Option<String>,
-        
+
         /// Zeige detaillierte Metriken
         #[arg(short, long)]
         verbose: bool,
@@ -264,7 +264,7 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: RollbackCommands,
     },
-    
+
     /// Serialization-Tools
     Serialize {
         /// Subcommand
@@ -281,14 +281,14 @@ pub enum ConfigCommands {
         #[arg(long)]
         example: bool,
     },
-    
+
     /// Validiert velin.config.json
     Validate {
         /// Config-Datei
         #[arg(short, long)]
         file: Option<PathBuf>,
     },
-    
+
     /// Zeigt Config-Werte
     Show {
         /// Config-Datei
@@ -301,13 +301,13 @@ pub enum ConfigCommands {
 pub enum CacheCommands {
     /// Zeigt Cache-Statistiken
     Stats,
-    
+
     /// Leert Cache
     Clear {
         /// Pattern für Keys
         pattern: Option<String>,
     },
-    
+
     /// Wärmt Cache
     Warm,
 }
@@ -319,48 +319,48 @@ pub enum BackupCommands {
         /// Backup-Strategie (full, incremental)
         #[arg(short, long)]
         strategy: Option<String>,
-        
+
         /// Ziel-Verzeichnis
         #[arg(short, long)]
         destination: Option<String>,
-        
+
         /// Komprimierung (gzip, zip, none)
         #[arg(short, long)]
         compression: Option<String>,
     },
-    
+
     /// Stellt ein Backup wieder her
     Restore {
         /// Backup-ID
         backup_id: String,
-        
+
         /// Ziel-Verzeichnis
         #[arg(short, long)]
         destination: Option<String>,
     },
-    
+
     /// Listet alle Backups auf
     List {
         /// Verzeichnis mit Backups
         #[arg(short, long)]
         directory: Option<String>,
     },
-    
+
     /// Löscht ein Backup
     Delete {
         /// Backup-ID
         backup_id: String,
-        
+
         /// Verzeichnis mit Backups
         #[arg(short, long)]
         directory: Option<String>,
     },
-    
+
     /// Verifiziert ein Backup
     Verify {
         /// Backup-ID
         backup_id: String,
-        
+
         /// Verzeichnis mit Backups
         #[arg(short, long)]
         directory: Option<String>,
@@ -371,46 +371,46 @@ pub enum BackupCommands {
 pub enum RollbackCommands {
     /// Beginnt eine Transaktion
     Begin,
-    
+
     /// Committet eine Transaktion
     Commit {
         /// Transaktions-ID
         transaction_id: String,
     },
-    
+
     /// Rollback einer Transaktion
     Rollback {
         /// Transaktions-ID
         transaction_id: String,
     },
-    
+
     /// Erstellt eine Version
     CreateVersion {
         /// Beschreibung
         description: String,
     },
-    
+
     /// Rollback zu einer Version
     ToVersion {
         /// Version-ID
         version_id: String,
     },
-    
+
     /// Listet alle Versionen auf
     ListVersions,
-    
+
     /// Erstellt einen Snapshot
     CreateSnapshot {
         /// Beschreibung
         description: String,
     },
-    
+
     /// Rollback zu einem Snapshot
     ToSnapshot {
         /// Snapshot-ID
         snapshot_id: String,
     },
-    
+
     /// Listet alle Snapshots auf
     ListSnapshots,
 }
@@ -422,30 +422,30 @@ pub enum SerializeCommands {
         /// Eingabe-Datei
         #[arg(short, long)]
         input: PathBuf,
-        
+
         /// Ausgabe-Datei
         #[arg(short, long)]
         output: PathBuf,
     },
-    
+
     /// Konvertiert YAML zu JSON
     YamlToJson {
         /// Eingabe-Datei
         #[arg(short, long)]
         input: PathBuf,
-        
+
         /// Ausgabe-Datei
         #[arg(short, long)]
         output: PathBuf,
     },
-    
+
     /// Validiert JSON
     ValidateJson {
         /// Datei
         #[arg(short, long)]
         file: PathBuf,
     },
-    
+
     /// Validiert YAML
     ValidateYaml {
         /// Datei

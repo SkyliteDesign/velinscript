@@ -114,6 +114,18 @@ impl LanguageServer for VelinLanguageServer {
 
         self.publish_doc_diagnostics(uri.clone(), &text).await;
         
+        // Use document info fields
+        if let Some(doc_info) = documents.get(&uri) {
+            let _doc_uri = &doc_info.uri;
+            if let Some(parse_errors) = documents.get_parse_errors(&uri) {
+                if !parse_errors.is_empty() {
+                    self.client
+                        .log_message(MessageType::WARNING, format!("Parse errors in {}: {:?}", uri, parse_errors))
+                        .await;
+                }
+            }
+        }
+        
         self.client
             .log_message(MessageType::INFO, format!("Document opened: {}", uri))
             .await;

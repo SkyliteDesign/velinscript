@@ -35,7 +35,7 @@ impl Optimizer {
             pipeline_optimizer: PipelineOptimizer::new(),
         }
     }
-    
+
     pub fn optimize(&self, program: &mut Program) {
         for opt in &self.optimizations {
             match opt {
@@ -743,7 +743,7 @@ impl Benchmark {
             results: Vec::new(),
         }
     }
-    
+
     pub fn run<F>(&mut self, f: F) -> f64
     where
         F: Fn(),
@@ -757,7 +757,7 @@ impl Benchmark {
         self.results.push(avg_time);
         avg_time
     }
-    
+
     pub fn average(&self) -> f64 {
         if self.results.is_empty() {
             return 0.0;

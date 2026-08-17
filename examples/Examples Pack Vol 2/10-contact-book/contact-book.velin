@@ -1,0 +1,508 @@
+// ================================================
+// VelinScript Beispiel: Kontaktbuch
+// ================================================
+// Ein vollständiges Kontaktverwaltungssystem
+// Zeigt CRUD, Suche, Gruppen und Export
+
+// -------- Datenstrukturen --------
+
+struct Contact {
+    id: string,
+    firstName: string,
+    lastName: string,
+    email: string,
+    phone: string,
+    company: string,
+    jobTitle: string,
+    address: Address,
+    birthday: string,
+    notes: string,
+    favorite: boolean,
+    tags: List<string>,
+    createdAt: string,
+    updatedAt: string,
+}
+
+struct Address {
+    street: string,
+    city: string,
+    state: string,
+    zipCode: string,
+    country: string,
+}
+
+struct CreateContactRequest {
+    firstName: string,
+    lastName: string,
+    email: string,
+    phone: string,
+    company: string,
+    jobTitle: string,
+    address: Address,
+    birthday: string,
+    notes: string,
+}
+
+struct ContactGroup {
+    id: string,
+    name: string,
+    description: string,
+    contactIds: List<string>,
+    createdAt: string,
+}
+
+struct SearchFilters {
+    query: string,
+    tags: List<string>,
+    favoriteOnly: boolean,
+    company: string,
+}
+
+struct ContactSummary {
+    id: string,
+    fullName: string,
+    email: string,
+    phone: string,
+    company: string,
+    favorite: boolean,
+}
+
+// -------- Hilfsfunktionen --------
+
+// Erstellt vollständigen Namen
+fn getFullName(contact: Contact): string {
+    return "{contact.firstName} {contact.lastName}";
+}
+
+// Konvertiert Contact zu Summary
+fn toSummary(contact: Contact): ContactSummary {
+    return ContactSummary {
+        id: contact.id,
+        fullName: getFullName(contact),
+        email: contact.email,
+        phone: contact.phone,
+        company: contact.company,
+        favorite: contact.favorite,
+    };
+}
+
+// Validiert E-Mail-Format
+fn isValidEmail(email: string): boolean {
+    return email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+}
+
+// Formatiert Telefonnummer (entfernt Nicht-Zahlen)
+fn formatPhoneNumber(phone: string): string {
+    let cleaned = "";
+    for (let i = 0; i < phone.length(); i = i + 1) {
+        let char = phone.substring(i, i + 1);
+        if (char.matches("[0-9+]")) {
+            cleaned = cleaned + char;
+        }
+    }
+    return cleaned;
+}
+
+// -------- API Endpoints --------
+
+// Listet alle Kontakte auf (mit Pagination)
+@GET("/api/contacts")
+fn getAllContacts(page: number, pageSize: number): List<ContactSummary> {
+    let offset = page * pageSize;
+    
+    let contacts = db.query(Contact)
+        .orderBy("lastName", "ASC")
+        .limit(pageSize)
+        .offset(offset)
+        .all();
+    
+    let summaries: List<ContactSummary> = [];
+    for (let contact in contacts) {
+        summaries.push(toSummary(contact));
+    }
+    
+    return summaries;
+}
+
+// Zeigt einzelnen Kontakt
+@GET("/api/contacts/:id")
+fn getContact(id: string): Contact {
+    let contact = db.find(Contact, id);
+    
+    if (contact == null) {
+        throw NotFoundError("Kontakt mit ID {id} nicht gefunden");
+    }
+    
+    return contact;
+}
+
+// Erstellt neuen Kontakt
+@POST("/api/contacts")
+fn createContact(request: CreateContactRequest): Contact {
+    // Validierung
+    if (request.firstName.trim() == "" || request.lastName.trim() == "") {
+        throw ValidationError("Vor- und Nachname sind erforderlich");
+    }
+    
+    if (request.email != "" && !isValidEmail(request.email)) {
+        throw ValidationError("Ungültige E-Mail-Adresse");
+    }
+    
+    let contact = Contact {
+        id: generateId(),
+        firstName: request.firstName.trim(),
+        lastName: request.lastName.trim(),
+        email: request.email.trim(),
+        phone: formatPhoneNumber(request.phone),
+        company: request.company,
+        jobTitle: request.jobTitle,
+        address: request.address,
+        birthday: request.birthday,
+        notes: request.notes,
+        favorite: false,
+        tags: [],
+        createdAt: getCurrentTimestamp(),
+        updatedAt: getCurrentTimestamp(),
+    };
+    
+    db.save(contact);
+    return contact;
+}
+
+// Aktualisiert Kontakt
+@PUT("/api/contacts/:id")
+fn updateContact(id: string, request: CreateContactRequest): Contact {
+    let contact = db.find(Contact, id);
+    
+    if (contact == null) {
+        throw NotFoundError("Kontakt nicht gefunden");
+    }
+    
+    // Validierung
+    if (request.email != "" && !isValidEmail(request.email)) {
+        throw ValidationError("Ungültige E-Mail-Adresse");
+    }
+    
+    contact.firstName = request.firstName.trim();
+    contact.lastName = request.lastName.trim();
+    contact.email = request.email.trim();
+    contact.phone = formatPhoneNumber(request.phone);
+    contact.company = request.company;
+    contact.jobTitle = request.jobTitle;
+    contact.address = request.address;
+    contact.birthday = request.birthday;
+    contact.notes = request.notes;
+    contact.updatedAt = getCurrentTimestamp();
+    
+    db.update(contact);
+    return contact;
+}
+
+// Löscht Kontakt
+@DELETE("/api/contacts/:id")
+fn deleteContact(id: string): void {
+    let contact = db.find(Contact, id);
+    
+    if (contact == null) {
+        throw NotFoundError("Kontakt nicht gefunden");
+    }
+    
+    // Entferne aus allen Gruppen
+    let groups = db.findAll(ContactGroup);
+    for (let group in groups) {
+        if (group.contactIds.contains(id)) {
+            group.contactIds.remove(id);
+            db.update(group);
+        }
+    }
+    
+    db.delete(contact);
+}
+
+// Markiert Kontakt als Favorit
+@PATCH("/api/contacts/:id/favorite")
+fn toggleFavorite(id: string): Contact {
+    let contact = db.find(Contact, id);
+    
+    if (contact == null) {
+        throw NotFoundError("Kontakt nicht gefunden");
+    }
+    
+    contact.favorite = !contact.favorite;
+    contact.updatedAt = getCurrentTimestamp();
+    db.update(contact);
+    
+    return contact;
+}
+
+// Fügt Tags hinzu
+@POST("/api/contacts/:id/tags")
+fn addTags(id: string, tags: List<string>): Contact {
+    let contact = db.find(Contact, id);
+    
+    if (contact == null) {
+        throw NotFoundError("Kontakt nicht gefunden");
+    }
+    
+    for (let tag in tags) {
+        if (!contact.tags.contains(tag)) {
+            contact.tags.push(tag);
+        }
+    }
+    
+    contact.updatedAt = getCurrentTimestamp();
+    db.update(contact);
+    
+    return contact;
+}
+
+// -------- Such-Funktionen --------
+
+// Sucht Kontakte
+@POST("/api/contacts/search")
+fn searchContacts(filters: SearchFilters): List<ContactSummary> {
+    let contacts = db.findAll(Contact);
+    let results: List<Contact> = [];
+    
+    for (let contact in contacts) {
+        let matches = true;
+        
+        // Textsuche
+        if (filters.query != "") {
+            let query = filters.query.toLowerCase();
+            let fullName = getFullName(contact).toLowerCase();
+            let email = contact.email.toLowerCase();
+            let company = contact.company.toLowerCase();
+            
+            if (!fullName.contains(query) && 
+                !email.contains(query) && 
+                !company.contains(query)) {
+                matches = false;
+            }
+        }
+        
+        // Tag-Filter
+        if (filters.tags.length() > 0) {
+            let hasTag = false;
+            for (let tag in filters.tags) {
+                if (contact.tags.contains(tag)) {
+                    hasTag = true;
+                    break;
+                }
+            }
+            if (!hasTag) {
+                matches = false;
+            }
+        }
+        
+        // Favoriten-Filter
+        if (filters.favoriteOnly && !contact.favorite) {
+            matches = false;
+        }
+        
+        // Firmen-Filter
+        if (filters.company != "" && contact.company != filters.company) {
+            matches = false;
+        }
+        
+        if (matches) {
+            results.push(contact);
+        }
+    }
+    
+    let summaries: List<ContactSummary> = [];
+    for (let contact in results) {
+        summaries.push(toSummary(contact));
+    }
+    
+    return summaries;
+}
+
+// Zeigt Favoriten
+@GET("/api/contacts/favorites")
+fn getFavorites(): List<ContactSummary> {
+    let contacts = db.query(Contact)
+        .where("favorite", "=", true)
+        .orderBy("lastName", "ASC")
+        .all();
+    
+    let summaries: List<ContactSummary> = [];
+    for (let contact in contacts) {
+        summaries.push(toSummary(contact));
+    }
+    
+    return summaries;
+}
+
+// Zeigt Geburtstage im aktuellen Monat
+@GET("/api/contacts/birthdays")
+fn getUpcomingBirthdays(): List<ContactSummary> {
+    let contacts = db.findAll(Contact);
+    let currentMonth = now().format("MM");
+    let results: List<Contact> = [];
+    
+    for (let contact in contacts) {
+        if (contact.birthday != "") {
+            let month = contact.birthday.substring(5, 7);
+            if (month == currentMonth) {
+                results.push(contact);
+            }
+        }
+    }
+    
+    let summaries: List<ContactSummary> = [];
+    for (let contact in results) {
+        summaries.push(toSummary(contact));
+    }
+    
+    return summaries;
+}
+
+// -------- Gruppen-Verwaltung --------
+
+// Erstellt neue Gruppe
+@POST("/api/groups")
+fn createGroup(name: string, description: string): ContactGroup {
+    let group = ContactGroup {
+        id: generateId(),
+        name: name,
+        description: description,
+        contactIds: [],
+        createdAt: getCurrentTimestamp(),
+    };
+    
+    db.save(group);
+    return group;
+}
+
+// Fügt Kontakt zu Gruppe hinzu
+@POST("/api/groups/:groupId/contacts/:contactId")
+fn addContactToGroup(groupId: string, contactId: string): ContactGroup {
+    let group = db.find(ContactGroup, groupId);
+    let contact = db.find(Contact, contactId);
+    
+    if (group == null || contact == null) {
+        throw NotFoundError("Gruppe oder Kontakt nicht gefunden");
+    }
+    
+    if (!group.contactIds.contains(contactId)) {
+        group.contactIds.push(contactId);
+        db.update(group);
+    }
+    
+    return group;
+}
+
+// Listet Kontakte einer Gruppe
+@GET("/api/groups/:groupId/contacts")
+fn getGroupContacts(groupId: string): List<ContactSummary> {
+    let group = db.find(ContactGroup, groupId);
+    
+    if (group == null) {
+        throw NotFoundError("Gruppe nicht gefunden");
+    }
+    
+    let summaries: List<ContactSummary> = [];
+    
+    for (let contactId in group.contactIds) {
+        let contact = db.find(Contact, contactId);
+        if (contact != null) {
+            summaries.push(toSummary(contact));
+        }
+    }
+    
+    return summaries;
+}
+
+// -------- Export-Funktionen --------
+
+// Exportiert alle Kontakte als CSV
+@GET("/api/contacts/export/csv")
+fn exportToCSV(): string {
+    let contacts = db.findAll(Contact);
+    
+    let csv = "Vorname,Nachname,E-Mail,Telefon,Firma,Position,Stadt,Land\n";
+    
+    for (let contact in contacts) {
+        let row = "{contact.firstName},{contact.lastName},{contact.email},{contact.phone},";
+        row = row + "{contact.company},{contact.jobTitle},";
+        row = row + "{contact.address.city},{contact.address.country}\n";
+        csv = csv + row;
+    }
+    
+    return csv;
+}
+
+// Exportiert als vCard (VCF)
+@GET("/api/contacts/:id/vcard")
+fn exportToVCard(id: string): string {
+    let contact = db.find(Contact, id);
+    
+    if (contact == null) {
+        throw NotFoundError("Kontakt nicht gefunden");
+    }
+    
+    let vcard = "BEGIN:VCARD\n";
+    vcard = vcard + "VERSION:3.0\n";
+    vcard = vcard + "FN:{getFullName(contact)}\n";
+    vcard = vcard + "N:{contact.lastName};{contact.firstName};;;\n";
+    
+    if (contact.email != "") {
+        vcard = vcard + "EMAIL:{contact.email}\n";
+    }
+    
+    if (contact.phone != "") {
+        vcard = vcard + "TEL:{contact.phone}\n";
+    }
+    
+    if (contact.company != "") {
+        vcard = vcard + "ORG:{contact.company}\n";
+    }
+    
+    if (contact.jobTitle != "") {
+        vcard = vcard + "TITLE:{contact.jobTitle}\n";
+    }
+    
+    vcard = vcard + "END:VCARD\n";
+    
+    return vcard;
+}
+
+// Statistiken
+@GET("/api/contacts/stats")
+fn getStatistics(): Map<string, any> {
+    let contacts = db.findAll(Contact);
+    let groups = db.findAll(ContactGroup);
+    
+    let totalContacts = contacts.length();
+    let favoriteCount = 0;
+    let companiesMap: Map<string, number> = Map::new();
+    
+    for (let contact in contacts) {
+        if (contact.favorite) {
+            favoriteCount = favoriteCount + 1;
+        }
+        
+        if (contact.company != "") {
+            let count = companiesMap.get(contact.company).orElse(0);
+            companiesMap.set(contact.company, count + 1);
+        }
+    }
+    
+    let stats: Map<string, any> = Map::new();
+    stats.set("totalContacts", totalContacts);
+    stats.set("favoriteCount", favoriteCount);
+    stats.set("groupCount", groups.length());
+    stats.set("companiesCount", companiesMap.size());
+    
+    return stats;
+}
+
+// Hilfsfunktionen
+fn generateId(): string {
+    return uuid();
+}
+
+fn getCurrentTimestamp(): string {
+    return now().format("YYYY-MM-DD HH:mm:ss");
+}

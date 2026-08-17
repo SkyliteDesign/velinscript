@@ -29,7 +29,7 @@ impl FormatConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     pub fn indent_string(&self) -> String {
         match self.indent_style {
             IndentStyle::Spaces => " ".repeat(self.indent_size),

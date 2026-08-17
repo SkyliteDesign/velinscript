@@ -57,7 +57,8 @@ pub async fn exchange_code(
         .set_pkce_verifier(pkce_verifier)
         .request_async(oauth2::reqwest::async_http_client)
         .await
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert OpenID Connect Discovery
@@ -113,7 +114,8 @@ pub async fn oauth2_middleware(mut req: Request, next: Next) -> Result<Response,
         }
         Err(_) => Err(StatusCode::UNAUTHORIZED),
     }
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert OAuth2 Middleware für Actix
@@ -206,7 +208,8 @@ pub fn verify_sms_code(code: &str, expected: &str) -> bool {
 
 pub fn verify_email_code(code: &str, expected: &str) -> bool {
     code == expected
-}"#.to_string()
+}"#
+        .to_string()
     }
 
     /// Generiert OAuth2 Token Validation

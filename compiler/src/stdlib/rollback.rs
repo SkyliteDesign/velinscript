@@ -2,7 +2,7 @@
 // Rollback-System für Datenbanken und Dateien
 
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use uuid;
@@ -73,32 +73,32 @@ impl RollbackStdlib {
     pub fn generate_begin_transaction_code() -> String {
         "rollback::begin_transaction()".to_string()
     }
-    
+
     /// Transformiert VelinScript rollback.commit() zu Rust-Code
     pub fn generate_commit_code(transaction_id: &str) -> String {
         format!("rollback::commit_transaction({})", transaction_id)
     }
-    
+
     /// Transformiert VelinScript rollback.rollback() zu Rust-Code
     pub fn generate_rollback_code(transaction_id: &str) -> String {
         format!("rollback::rollback_transaction({})", transaction_id)
     }
-    
+
     /// Transformiert VelinScript rollback.createVersion() zu Rust-Code
     pub fn generate_create_version_code(description: &str) -> String {
         format!("rollback::create_version({})", description)
     }
-    
+
     /// Transformiert VelinScript rollback.rollbackToVersion() zu Rust-Code
     pub fn generate_rollback_to_version_code(version_id: &str) -> String {
         format!("rollback::rollback_to_version({})", version_id)
     }
-    
+
     /// Transformiert VelinScript rollback.createSnapshot() zu Rust-Code
     pub fn generate_create_snapshot_code(description: &str) -> String {
         format!("rollback::create_snapshot({})", description)
     }
-    
+
     /// Transformiert VelinScript rollback.rollbackToSnapshot() zu Rust-Code
     pub fn generate_rollback_to_snapshot_code(snapshot_id: &str) -> String {
         format!("rollback::rollback_to_snapshot({})", snapshot_id)
@@ -120,7 +120,7 @@ impl RollbackManager {
             snapshots: HashMap::new(),
         }
     }
-    
+
     /// Startet eine neue Transaktion
     pub fn begin_transaction(&mut self) -> String {
         let transaction_id = format!("tx-{}", uuid::Uuid::new_v4().to_string());
@@ -130,10 +130,11 @@ impl RollbackManager {
             timestamp: Utc::now(),
             status: TransactionStatus::Pending,
         };
-        self.transactions.insert(transaction_id.clone(), transaction);
+        self.transactions
+            .insert(transaction_id.clone(), transaction);
         transaction_id
     }
-    
+
     /// Committet eine Transaktion
     pub fn commit_transaction(&mut self, transaction_id: &str) -> Result<(), String> {
         if let Some(transaction) = self.transactions.get_mut(transaction_id) {
@@ -147,12 +148,14 @@ impl RollbackManager {
             Err(format!("Transaction not found: {}", transaction_id))
         }
     }
-    
+
     /// Gibt den Status einer Transaktion zurück
     pub fn get_transaction_status(&self, transaction_id: &str) -> Option<TransactionStatus> {
-        self.transactions.get(transaction_id).map(|t| t.status.clone())
+        self.transactions
+            .get(transaction_id)
+            .map(|t| t.status.clone())
     }
-    
+
     /// Rollback einer Transaktion
     pub fn rollback_transaction(&mut self, transaction_id: &str) -> Result<(), String> {
         let operations = if let Some(transaction) = self.transactions.get(transaction_id) {
@@ -164,19 +167,19 @@ impl RollbackManager {
         } else {
             return Err(format!("Transaction not found: {}", transaction_id));
         };
-        
+
         // Führe Rollback-Operationen in umgekehrter Reihenfolge aus
         for operation in operations.iter().rev() {
             self.execute_rollback_operation(operation)?;
         }
-        
+
         if let Some(transaction) = self.transactions.get_mut(transaction_id) {
             transaction.status = TransactionStatus::RolledBack;
         }
-        
+
         Ok(())
     }
-    
+
     /// Erstellt eine Version
     pub fn create_version(&mut self, description: &str) -> Result<String, String> {
         let version_id = format!("v-{}", uuid::Uuid::new_v4().to_string());
@@ -190,7 +193,7 @@ impl RollbackManager {
         self.versions.insert(version_id.clone(), version);
         Ok(version_id)
     }
-    
+
     /// Rollback zu einer Version
     pub fn rollback_to_version(&mut self, version_id: &str) -> Result<(), String> {
         if let Some(version) = self.versions.get(version_id) {
@@ -203,7 +206,7 @@ impl RollbackManager {
             Err(format!("Version not found: {}", version_id))
         }
     }
-    
+
     /// Erstellt einen Snapshot
     pub fn create_snapshot(&mut self, description: &str) -> Result<String, String> {
         let snapshot_id = format!("snap-{}", uuid::Uuid::new_v4().to_string());
@@ -217,7 +220,7 @@ impl RollbackManager {
         self.snapshots.insert(snapshot_id.clone(), snapshot);
         Ok(snapshot_id)
     }
-    
+
     /// Rollback zu einem Snapshot
     pub fn rollback_to_snapshot(&mut self, snapshot_id: &str) -> Result<(), String> {
         if let Some(snapshot) = self.snapshots.get(snapshot_id) {
@@ -230,12 +233,14 @@ impl RollbackManager {
             Err(format!("Snapshot not found: {}", snapshot_id))
         }
     }
-    
+
     // Helper-Funktionen
-    
+
     fn execute_rollback_operation(&self, operation: &Operation) -> Result<(), String> {
         match operation {
-            Operation::DatabaseWrite { table: _, key: _, .. } => {
+            Operation::DatabaseWrite {
+                table: _, key: _, ..
+            } => {
                 // Rollback: Lösche oder stelle alten Wert wieder her
                 // In Production: Implementiere echte Rollback-Logik
                 Ok(())
@@ -257,22 +262,25 @@ impl RollbackManager {
             }
         }
     }
-    
+
     fn capture_database_state(&self) -> Result<HashMap<String, serde_json::Value>, String> {
         // In Production: Erfasse aktuellen Datenbank-State
         Ok(HashMap::new())
     }
-    
+
     fn capture_file_state(&self) -> Result<HashMap<String, Vec<u8>>, String> {
         // In Production: Erfasse aktuellen File-State
         Ok(HashMap::new())
     }
-    
-    fn restore_database_state(&self, _state: &HashMap<String, serde_json::Value>) -> Result<(), String> {
+
+    fn restore_database_state(
+        &self,
+        _state: &HashMap<String, serde_json::Value>,
+    ) -> Result<(), String> {
         // In Production: Stelle Datenbank-State wieder her
         Ok(())
     }
-    
+
     fn restore_file_state(&self, _state: &HashMap<String, Vec<u8>>) -> Result<(), String> {
         // In Production: Stelle File-State wieder her
         Ok(())

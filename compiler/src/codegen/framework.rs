@@ -200,10 +200,14 @@ impl FrameworkSelector {
     pub fn generate_app_init(framework: Framework, routes: Vec<(String, String, String)>) -> String {
         match framework {
             Framework::Axum => {
-                let mut code = "pub fn create_router() -> Router {\n    Router::new()\n".to_string();
+                let mut code =
+                    "pub fn create_router() -> Router {\n    Router::new()\n".to_string();
                 for (method, path, handler) in routes {
                     let method_lower = method.to_lowercase();
-                    code.push_str(&format!("        .route(\"{}\", {}({}_handler))\n", path, method_lower, handler));
+                    code.push_str(&format!(
+                        "        .route(\"{}\", {}({}_handler))\n",
+                        path, method_lower, handler
+                    ));
                 }
                 code.push_str("}\n");
                 code
@@ -212,7 +216,10 @@ impl FrameworkSelector {
                 let mut code = "pub fn create_app() -> actix_web::App<impl actix_web::dev::ServiceFactory<actix_web::dev::ServiceRequest>> {\n    actix_web::App::new()\n".to_string();
                 for (method, path, handler) in routes {
                     let method_lower = method.to_lowercase();
-                    code.push_str(&format!("        .route(\"{}\", web::{}().to({}_handler))\n", path, method_lower, handler));
+                    code.push_str(&format!(
+                        "        .route(\"{}\", web::{}().to({}_handler))\n",
+                        path, method_lower, handler
+                    ));
                 }
                 code.push_str("}\n");
                 code
@@ -228,21 +235,28 @@ impl FrameworkSelector {
         return_type: &Option<Type>,
     ) -> String {
         let mut sig = format!("async fn {}_handler(", function_name);
-        
+
         // Axum Extractors
         let mut extractors = Vec::new();
         for param in params {
             match param.param_type {
                 Type::String | Type::Number | Type::Boolean => {
                     // Path parameter
-                    extractors.push(format!("Path({}): Path<{}>", param.name, Self::velin_to_rust_type(&param.param_type)));
+                    extractors.push(format!(
+                        "Path({}): Path<{}>",
+                        param.name,
+                        Self::velin_to_rust_type(&param.param_type)
+                    ));
                 }
                 Type::Named(ref name) if name == "HttpRequest" => {
                     extractors.push("request: HttpRequest".to_string());
                 }
                 _ => {
                     // JSON Body
-                    extractors.push(format!("Json(payload): Json<{}>", Self::velin_to_rust_type(&param.param_type)));
+                    extractors.push(format!(
+                        "Json(payload): Json<{}>",
+                        Self::velin_to_rust_type(&param.param_type)
+                    ));
                 }
             }
         }
@@ -254,7 +268,9 @@ impl FrameworkSelector {
         if let Some(ref _ret_type) = return_type {
             sig.push_str(&format!(" {{\n    // Handler implementation\n    let result = {}().await;\n    (StatusCode::OK, Json(result)).into_response()\n}}", function_name));
         } else {
-            sig.push_str(" {\n    // Handler implementation\n    StatusCode::OK.into_response()\n}");
+            sig.push_str(
+                " {\n    // Handler implementation\n    StatusCode::OK.into_response()\n}",
+            );
         }
 
         sig
@@ -267,19 +283,26 @@ impl FrameworkSelector {
         return_type: &Option<Type>,
     ) -> String {
         let mut sig = format!("async fn {}_handler(", function_name);
-        
+
         // Actix Extractors
         let mut extractors = Vec::new();
         for param in params {
             match param.param_type {
                 Type::String | Type::Number | Type::Boolean => {
-                    extractors.push(format!("{}: {}", param.name, Self::velin_to_rust_type(&param.param_type)));
+                    extractors.push(format!(
+                        "{}: {}",
+                        param.name,
+                        Self::velin_to_rust_type(&param.param_type)
+                    ));
                 }
                 Type::Named(ref name) if name == "HttpRequest" => {
                     extractors.push("req: HttpRequest".to_string());
                 }
                 _ => {
-                    extractors.push(format!("payload: web::Json<{}>", Self::velin_to_rust_type(&param.param_type)));
+                    extractors.push(format!(
+                        "payload: web::Json<{}>",
+                        Self::velin_to_rust_type(&param.param_type)
+                    ));
                 }
             }
         }
@@ -317,7 +340,7 @@ impl FrameworkSelector {
             "Axum" | "@Axum" | "Actix" | "@Actix" | "ActixWeb" | "@ActixWeb"
         )
     }
-    
+
     /// Extrahiert Path-Parameter aus einem Route-Path (z.B. "/api/users/:id" -> ["id"])
     pub fn extract_path_params(path: &str) -> Vec<String> {
         let mut params = Vec::new();
@@ -328,7 +351,7 @@ impl FrameworkSelector {
         }
         params
     }
-    
+
     /// Generiert Error-Response-Code für Axum
     pub fn generate_axum_error_response(status_code: u16, message: &str) -> String {
         format!(
@@ -338,7 +361,7 @@ impl FrameworkSelector {
             status_code, message
         )
     }
-    
+
     /// Generiert Error-Response-Code für Actix
     pub fn generate_actix_error_response(status_code: u16, message: &str) -> String {
         format!(
@@ -349,7 +372,7 @@ impl FrameworkSelector {
             status_code, message
         )
     }
-    
+
     /// Generiert CORS-Middleware für Axum
     pub fn generate_axum_cors() -> String {
         r#"use tower_http::cors::{CorsLayer, Any};
@@ -357,9 +380,10 @@ impl FrameworkSelector {
 let cors = CorsLayer::new()
     .allow_origin(Any)
     .allow_methods(Any)
-    .allow_headers(Any);"#.to_string()
+    .allow_headers(Any);"#
+            .to_string()
     }
-    
+
     /// Generiert CORS-Middleware für Actix
     pub fn generate_actix_cors() -> String {
         r#"use actix_cors::Cors;
@@ -367,9 +391,10 @@ let cors = CorsLayer::new()
 let cors = Cors::default()
     .allow_any_origin()
     .allow_any_method()
-    .allow_any_header();"#.to_string()
+    .allow_any_header();"#
+            .to_string()
     }
-    
+
     /// Generiert vollständigen Handler mit Path/Query-Parameter-Extraktion für Axum
     pub fn generate_axum_handler_complete(
         function_name: &str,
@@ -379,33 +404,54 @@ let cors = Cors::default()
     ) -> String {
         let path_params = Self::extract_path_params(path);
         let mut handler = format!("async fn {}_handler(", function_name);
-        
+
         let mut extractors = Vec::new();
-        
+
         // Path parameters
         for path_param in &path_params {
             if let Some(param) = params.iter().find(|p| p.name == *path_param) {
-                extractors.push(format!("Path({}): Path<{}>", path_param, Self::velin_to_rust_type(&param.param_type)));
+                extractors.push(format!(
+                    "Path({}): Path<{}>",
+                    path_param,
+                    Self::velin_to_rust_type(&param.param_type)
+                ));
             }
         }
-        
+
         // Query parameters
         for param in params {
-            if !path_params.contains(&param.name) && matches!(param.param_type, Type::String | Type::Number | Type::Boolean) {
-                extractors.push(format!("Query({}): Query<{}>", param.name, Self::velin_to_rust_type(&param.param_type)));
+            if !path_params.contains(&param.name)
+                && matches!(
+                    param.param_type,
+                    Type::String | Type::Number | Type::Boolean
+                )
+            {
+                extractors.push(format!(
+                    "Query({}): Query<{}>",
+                    param.name,
+                    Self::velin_to_rust_type(&param.param_type)
+                ));
             }
         }
-        
+
         // Body parameters
         for param in params {
-            if !path_params.contains(&param.name) && !matches!(param.param_type, Type::String | Type::Number | Type::Boolean) {
-                extractors.push(format!("Json(payload): Json<{}>", Self::velin_to_rust_type(&param.param_type)));
+            if !path_params.contains(&param.name)
+                && !matches!(
+                    param.param_type,
+                    Type::String | Type::Number | Type::Boolean
+                )
+            {
+                extractors.push(format!(
+                    "Json(payload): Json<{}>",
+                    Self::velin_to_rust_type(&param.param_type)
+                ));
             }
         }
-        
+
         handler.push_str(&extractors.join(", "));
         handler.push_str(") -> impl IntoResponse {\n");
-        
+
         // Handler body
         if let Some(ref _ret_type) = return_type {
             handler.push_str(&format!("    let result = {}().await;\n", function_name));
@@ -413,11 +459,11 @@ let cors = Cors::default()
         } else {
             handler.push_str("    StatusCode::OK.into_response()\n");
         }
-        
+
         handler.push_str("}");
         handler
     }
-    
+
     /// Generiert vollständigen Handler mit Path/Query-Parameter-Extraktion für Actix
     pub fn generate_actix_handler_complete(
         function_name: &str,
@@ -427,33 +473,54 @@ let cors = Cors::default()
     ) -> String {
         let path_params = Self::extract_path_params(path);
         let mut handler = format!("async fn {}_handler(", function_name);
-        
+
         let mut extractors = Vec::new();
-        
+
         // Path parameters
         for path_param in &path_params {
             if let Some(param) = params.iter().find(|p| p.name == *path_param) {
-                extractors.push(format!("{}: web::Path<{}>", path_param, Self::velin_to_rust_type(&param.param_type)));
+                extractors.push(format!(
+                    "{}: web::Path<{}>",
+                    path_param,
+                    Self::velin_to_rust_type(&param.param_type)
+                ));
             }
         }
-        
+
         // Query parameters
         for param in params {
-            if !path_params.contains(&param.name) && matches!(param.param_type, Type::String | Type::Number | Type::Boolean) {
-                extractors.push(format!("{}: web::Query<{}>", param.name, Self::velin_to_rust_type(&param.param_type)));
+            if !path_params.contains(&param.name)
+                && matches!(
+                    param.param_type,
+                    Type::String | Type::Number | Type::Boolean
+                )
+            {
+                extractors.push(format!(
+                    "{}: web::Query<{}>",
+                    param.name,
+                    Self::velin_to_rust_type(&param.param_type)
+                ));
             }
         }
-        
+
         // Body parameters
         for param in params {
-            if !path_params.contains(&param.name) && !matches!(param.param_type, Type::String | Type::Number | Type::Boolean) {
-                extractors.push(format!("payload: web::Json<{}>", Self::velin_to_rust_type(&param.param_type)));
+            if !path_params.contains(&param.name)
+                && !matches!(
+                    param.param_type,
+                    Type::String | Type::Number | Type::Boolean
+                )
+            {
+                extractors.push(format!(
+                    "payload: web::Json<{}>",
+                    Self::velin_to_rust_type(&param.param_type)
+                ));
             }
         }
-        
+
         handler.push_str(&extractors.join(", "));
         handler.push_str(") -> impl Responder {\n");
-        
+
         // Handler body
         if let Some(ref _ret_type) = return_type {
             handler.push_str(&format!("    let result = {}().await;\n", function_name));
@@ -461,7 +528,7 @@ let cors = Cors::default()
         } else {
             handler.push_str("    HttpResponse::Ok().finish()\n");
         }
-        
+
         handler.push_str("}");
         handler
     }

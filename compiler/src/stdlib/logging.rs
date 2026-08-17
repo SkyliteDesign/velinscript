@@ -57,7 +57,7 @@ impl Logger {
             output: Box::new(io::stdout()),
         }
     }
-    
+
     /// Erstellt einen Logger mit spezifischem Level
     pub fn with_level(level: LogLevel) -> Self {
         Logger {
@@ -65,37 +65,37 @@ impl Logger {
             output: Box::new(io::stdout()),
         }
     }
-    
+
     /// Setzt das Log-Level
     pub fn set_level(&mut self, level: LogLevel) {
         self.level = level;
     }
-    
+
     /// Loggt eine Nachricht auf Trace-Level
     pub fn trace(&mut self, message: &str) {
         self.log(LogLevel::Trace, message);
     }
-    
+
     /// Loggt eine Nachricht auf Debug-Level
     pub fn debug(&mut self, message: &str) {
         self.log(LogLevel::Debug, message);
     }
-    
+
     /// Loggt eine Nachricht auf Info-Level
     pub fn info(&mut self, message: &str) {
         self.log(LogLevel::Info, message);
     }
-    
+
     /// Loggt eine Nachricht auf Warn-Level
     pub fn warn(&mut self, message: &str) {
         self.log(LogLevel::Warn, message);
     }
-    
+
     /// Loggt eine Nachricht auf Error-Level
     pub fn error(&mut self, message: &str) {
         self.log(LogLevel::Error, message);
     }
-    
+
     /// Interne Log-Funktion
     fn log(&mut self, level: LogLevel, message: &str) {
         if level >= self.level {
@@ -283,27 +283,27 @@ impl LoggingStdlib {
     pub fn generate_trace_code(message: &str) -> String {
         format!("logger.trace(\"{}\")", message)
     }
-    
+
     /// Generiert Rust-Code für log.debug()
     pub fn generate_debug_code(message: &str) -> String {
         format!("logger.debug(\"{}\")", message)
     }
-    
+
     /// Generiert Rust-Code für log.info()
     pub fn generate_info_code(message: &str) -> String {
         format!("logger.info(\"{}\")", message)
     }
-    
+
     /// Generiert Rust-Code für log.warn()
     pub fn generate_warn_code(message: &str) -> String {
         format!("logger.warn(\"{}\")", message)
     }
-    
+
     /// Generiert Rust-Code für log.error()
     pub fn generate_error_code(message: &str) -> String {
         format!("logger.error(\"{}\")", message)
     }
-    
+
     /// Liste der verfügbaren Logging-Funktionen
     pub fn get_functions() -> Vec<FunctionInfo> {
         vec![

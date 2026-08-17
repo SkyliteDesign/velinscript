@@ -176,6 +176,42 @@ null
 - `||` - Oder
 - `!` - Nicht
 
+#### Membership Operator
+
+- `in` - Prüft, ob ein Element in einer Collection enthalten ist
+
+**Unterstützte Typen für rechten Operanden:**
+- `List<T>` - Listenelemente
+- `Map<K, V>` - Schlüssel
+- `string` - Teilstrings
+
+**Beispiele:**
+
+```velin
+// Mit Liste
+let colors = ["rot", "grün", "blau"]
+if "rot" in colors { print("Farbe gefunden") }
+
+// Mit Map
+let users = { "alice": 25, "bob": 30 }
+if "alice" in users { print("Benutzer existiert") }
+
+// Mit String
+if "ll" in "Hallo" { print("Substring gefunden") }
+
+// Mit Try-Catch
+try {
+    let value = getUserValue()
+    if value in validValues { print("Gültig") }
+} catch err { print("Fehler") }
+```
+
+**Code-Generierung:**
+- **Rust:** `.contains(&value)`
+- **Python:** `in`
+- **PHP:** `in_array()`
+- **JavaScript:** `in`
+
 #### Zuweisungsoperatoren
 
 - `=` - Zuweisung

@@ -62,6 +62,16 @@ fn printMessage(msg: string): void {
 }
 ```
 
+> **Tipp:** Nutze `@VelinAutoDoc` über deinen Funktionen, um automatisch Dokumentation zu generieren. Mehr dazu in [Tutorial 8](tutorial-8-intelligence.md).
+
+```velin
+/// Gibt eine Begrüßung zurück
+@VelinAutoDoc
+fn greet(name: string): string {
+    return "Hello, " + name + "!";
+}
+```
+
 ## Structs
 
 ### Struct definieren
@@ -159,3 +169,4 @@ let host = config["host"];
 - [Tutorial 2: APIs](tutorial-2-apis.md) - REST API Entwicklung
 - [Tutorial 3: Security](tutorial-3-security.md) - Security Features
 - [Tutorial 4: Database](tutorial-4-database.md) - Database Integration
+- [Tutorial 8: Intelligence](tutorial-8-intelligence.md) - AutoDoc, AutoTest & mehr

@@ -1,0 +1,37 @@
+name: Velisch Sync (manual)
+
+# Internal: does not push by default. Set inputs carefully after Doc-Gate filter.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only write manifest, do not push"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build curated manifest
+        run: |
+          mkdir -p .velin
+          {
+            echo "version=3.5.0"
+            echo "files=README.md,QUICK_START.md,CHANGELOG.md,examples/00-simple-hello,docs/guides/getting-started.md,docs/guides/multi-target.md"
+            echo "exclude=bauplan/,compiler/src/,docs/architecture/"
+          } > .velin/velisch-sync-manifest.txt
+          cat .velin/velisch-sync-manifest.txt
+      - name: Dry-run notice
+        if: ${{ inputs.dry_run == 'true' }}
+        run: echo "DRY_RUN=true — no push to Velisch repo"
+      - name: Push gated
+        if: ${{ inputs.dry_run == 'false' }}
+        run: |
+          echo "Push to Velisch requires secrets and explicit approval — refusing in this draft."
+          exit 1

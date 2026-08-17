@@ -1,0 +1,225 @@
+// Custom Recommender - Recommendation Algorithmus
+// Hybrid Recommendation System: Kombiniert Embedding-basierte und Collaborative Filtering Ansätze
+
+use app_config;
+use models;
+use std::math;
+
+// calculateSimilarity - Berechnet Ähnlichkeit zwischen zwei Embeddings (Cosine Similarity)
+// Input: Zwei Embedding-Vektoren
+// Output: Ähnlichkeits-Score zwischen 0.0 und 1.0
+fn calculateSimilarity(embedding1: List<number>, embedding2: List<number>): number {
+    if (models.isTrue(embedding1.length != embedding2.length)) {
+        return 0.0;
+    }
+    if (models.isTrue(embedding1.length == 0)) {
+        return 0.0;
+    }
+    
+    // Dot Product berechnen
+    let mut dotProduct = 0.0;
+    let mut i = 0;
+    while (models.isTrue(embedding1.length > i)) {
+        dotProduct = dotProduct + (embedding1[i] * embedding2[i]);
+        i = i + 1;
+    }
+    
+    // Magnitude (Länge) der Vektoren berechnen
+    let mut magnitude1 = 0.0;
+    let mut magnitude2 = 0.0;
+    i = 0;
+    while (models.isTrue(embedding1.length > i)) {
+        magnitude1 = magnitude1 + (embedding1[i] * embedding1[i]);
+        magnitude2 = magnitude2 + (embedding2[i] * embedding2[i]);
+        i = i + 1;
+    }
+    magnitude1 = math.sqrt(magnitude1);
+    magnitude2 = math.sqrt(magnitude2);
+    
+    if (magnitude1 == 0.0) {
+        return 0.0;
+    }
+    if (magnitude2 == 0.0) {
+        return 0.0;
+    }
+    
+    return dotProduct / (magnitude1 * magnitude2);
+}
+
+// collaborativeFilter - Collaborative Filtering Algorithmus
+fn collaborativeFilter(
+    userId: string, 
+    allItems: List<models.Item>, 
+    allPreferences: List<models.UserPreference>
+): List<models.Recommendation> {
+    return [];
+}
+
+// embeddingBasedRecommend - Embedding-basierte Empfehlungen
+fn embeddingBasedRecommend(
+    userId: string,
+    userEmbedding: List<number>,
+    allItems: List<models.Item>
+): List<models.Recommendation> {
+    return [];
+}
+
+// hybridRecommend - Kombiniert Embedding-basierte und Collaborative Filtering Empfehlungen
+fn hybridRecommend(
+    userId: string,
+    userEmbedding: List<number>,
+    allItems: List<models.Item>,
+    allPreferences: List<models.UserPreference>
+): List<models.Recommendation> {
+    // Lade Konfiguration
+    let config = app_config.getConfig();
+    let embeddingWeight = config.ml.recommendation.embeddingWeight;
+    let collaborativeWeight = config.ml.recommendation.collaborativeWeight;
+    let maxRecommendations = config.ml.recommendation.maxRecommendations;
+    let minScore = config.ml.recommendation.minScore;
+    
+    // 1. Hole Embedding-basierte Empfehlungen
+    let embeddingRecs = embeddingBasedRecommend(userId, userEmbedding, allItems);
+    
+    // 2. Hole Collaborative Filtering Empfehlungen
+    let collaborativeRecs = collaborativeFilter(userId, allItems, allPreferences);
+    
+    // 3. Kombiniere beide Ansätze
+    let mut combinedScores = Map<string, models.Recommendation>();
+    
+    // Füge Embedding-Empfehlungen hinzu
+    let mut i = 0;
+    while (models.isTrue(embeddingRecs.length > i)) {
+        let rec = embeddingRecs[i];
+        let score = rec.score * embeddingWeight;
+        let r: models.Recommendation = models.createRecommendation(
+            rec.itemId,
+            score,
+            rec.reason,
+            "hybrid",
+            rec.item
+        );
+        combinedScores.insert(rec.itemId, r);
+        i = i + 1;
+    }
+    
+    // Füge Collaborative Filtering Empfehlungen hinzu und kombiniere Scores
+    i = 0;
+    while (models.isTrue(collaborativeRecs.length > i)) {
+        let colRec = collaborativeRecs[i];
+        let score = colRec.score * collaborativeWeight;
+        if (models.isTrue(combinedScores.contains(colRec.itemId))) {
+            // Kombiniere Scores wenn Item in beiden Listen ist
+            let existing: models.Recommendation = combinedScores.get(colRec.itemId);
+            let rCombined: models.Recommendation = models.createRecommendation(
+                colRec.itemId,
+                existing.score + score,
+                "Kombiniert aus Embedding-Ähnlichkeit und ähnlichen Nutzern",
+                "hybrid",
+                colRec.item
+            );
+            combinedScores.insert(colRec.itemId, rCombined);
+        } else {
+            let rNew: models.Recommendation = models.createRecommendation(
+                colRec.itemId,
+                score,
+                colRec.reason,
+                "hybrid",
+                colRec.item
+            );
+            combinedScores.insert(colRec.itemId, rNew);
+        }
+        i = i + 1;
+    }
+    
+    // 4. Konvertiere Map zu Liste und sortiere
+    let mut finalRecommendations: List<models.Recommendation> = [];
+    let keys = combinedScores.keys();
+    i = 0;
+    while (models.isTrue(keys.length > i)) {
+        let itemId = keys[i];
+        if (models.isTrue(combinedScores.contains(itemId))) {
+            let finalRec: models.Recommendation = combinedScores.get(itemId);
+            // Filtere nach minScore
+            if (models.isTrue(finalRec.score >= minScore)) {
+                finalRecommendations.push(finalRec);
+            }
+        }
+        i = i + 1;
+    }
+    
+    // Sortiere nach Score - Bubble Sort
+    let mut swapped = true;
+    let mut finalLen = finalRecommendations.length;
+    while (models.isTrue(swapped)) {
+        swapped = false;
+        let mut p = 0;
+        // Check bounds carefully
+        if (models.isTrue(finalLen > 1)) {
+            while (models.isTrue((finalLen - 1) > p)) {
+                let r1 = finalRecommendations[p];
+                let r2 = finalRecommendations[p + 1];
+                if (models.isTrue(r1.score < r2.score)) {
+                    finalRecommendations[p] = r2;
+                    finalRecommendations[p + 1] = r1;
+                    swapped = true;
+                }
+                p = p + 1;
+            }
+        } else {
+            swapped = false;
+        }
+    }
+    
+    // Begrenze auf maxRecommendations
+    if (models.isTrue(finalRecommendations.length > maxRecommendations)) {
+        let sliced: List<models.Recommendation> = [];
+        let j = 0;
+        while (models.isTrue(maxRecommendations > j)) {
+            sliced.push(finalRecommendations[j]);
+            j = j + 1;
+        }
+        return sliced;
+    }
+    
+    return finalRecommendations;
+}
+
+// getUserHistory - Ruft den Nutzerverlauf ab
+// Input: userId, alle Preferences
+// Output: Liste von UserPreferences sortiert nach Timestamp
+fn getUserHistory(userId: string, allPreferences: List<models.UserPreference>): List<models.UserPreference> {
+    let mut userPrefs: List<models.UserPreference> = [];
+    let mut i = 0;
+    while (models.isTrue(allPreferences.length > i)) {
+        let p = allPreferences[i];
+        if (models.isTrue(p.userId == userId)) {
+            userPrefs.push(p);
+        }
+        i = i + 1;
+    }
+    
+    // Sort logic (Bubble sort by timestamp desc)
+    let mut swapped = true;
+    let mut len = userPrefs.length;
+    while (models.isTrue(swapped)) {
+        swapped = false;
+        let mut j = 0;
+        while (models.isTrue((len - 1) > j)) {
+            let p1 = userPrefs[j];
+            let p2 = userPrefs[j + 1];
+            // String comparison needed? Assuming string timestamp format "YYYY-MM-DD..."
+            // Velin might not support string comparison via < > directly if not overloaded.
+            // But usually it works for strings.
+            // Descending order: b > a
+            if (models.isTrue(p2.timestamp > p1.timestamp)) {
+                userPrefs[j] = p2;
+                userPrefs[j + 1] = p1;
+                swapped = true;
+            }
+            j = j + 1;
+        }
+    }
+    
+    return userPrefs;
+}

@@ -1,0 +1,14 @@
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_{{module_name}}_basic() {
+        let stdlib = {{ModuleName}}Stdlib;
+        
+        // Test grundlegende Funktionalität
+        assert!(true, "Basic test should pass");
+    }
+    
+{{test_functions}}
+}

@@ -74,6 +74,26 @@ impl JsonStdlib {
     pub fn generate_get_code(value: &str, key: &str) -> String {
         format!("json::get(&{}, \"{}\")", value, key)
     }
+
+    /// Generiert Rust-Code für json.set()
+    pub fn generate_set_code(value: &str, key: &str, new_value: &str) -> String {
+        format!("json::set(&mut {}, \"{}\", {})", value, key, new_value)
+    }
+
+    /// Generiert Rust-Code für json.has_key()
+    pub fn generate_has_key_code(value: &str, key: &str) -> String {
+        format!("json::has_key(&{}, \"{}\")", value, key)
+    }
+
+    /// Generiert Rust-Code für json.keys()
+    pub fn generate_keys_code(value: &str) -> String {
+        format!("json::keys(&{})", value)
+    }
+
+    /// Generiert Rust-Code für json.length()
+    pub fn generate_length_code(value: &str) -> String {
+        format!("json::length(&{})", value)
+    }
     
     /// Liste der verfügbaren JSON-Funktionen
     pub fn get_functions() -> Vec<FunctionInfo> {

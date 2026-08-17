@@ -1,0 +1,221 @@
+struct CryptoPrice {
+    symbol: string,
+    priceUsd: number,
+    change24hPercent: number,
+    marketCapUsd: number,
+}
+
+struct PortfolioRequest {
+    btcAmount: number,
+    ethAmount: number,
+    solAmount: number,
+}
+
+struct PortfolioOverview {
+    btcAmount: number,
+    btcValueUsd: number,
+    ethAmount: number,
+    ethValueUsd: number,
+    solAmount: number,
+    solValueUsd: number,
+    totalValueUsd: number,
+}
+
+struct PortfolioPreset {
+    id: string,
+    name: string,
+    description: string,
+    btcShare: number,
+    ethShare: number,
+    solShare: number,
+}
+
+struct PortfolioFromPresetRequest {
+    presetId: string,
+    totalUsd: number,
+}
+
+fn getStaticBitcoinPrice(): CryptoPrice {
+    return CryptoPrice {
+        symbol: "BTC",
+        priceUsd: 43000.15,
+        change24hPercent: -2.31,
+        marketCapUsd: 845000000000,
+    };
+}
+
+fn getStaticEthereumPrice(): CryptoPrice {
+    return CryptoPrice {
+        symbol: "ETH",
+        priceUsd: 2300.50,
+        change24hPercent: 1.85,
+        marketCapUsd: 275000000000,
+    };
+}
+
+fn getStaticSolanaPrice(): CryptoPrice {
+    return CryptoPrice {
+        symbol: "SOL",
+        priceUsd: 95.20,
+        change24hPercent: 4.12,
+        marketCapUsd: 4200000000,
+    };
+}
+
+@GET("/api/crypto/btc")
+fn getBitcoinPrice(): CryptoPrice {
+    return getStaticBitcoinPrice();
+}
+
+fn getStaticPortfolio(): PortfolioOverview {
+    let btc = getStaticBitcoinPrice();
+    let eth = getStaticEthereumPrice();
+    let sol = getStaticSolanaPrice();
+
+    let btcAmount = 0.5;
+    let ethAmount = 5.0;
+    let solAmount = 80.0;
+
+    let btcValue = btc.priceUsd * btcAmount;
+    let ethValue = eth.priceUsd * ethAmount;
+    let solValue = sol.priceUsd * solAmount;
+
+    let total = btcValue + ethValue + solValue;
+
+    return PortfolioOverview {
+        btcAmount: btcAmount,
+        btcValueUsd: btcValue,
+        ethAmount: ethAmount,
+        ethValueUsd: ethValue,
+        solAmount: solAmount,
+        solValueUsd: solValue,
+        totalValueUsd: total,
+    };
+}
+
+@GET("/api/crypto/portfolio")
+fn getPortfolio(): PortfolioOverview {
+    return getStaticPortfolio();
+}
+
+@POST("/api/crypto/portfolio/custom")
+fn calculateCustomPortfolio(request: PortfolioRequest): PortfolioOverview {
+    let btc = getStaticBitcoinPrice();
+    let eth = getStaticEthereumPrice();
+    let sol = getStaticSolanaPrice();
+
+    let btcValue = btc.priceUsd * request.btcAmount;
+    let ethValue = eth.priceUsd * request.ethAmount;
+    let solValue = sol.priceUsd * request.solAmount;
+
+    let total = btcValue + ethValue + solValue;
+
+    return PortfolioOverview {
+        btcAmount: request.btcAmount,
+        btcValueUsd: btcValue,
+        ethAmount: request.ethAmount,
+        ethValueUsd: ethValue,
+        solAmount: request.solAmount,
+        solValueUsd: solValue,
+        totalValueUsd: total,
+    };
+}
+
+fn getConservativePreset(): PortfolioPreset {
+    return PortfolioPreset {
+        id: "conservative",
+        name: "Konservativ BTC-fokussiert",
+        description: "70% BTC, 20% ETH, 10% SOL",
+        btcShare: 0.7,
+        ethShare: 0.2,
+        solShare: 0.1,
+    };
+}
+
+fn getBalancedPreset(): PortfolioPreset {
+    return PortfolioPreset {
+        id: "balanced",
+        name: "Ausgewogen",
+        description: "40% BTC, 40% ETH, 20% SOL",
+        btcShare: 0.4,
+        ethShare: 0.4,
+        solShare: 0.2,
+    };
+}
+
+fn getGrowthPreset(): PortfolioPreset {
+    return PortfolioPreset {
+        id: "growth",
+        name: "Wachstum (ETH/SOL-fokussiert)",
+        description: "20% BTC, 50% ETH, 30% SOL",
+        btcShare: 0.2,
+        ethShare: 0.5,
+        solShare: 0.3,
+    };
+}
+
+fn getPresetById(id: string): PortfolioPreset {
+    if (id == "conservative") {
+        return getConservativePreset();
+    }
+
+    if (id == "balanced") {
+        return getBalancedPreset();
+    }
+
+    if (id == "growth") {
+        return getGrowthPreset();
+    }
+
+    return getBalancedPreset();
+}
+
+@GET("/api/crypto/portfolio/preset/conservative")
+fn getConservativePortfolioPreset(): PortfolioPreset {
+    return getConservativePreset();
+}
+
+@GET("/api/crypto/portfolio/preset/balanced")
+fn getBalancedPortfolioPreset(): PortfolioPreset {
+    return getBalancedPreset();
+}
+
+@GET("/api/crypto/portfolio/preset/growth")
+fn getGrowthPortfolioPreset(): PortfolioPreset {
+    return getGrowthPreset();
+}
+
+@POST("/api/crypto/portfolio/from-preset")
+fn calculatePortfolioFromPreset(request: PortfolioFromPresetRequest): PortfolioOverview {
+    let preset = getPresetById(request.presetId);
+
+    let btc = getStaticBitcoinPrice();
+    let eth = getStaticEthereumPrice();
+    let sol = getStaticSolanaPrice();
+
+    let btcBudget = request.totalUsd * preset.btcShare;
+    let ethBudget = request.totalUsd * preset.ethShare;
+    let solBudget = request.totalUsd * preset.solShare;
+
+    let btcAmount = btcBudget / btc.priceUsd;
+    let ethAmount = ethBudget / eth.priceUsd;
+    let solAmount = solBudget / sol.priceUsd;
+
+    let btcValue = btc.priceUsd * btcAmount;
+    let ethValue = eth.priceUsd * ethAmount;
+    let solValue = sol.priceUsd * solAmount;
+
+    let total = btcValue + ethValue + solValue;
+
+    return PortfolioOverview {
+        btcAmount: btcAmount,
+        btcValueUsd: btcValue,
+        ethAmount: ethAmount,
+        ethValueUsd: ethValue,
+        solAmount: solAmount,
+        solValueUsd: solValue,
+        totalValueUsd: total,
+    };
+}
+
+

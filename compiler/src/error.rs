@@ -1,5 +1,6 @@
-// Zentrale Error-Types für VelinScript Compiler
+// Zentrale Error-Types für Velisch Compiler
 // Verwendet thiserror für automatische Error-Implementierungen
+// Velisch Identity - Fingerabdruck im Error-System
 
 use thiserror::Error;
 
@@ -28,7 +29,7 @@ impl ErrorLocation {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum CompilerError {
     #[error("Parse error: {message} at line {line}, column {column}")]
     Parse {
@@ -38,6 +39,7 @@ pub enum CompilerError {
         found: Option<String>,
         line: usize,
         column: usize,
+        source_context: Option<String>,
     },
     
     #[error("Type error: {message} at line {line}, column {column}")]
@@ -75,9 +77,19 @@ pub enum CompilerError {
     Internal {
         message: String,
     },
+    
+    #[error("Warning: {0}")]
+    Warning(String),
+
+    #[error("Info: {0}")]
+    Info(String),
 }
 
 pub type CompilerResult<T> = Result<T, CompilerError>;
+
+// Error Suggestions Modul
+pub mod suggestions;
+pub use suggestions::ErrorSuggestionEngine;
 
 impl CompilerError {
     pub fn parse_error(message: String, location: ErrorLocation) -> Self {
@@ -88,6 +100,7 @@ impl CompilerError {
             found: None,
             line: location.line,
             column: location.column,
+            source_context: None,
         }
     }
     
@@ -104,6 +117,7 @@ impl CompilerError {
             found: Some(found),
             line: location.line,
             column: location.column,
+            source_context: None,
         }
     }
     
@@ -152,6 +166,16 @@ impl CompilerError {
             message,
             field,
         }
+    }
+
+    pub fn warning(message: String) -> Self {
+        CompilerError::Warning(message)
+    }
+    
+    /// Gibt eine verbesserte Fehlermeldung mit Vorschlägen zurück
+    pub fn with_suggestions(&self) -> String {
+        let engine = ErrorSuggestionEngine::new();
+        engine.enhance_error(self)
     }
 }
 

@@ -3,7 +3,7 @@
 use tower_lsp::lsp_types::*;
 use velin_compiler::parser::ast::*;
 
-pub fn get_hover(program: &Program, position: Position, word: &str) -> Option<Hover> {
+pub fn get_hover(program: &Program, _position: Position, word: &str) -> Option<Hover> {
     // Suche nach Funktionen
     for item in &program.items {
         if let Item::Function(f) = item {
@@ -77,6 +77,43 @@ pub fn get_hover(program: &Program, position: Position, word: &str) -> Option<Ho
                             e.name,
                             variants_str.replace(", ", ",\n  "),
                             e.name
+                        ),
+                    }),
+                    range: None,
+                });
+            }
+        }
+    }
+    
+    // Suche nach Traits
+    for item in &program.items {
+        if let Item::Trait(t) = item {
+            if t.name == word {
+                let methods_str = t.methods
+                    .iter()
+                    .map(|m| {
+                        let params_str = m.params
+                            .iter()
+                            .map(|p| format!("{}: {}", p.name, p.param_type.to_string()))
+                            .collect::<Vec<_>>()
+                            .join(", ");
+                        let return_str = m.return_type
+                            .as_ref()
+                            .map(|t| format!(" -> {}", t.to_string()))
+                            .unwrap_or_else(|| "".to_string());
+                        format!("  {}({}){}", m.name, params_str, return_str)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(";\n");
+                
+                return Some(Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: format!(
+                            "```velin\ntrait {} {{\n{}\n}}\n```\n\nTrait: {}",
+                            t.name,
+                            methods_str,
+                            t.name
                         ),
                     }),
                     range: None,

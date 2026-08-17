@@ -12,6 +12,9 @@ pub enum Item {
     TypeAlias(TypeAlias),
     Module(Module),
     Use(Use),
+    Trait(Trait),
+    Impl(Impl),
+    TopLevelCode(ExpressionStatement), // Top-level expression statements like init();
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,11 +22,13 @@ pub struct Function {
     pub decorators: Vec<Decorator>,
     pub visibility: Visibility,
     pub name: String,
+    pub type_params: Vec<GenericParam>, // Generic parameters with constraints
     pub params: Vec<Parameter>,
     pub return_type: Option<Type>,
     pub body: Block,
     pub is_async: bool,
     pub is_const: bool,
+    pub documentation: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -68,6 +73,31 @@ pub enum Statement {
     For(ForStatement),
     While(WhileStatement),
     Match(MatchStatement),
+    Throw(ThrowStatement),
+    Break(BreakStatement),
+    Try(TryStatement),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ThrowStatement {
+    pub expression: Expression,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct BreakStatement;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TryStatement {
+    pub try_block: Block,
+    pub catch_blocks: Vec<CatchBlock>,
+    pub finally_block: Option<Block>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CatchBlock {
+    pub error_var: Option<String>,
+    pub error_type: Option<Type>,
+    pub body: Block,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -117,6 +147,7 @@ pub struct MatchStatement {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MatchArm {
     pub pattern: Pattern,
+    pub guard: Option<Expression>, // Pattern guard: `if condition`
     pub body: Block,
 }
 
@@ -126,6 +157,10 @@ pub enum Pattern {
     Identifier(String),
     Tuple(Vec<Pattern>),
     Struct { name: String, fields: Vec<(String, Pattern)> },
+    EnumVariant { name: String, data: Option<Vec<Pattern>> },
+    Range { start: Box<Expression>, end: Box<Expression>, inclusive: bool }, // 0..10 or 0..=10
+    Wildcard, // _
+    Or(Vec<Pattern>), // pattern1 | pattern2
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -166,11 +201,36 @@ pub enum Expression {
         name: String,
         fields: Vec<(String, Expression)>,
     },
+    MapLiteral(Vec<(String, Expression)>),
+    ListLiteral(Vec<Expression>),
     GenericConstructor {
         name: String,
         type_params: Vec<Type>,
         args: Vec<Expression>,
     },
+    Lambda {
+        params: Vec<Parameter>,
+        return_type: Option<Type>,
+        body: Box<Expression>, // Can be a Block or a single expression
+    },
+    Assignment {
+        target: Box<Expression>,
+        value: Box<Expression>,
+    },
+    FormatString {
+        parts: Vec<FormatStringPart>,
+    },
+    /// LLM-Call: @llm.analyze(text)
+    LLMCall {
+        method: String, // "analyze", "summarize", "extract", etc.
+        args: Vec<Expression>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FormatStringPart {
+    Text(String),
+    Expression(Box<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -211,6 +271,7 @@ pub struct Struct {
     pub fields: Vec<StructField>,
     pub visibility: Visibility,
     pub decorators: Vec<Decorator>,
+    pub documentation: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -218,6 +279,7 @@ pub struct StructField {
     pub name: String,
     pub field_type: Type,
     pub visibility: Visibility,
+    pub decorators: Vec<Decorator>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -225,6 +287,7 @@ pub struct Enum {
     pub name: String,
     pub variants: Vec<EnumVariant>,
     pub visibility: Visibility,
+    pub documentation: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -245,12 +308,48 @@ pub struct Module {
     pub name: String,
     pub items: Vec<Item>,
     pub visibility: Visibility,
+    pub documentation: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Use {
     pub path: Vec<String>,
     pub alias: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Trait {
+    pub name: String,
+    pub type_params: Vec<String>,
+    pub methods: Vec<TraitMethod>,
+    pub visibility: Visibility,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TraitMethod {
+    pub name: String,
+    pub params: Vec<Parameter>,
+    pub return_type: Option<Type>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Impl {
+    pub trait_name: String,
+    pub for_type: Type,
+    pub type_params: Vec<String>,
+    pub methods: Vec<Function>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenericParam {
+    pub name: String,
+    pub constraints: Vec<GenericConstraint>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum GenericConstraint {
+    Trait(String),
+    Multiple(Vec<String>), // T: Trait1 & Trait2
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -261,6 +360,7 @@ pub enum Type {
     Boolean,
     Void,
     Null,
+    Any,
     
     // Named types
     Named(String),
@@ -289,6 +389,12 @@ pub enum Type {
     
     // Optional types
     Optional(Box<Type>),
+    
+    // Result type
+    Result {
+        ok: Box<Type>,
+        err: Box<Type>,
+    },
 }
 
 impl Type {
@@ -299,6 +405,7 @@ impl Type {
             Type::Boolean => "boolean".to_string(),
             Type::Void => "void".to_string(),
             Type::Null => "null".to_string(),
+            Type::Any => "any".to_string(),
             Type::Named(name) => name.clone(),
             Type::Generic { name, params } => {
                 let params_str = params
@@ -329,6 +436,9 @@ impl Type {
                 format!("({})", types_str)
             }
             Type::Optional(inner) => format!("{}?", inner.to_string()),
+            Type::Result { ok, err } => {
+                format!("Result<{}, {}>", ok.to_string(), err.to_string())
+            }
         }
     }
 }

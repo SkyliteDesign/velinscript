@@ -1,0 +1,38 @@
+name: Examples Learn Path
+
+on:
+  push:
+    paths:
+      - "examples/00-simple-*/**"
+      - "examples/01-hello-api/**"
+      - "compiler/**"
+  pull_request:
+    paths:
+      - "examples/00-simple-*/**"
+      - "examples/01-hello-api/**"
+      - "compiler/**"
+  workflow_dispatch:
+
+jobs:
+  compile-learn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build compiler
+        working-directory: compiler
+        run: cargo build --release
+      - name: Parse/compile learn examples
+        working-directory: compiler
+        run: |
+          set -e
+          BIN=./target/release/velin
+          for f in \
+            ../examples/00-simple-hello/main.velin \
+            ../examples/00-simple-variables/main.velin \
+            ../examples/00-simple-structs/main.velin \
+            ../examples/01-hello-api/main.velin
+          do
+            echo "== $f =="
+            "$BIN" check -i "$f" || "$BIN" compile -i "$f" -o /tmp/out.rs --no-type-check
+          done

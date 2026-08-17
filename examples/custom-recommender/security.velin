@@ -64,13 +64,23 @@ fn checkRateLimit(ipAddress: string): boolean {
         return true;
     }
     
-    // In Production: Verwende Redis oder ähnliches für Rate Limiting
-    // let count = cache.get("rate_limit:" + ipAddress);
-    // if (count >= config.security.rateLimit.requestsPerMinute) {
-    //     return false;
-    // }
-    // cache.increment("rate_limit:" + ipAddress, 60); // TTL 60 Sekunden
+    // Verwende Cache für Rate Limiting (In-Memory mit TTL)
+    let rateLimitKey = "rate_limit:" + ipAddress;
+    let currentCount = cacheGet<number>(rateLimitKey);
     
+    if (currentCount == null) {
+        // Erster Request in diesem Zeitfenster
+        cacheSet(rateLimitKey, 1, 60); // TTL 60 Sekunden (1 Minute)
+        return true;
+    }
+    
+    if (currentCount >= config.security.rateLimit.requestsPerMinute) {
+        // Rate Limit überschritten
+        return false;
+    }
+    
+    // Erhöhe Counter
+    cacheSet(rateLimitKey, currentCount + 1, 60);
     return true;
 }
 

@@ -1,0 +1,15 @@
+// {{description}}
+
+{{types}}
+
+pub struct {{ModuleName}}Stdlib {
+    // Service-Implementierung
+}
+
+impl {{ModuleName}}Stdlib {
+    pub fn new() -> Self {
+        {{ModuleName}}Stdlib {}
+    }
+    
+{{functions}}
+}

@@ -1,10 +1,13 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+// Velisch Identity - Fingerabdruck in CLI
+// Diese Imports dienen als Fingerabdruck und werden absichtlich nicht direkt verwendet
+
 #[derive(Parser)]
 #[command(name = "velin")]
-#[command(about = "VelinScript Compiler - Eine moderne Programmiersprache für KI-APIs")]
-#[command(version = "0.1.0")]
+#[command(about = "Velisch Compiler - Eine moderne Programmiersprache für KI-APIs")]
+#[command(version = "3.5.0")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -12,7 +15,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Kompiliert eine VelinScript Datei zu Rust
+    /// Kompiliert eine Velisch Datei zu Rust
     Compile {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
@@ -29,16 +32,60 @@ pub enum Commands {
         /// Zeige generierten Code in der Konsole
         #[arg(long)]
         show_code: bool,
+        
+        /// Automatische Fehlerkorrektur aktivieren
+        #[arg(long)]
+        autofix: bool,
+        
+        /// KI-Semantik-Analyse aktivieren
+        #[arg(long)]
+        ai_semantic: bool,
+        
+        /// KI-Bug-Erkennung aktivieren
+        #[arg(long)]
+        ai_bug_detection: bool,
+        
+        /// KI-Code-Generierung aktivieren
+        #[arg(long)]
+        ai_codegen: bool,
+        
+        /// KI-Optimierung aktivieren
+        #[arg(long)]
+        ai_optimization: bool,
+        
+        /// AI Provider (openai, anthropic, gemini, local)
+        #[arg(long)]
+        ai_provider: Option<String>,
+        
+        /// AI API Key
+        #[arg(long)]
+        ai_api_key: Option<String>,
+
+        /// Ziel-Sprache (rust, php, python, etc.)
+        #[arg(long, default_value = "rust")]
+        target: String,
+
+        /// Web Framework (laravel, symfony, fastapi, flask, axum, actix)
+        #[arg(long)]
+        framework: Option<String>,
+
+        /// Codegen path: `ir` (default, productive) or `ast-legacy` (debug/compare only)
+        #[arg(long, default_value = "ir")]
+        codegen: String,
     },
     
-    /// Prüft eine VelinScript Datei (nur Parsing & Type Checking)
+    /// Prüft eine Velisch Datei (nur Parsing & Type Checking)
     Check {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
         input: PathBuf,
+        
+        /// Automatische Fehlerkorrektur aktivieren
+        #[arg(long)]
+        autofix: bool,
     },
     
-    /// Formatiert eine VelinScript Datei
+    /// Formatiert eine Velisch Datei
     Format {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
@@ -49,14 +96,14 @@ pub enum Commands {
         in_place: bool,
     },
     
-    /// Zeigt Informationen über eine VelinScript Datei
+    /// Zeigt Informationen über eine Velisch Datei
     Info {
         /// Eingabe-Datei (.velin)
         #[arg(short, long)]
         input: PathBuf,
     },
     
-    /// Initialisiert ein neues VelinScript Projekt
+    /// Initialisiert ein neues Velisch Projekt
     Init {
         /// Projekt-Name
         name: Option<String>,
@@ -64,6 +111,55 @@ pub enum Commands {
         /// Erstelle im aktuellen Verzeichnis
         #[arg(long)]
         current_dir: bool,
+    },
+    
+    /// Alias für `init` - Erstellt ein neues Velisch Projekt
+    New {
+        /// Projekt-Name
+        name: Option<String>,
+        
+        /// Erstelle im aktuellen Verzeichnis
+        #[arg(long)]
+        current_dir: bool,
+    },
+    
+    /// Schreibt ein Axum-Scaffold unter .velin/serve-scaffold (danach: cargo run)
+    Serve {
+        /// Eingabe-Datei (.velin)
+        #[arg(short, long)]
+        input: Option<PathBuf>,
+        
+        /// Port (Standard: 8080)
+        #[arg(short, long, default_value = "8080")]
+        port: u16,
+        
+        /// Host (Standard: localhost)
+        #[arg(long, default_value = "localhost")]
+        host: String,
+        
+        /// Watch-Mode (automatisches Neuladen bei Änderungen)
+        #[arg(short, long)]
+        watch: bool,
+    },
+    
+    /// Alias for serve (hidden until full runtime is available)
+    #[command(hide = true)]
+    Run {
+        /// Eingabe-Datei (.velin)
+        #[arg(short, long)]
+        input: Option<PathBuf>,
+        
+        /// Port (Standard: 8080)
+        #[arg(short, long, default_value = "8080")]
+        port: u16,
+        
+        /// Host (Standard: localhost)
+        #[arg(long, default_value = "localhost")]
+        host: String,
+        
+        /// Watch-Mode (automatisches Neuladen bei Änderungen)
+        #[arg(short, long)]
+        watch: bool,
     },
     
     /// Generiert OpenAPI Specification
@@ -96,7 +192,7 @@ pub enum Commands {
         path: Option<String>,
         
         /// OpenAPI Datei (für Client)
-        #[arg(short, long)]
+        #[arg(long)]
         openapi: Option<PathBuf>,
         
         /// Ausgabe-Sprache (für Client)
@@ -108,7 +204,7 @@ pub enum Commands {
         output: Option<PathBuf>,
     },
     
-    /// Führt Tests aus (Unit + Integration)
+    /// Parse Velin test files under tests/ (full runner: use velin-test-runner)
     Test {
         /// Test-Verzeichnis
         #[arg(short, long)]
@@ -134,14 +230,16 @@ pub enum Commands {
         subcommand: ConfigCommands,
     },
     
-    /// Cache-Management
+    /// Cache management (requires generated runtime; hidden)
+    #[command(hide = true)]
     Cache {
         /// Subcommand
         #[command(subcommand)]
         subcommand: CacheCommands,
     },
     
-    /// Health Check
+    /// Health check against a running service (hidden)
+    #[command(hide = true)]
     Health {
         /// Endpoint-URL
         #[arg(short, long)]
@@ -152,14 +250,15 @@ pub enum Commands {
         verbose: bool,
     },
     
-    /// Backup-Management
+    /// Projekt-Dateien unter .velin/backup sichern
     Backup {
         /// Subcommand
         #[command(subcommand)]
         subcommand: BackupCommands,
     },
     
-    /// Rollback-Management
+    /// Rollback helpers (hidden until filesystem ops are complete)
+    #[command(hide = true)]
     Rollback {
         /// Subcommand
         #[command(subcommand)]

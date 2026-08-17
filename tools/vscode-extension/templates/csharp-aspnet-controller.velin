@@ -1,0 +1,12 @@
+@AspNet
+@Controller("api/[controller]")
+struct ${1:Resource}Controller {
+    // fields
+}
+
+impl ${1:Resource}Controller {
+    @Get
+    fn Get(self): List<${2:Type}> {
+        return [];
+    }
+}

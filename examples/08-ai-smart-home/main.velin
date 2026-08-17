@@ -1,0 +1,48 @@
+use devices;
+use automation;
+
+fn main() {
+    // 1. Initialize System Environment
+    // The compiler can optimize env lookups if keys are static
+    let system_name: string = env.get("HOME_NAME", "VelinHome");
+    let debug_mode: boolean = env.get_bool("DEBUG", true);
+    
+    // 2. Initialize Event Bus for device communication
+    let bus = event_bus.create();
+    
+    // 3. Setup Security Alerting
+    // Create a rule: Trigger if temperature exceeds 30.0 degrees
+    let heat_rule = alerting.create_rule({ "condition": ">", "threshold": 30.0 });
+    
+    // 4. Setup Scheduler for Routines
+    // Run "Good Morning" routine every day at 7:00 AM
+    // The scheduler module parses cron syntax
+    scheduler.schedule({ "name": "good_morning" }, "0 7 * * *");
+    
+    // 5. Load Devices
+    // In a real scenario, this fetches from DB or discovery
+    let all_devices: List<devices.SmartDevice> = devices.get_all_devices();
+    
+    // 6. Main Control Loop Simulation
+    // We iterate through devices to check status and optimize settings
+    let current_outside_temp: number = 26.0;
+    
+    // Example of using the AI-optimized function from automation module
+    let target_temp: number = 22.0;
+    let occupancy: boolean = true;
+    
+    let hvac_load: number = automation.calculate_hvac_load(current_outside_temp, target_temp, occupancy);
+    
+    // 7. Publish System Status
+    // Using the map literal syntax supported by the new parser
+    event_bus.publish(bus, "system_status", { 
+        "hvac_load": hvac_load,
+        "active_devices": 3,
+        "mode": "auto"
+    });
+    
+    // 8. Example of AI-Optimized processing
+    // This function call is a candidate for inlining by the compiler
+    let sensor_data: List<number> = [22.1, 22.2, 22.1, 22.3];
+    let processed: number = automation.process_sensor_stream(sensor_data);
+}

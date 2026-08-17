@@ -1,8 +1,8 @@
 {
   "name": "velinscript",
   "displayName": "VelinScript",
-  "description": "VelinScript Language Support for VS Code",
-  "version": "0.1.0",
+  "description": "%velin.description%",
+  "version": "3.5.0",
   "publisher": "velinscript",
   "engines": {
     "vscode": "^1.60.0"
@@ -29,6 +29,66 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "configuration": {
+      "title": "VelinScript",
+      "properties": {
+        "velin.compiler.path": {
+          "description": "Path to the VelinScript compiler executable (velin or velin-compiler).",
+          "default": "velin-compiler",
+          "type": "string"
+        },
+        "velin.lsp.path": {
+          "description": "Path to the VelinScript Language Server executable.",
+          "default": "velin-lsp",
+          "type": "string"
+        },
+        "velin.compiler.target": {
+          "enum": [
+            "rust",
+            "php",
+            "python",
+            "ts",
+            "js",
+            "go",
+            "java",
+            "csharp"
+          ],
+          "default": "rust",
+          "description": "Target language for compilation.",
+          "type": "string"
+        },
+        "velin.target": {
+          "enum": [
+            "rust",
+            "php",
+            "python",
+            "ts",
+            "js",
+            "go",
+            "java",
+            "csharp"
+          ],
+          "default": "rust",
+          "description": "Deprecated alias for velin.compiler.target.",
+          "type": "string"
+        },
+        "velin.compiler.framework": {
+          "type": "string",
+          "description": "Web framework (e.g. axum, actix)."
+        },
+        "velin.debugger.path": {
+          "description": "Debugger binary path.",
+          "default": "velin-debugger",
+          "type": "string"
+        },
+        "velin.debugger.port": {
+          "description": "Debugger port.",
+          "default": 4711,
+          "type": "number"
+        }
+      },
+      "type": "object"
+    },
     "grammars": [
       {
         "language": "velin",
@@ -45,141 +105,222 @@
     "commands": [
       {
         "command": "velin.compile",
-        "title": "Compile VelinScript"
+        "title": "%velin.compile.title%"
       },
       {
         "command": "velin.format",
-        "title": "Format Document"
+        "title": "%velin.format.title%"
       },
       {
         "command": "velin.check",
-        "title": "Check VelinScript"
+        "title": "%velin.check.title%"
       },
       {
         "command": "velin.generate.mlFunction",
-        "title": "Generate ML Function Template"
+        "title": "%velin.generate.mlFunction.title%"
       },
       {
         "command": "velin.generate.modelLoader",
-        "title": "Generate Model Loader Boilerplate"
+        "title": "%velin.generate.modelLoader.title%"
       },
       {
         "command": "velin.generate.aiEndpoint",
-        "title": "Generate AI API Endpoint Template"
+        "title": "%velin.generate.aiEndpoint.title%"
       },
       {
         "command": "velin.generate.responses",
-        "title": "Generate Responses Template"
+        "title": "%velin.generate.responses.title%"
       },
       {
         "command": "velin.generate.errors",
-        "title": "Generate Errors Template"
+        "title": "%velin.generate.errors.title%"
       },
       {
         "command": "velin.generate.logging",
-        "title": "Generate Logging Template"
+        "title": "%velin.generate.logging.title%"
       },
       {
         "command": "velin.generate.cache",
-        "title": "Generate Cache Template"
+        "title": "%velin.generate.cache.title%"
       },
       {
         "command": "velin.generate.health",
-        "title": "Generate Health Template"
+        "title": "%velin.generate.health.title%"
       },
       {
         "command": "velin.generate.async",
-        "title": "Generate Async Template"
+        "title": "%velin.generate.async.title%"
       },
       {
         "command": "velin.generate.security",
-        "title": "Generate Security Template"
+        "title": "%velin.generate.security.title%"
       },
       {
         "command": "velin.test",
-        "title": "Run Tests"
+        "title": "%velin.test.title%"
       },
       {
         "command": "velin.test.unit",
-        "title": "Run Unit Tests"
+        "title": "%velin.test.unit.title%"
       },
       {
         "command": "velin.test.integration",
-        "title": "Run Integration Tests"
+        "title": "%velin.test.integration.title%"
       },
       {
         "command": "velin.config.init",
-        "title": "Initialize Config File"
+        "title": "%velin.config.init.title%"
       },
       {
         "command": "velin.config.validate",
-        "title": "Validate Config File"
+        "title": "%velin.config.validate.title%"
       },
       {
         "command": "velin.generate.backup",
-        "title": "Generate Backup Template"
+        "title": "%velin.generate.backup.title%"
       },
       {
         "command": "velin.generate.rollback",
-        "title": "Generate Rollback Template"
+        "title": "%velin.generate.rollback.title%"
       },
       {
         "command": "velin.generate.serialization",
-        "title": "Generate Serialization Template"
+        "title": "%velin.generate.serialization.title%"
       },
       {
         "command": "velin.backup.create",
-        "title": "Create Backup"
+        "title": "%velin.backup.create.title%"
       },
       {
         "command": "velin.backup.restore",
-        "title": "Restore Backup"
+        "title": "%velin.backup.restore.title%"
       },
       {
         "command": "velin.backup.list",
-        "title": "List Backups"
+        "title": "%velin.backup.list.title%"
       },
       {
         "command": "velin.rollback.begin",
-        "title": "Begin Transaction"
+        "title": "%velin.rollback.begin.title%"
       },
       {
         "command": "velin.rollback.commit",
-        "title": "Commit Transaction"
+        "title": "%velin.rollback.commit.title%"
       },
       {
         "command": "velin.rollback.rollback",
-        "title": "Rollback Transaction"
+        "title": "%velin.rollback.rollback.title%"
       },
       {
         "command": "velin.serialize.jsonToYaml",
-        "title": "Convert JSON to YAML"
+        "title": "%velin.serialize.jsonToYaml.title%"
       },
       {
         "command": "velin.serialize.yamlToJson",
-        "title": "Convert YAML to JSON"
+        "title": "%velin.serialize.yamlToJson.title%"
+      },
+      {
+        "command": "velin.generate.tsExpress",
+        "title": "Velin: Generate Express Endpoint (TS)"
+      },
+      {
+        "command": "velin.generate.javaSpring",
+        "title": "Velin: Generate Spring Controller (Java)"
+      },
+      {
+        "command": "velin.generate.csharpAspNet",
+        "title": "Velin: Generate ASP.NET Controller (C#)"
       }
     ],
-    "configuration": {
-      "title": "VelinScript",
-      "properties": {
-        "velin.lsp.path": {
-          "type": "string",
-          "default": "velin-lsp",
-          "description": "Path to velin-lsp binary"
+    "debuggers": [
+      {
+        "type": "velin",
+        "label": "VelinScript",
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "%velin.debug.program.desc%"
+              },
+              "args": {
+                "type": "array",
+                "description": "%velin.debug.args.desc%"
+              },
+              "cwd": {
+                "type": "string",
+                "description": "%velin.debug.cwd.desc%"
+              },
+              "env": {
+                "type": "object",
+                "description": "%velin.debug.env.desc%"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "%velin.debug.stopOnEntry.desc%",
+                "default": false
+              }
+            }
+          },
+          "attach": {
+            "required": [
+              "port"
+            ],
+            "properties": {
+              "port": {
+                "type": "number",
+                "description": "%velin.debug.port.desc%",
+                "default": 4711
+              },
+              "host": {
+                "type": "string",
+                "description": "%velin.debug.host.desc%",
+                "default": "localhost"
+              }
+            }
+          }
         },
-        "velin.compiler.path": {
-          "type": "string",
-          "default": "velin",
-          "description": "Path to velin compiler binary"
+        "initialConfigurations": [
+          {
+            "type": "velin",
+            "request": "launch",
+            "name": "Debug VelinScript",
+            "program": "${workspaceFolder}/main.velin",
+            "stopOnEntry": false
+          },
+          {
+            "type": "velin",
+            "request": "attach",
+            "name": "Attach to VelinScript",
+            "port": 4711,
+            "host": "localhost"
+          }
+        ]
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "velin",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "description": "Task name"
+          }
         }
       }
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node scripts/test-compile-args.js"
   },
   "devDependencies": {
     "@types/vscode": "^1.60.0",

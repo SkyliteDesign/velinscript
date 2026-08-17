@@ -11,11 +11,17 @@ pub enum Token {
     For,
     While,
     Match,
+    Throw,
+    Break,
+    Try,
+    Catch,
+    Finally,
     Type,
     Struct,
     Enum,
     Impl,
     Trait,
+    Interface,
     Pub,
     Use,
     Mod,
@@ -44,6 +50,7 @@ pub enum Token {
     
     // Literals
     String(String),
+    FormatString(Vec<FormatStringPart>),
     Number(f64),
     Boolean(bool),
     Null,
@@ -79,20 +86,30 @@ pub enum Token {
     Dot,         // .
     Arrow,       // ->
     FatArrow,    // =>
+    DotDot,      // ..
+    DotDotEq,    // ..=
     
     // Special
     Newline,
     EOF,
     Unknown(char),
+    DocComment(String),
 }
 
 #[derive(Debug, Clone)]
 pub struct Lexer<'a> {
-    input: Chars<'a>,
-    current: Option<char>,
-    position: usize,
-    line: usize,
-    column: usize,
+    pub input: Chars<'a>,
+    pub current: Option<char>,
+    pub position: usize,
+    pub byte_position: usize,
+    pub line: usize,
+    pub column: usize,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FormatStringPart {
+    Text(String),
+    Expression(String), // The expression inside {}
 }
 
 #[derive(Debug, Clone)]
@@ -108,6 +125,7 @@ impl<'a> Lexer<'a> {
             input: input.chars(),
             current: None,
             position: 0,
+            byte_position: 0,
             line: 1,
             column: 0,
         };
@@ -120,6 +138,9 @@ impl<'a> Lexer<'a> {
     }
     
     fn advance(&mut self) {
+        if let Some(ch) = self.current {
+            self.byte_position += ch.len_utf8();
+        }
         self.current = self.input.next();
         if let Some(ch) = self.current {
             if ch == '\n' {
@@ -140,7 +161,7 @@ impl<'a> Lexer<'a> {
         self.position += 1;
     }
     
-    fn skip_whitespace(&mut self) {
+    pub fn skip_whitespace(&mut self) {
         while let Some(ch) = self.current {
             // Skip BOM (Byte Order Mark) if present
             if ch == '\u{feff}' {
@@ -156,20 +177,39 @@ impl<'a> Lexer<'a> {
         }
     }
     
-    fn skip_comment(&mut self) {
+    fn skip_comment(&mut self) -> Option<Token> {
         // We already consumed the first '/' in next_token()
         // Now check for second '/' or '*'
         if let Some('/') = self.current {
             // Single-line comment: //
             self.advance(); // consume second '/'
+            
+            // Check for third '/' (Doc Comment)
+            let is_doc_comment = if let Some('/') = self.current {
+                self.advance();
+                true
+            } else {
+                false
+            };
+
+            let mut comment_content = String::new();
+
             // Skip until newline (but don't consume the newline)
             while let Some(ch) = self.current {
                 if ch == '\n' || ch == '\r' {
                     // Don't consume newline, let it be tokenized separately
                     break;
                 }
+                if is_doc_comment {
+                    comment_content.push(ch);
+                }
                 self.advance();
             }
+
+            if is_doc_comment {
+                return Some(Token::DocComment(comment_content.trim().to_string()));
+            }
+
         } else if let Some('*') = self.current {
             // Multi-line comment: /*
             self.advance(); // consume '*'
@@ -185,6 +225,7 @@ impl<'a> Lexer<'a> {
                 }
             }
         }
+        None
     }
     
     fn read_string(&mut self) -> Result<String, LexerError> {
@@ -227,11 +268,139 @@ impl<'a> Lexer<'a> {
         })
     }
     
-    fn read_number(&mut self) -> f64 {
-        let mut num_str = String::new();
+    fn read_format_string(&mut self) -> Result<Vec<FormatStringPart>, LexerError> {
+        let quote = self.current.unwrap();
+        self.advance();
+        let mut parts = Vec::new();
+        let mut current_text = String::new();
         
         while let Some(ch) = self.current {
-            if ch.is_ascii_digit() || ch == '.' {
+            match ch {
+                '"' | '\'' if ch == quote => {
+                    self.advance();
+                    if !current_text.is_empty() {
+                        parts.push(FormatStringPart::Text(current_text));
+                    }
+                    return Ok(parts);
+                }
+                '{' => {
+                    // Start of expression
+                    if !current_text.is_empty() {
+                        parts.push(FormatStringPart::Text(current_text));
+                        current_text = String::new();
+                    }
+                    self.advance(); // consume '{'
+                    
+                    // Read expression until '}'
+                    let mut expr = String::new();
+                    let mut brace_count = 1;
+                    
+                    while let Some(ch) = self.current {
+                        match ch {
+                            '{' => {
+                                brace_count += 1;
+                                expr.push(ch);
+                                self.advance();
+                            }
+                            '}' => {
+                                brace_count -= 1;
+                                if brace_count == 0 {
+                                    self.advance(); // consume '}'
+                                    parts.push(FormatStringPart::Expression(expr.trim().to_string()));
+                                    break;
+                                } else {
+                                    expr.push(ch);
+                                    self.advance();
+                                }
+                            }
+                            '\\' => {
+                                // Escape sequence
+                                self.advance();
+                                if let Some(escaped) = self.current {
+                                    match escaped {
+                                        'n' => expr.push('\n'),
+                                        't' => expr.push('\t'),
+                                        'r' => expr.push('\r'),
+                                        '\\' => expr.push('\\'),
+                                        '{' => expr.push('{'),
+                                        '}' => expr.push('}'),
+                                        '"' => expr.push('"'),
+                                        '\'' => expr.push('\''),
+                                        _ => {
+                                            expr.push('\\');
+                                            expr.push(escaped);
+                                        }
+                                    }
+                                    self.advance();
+                                }
+                            }
+                            _ => {
+                                expr.push(ch);
+                                self.advance();
+                            }
+                        }
+                    }
+                    
+                    if brace_count > 0 {
+                        return Err(LexerError {
+                            message: "Unterminated format string expression".to_string(),
+                            line: self.line,
+                            column: self.column,
+                        });
+                    }
+                }
+                '\\' => {
+                    self.advance();
+                    if let Some(escaped) = self.current {
+                        match escaped {
+                            'n' => current_text.push('\n'),
+                            't' => current_text.push('\t'),
+                            'r' => current_text.push('\r'),
+                            '\\' => current_text.push('\\'),
+                            '"' => current_text.push('"'),
+                            '\'' => current_text.push('\''),
+                            '{' => current_text.push('{'),
+                            '}' => current_text.push('}'),
+                            _ => current_text.push(escaped),
+                        }
+                        self.advance();
+                    }
+                }
+                _ => {
+                    current_text.push(ch);
+                    self.advance();
+                }
+            }
+        }
+        
+        Err(LexerError {
+            message: "Unterminated format string".to_string(),
+            line: self.line,
+            column: self.column,
+        })
+    }
+    
+    fn read_number(&mut self) -> f64 {
+        let mut num_str = String::new();
+        let mut has_dot = false;
+        
+        while let Some(ch) = self.current {
+            if ch.is_ascii_digit() {
+                num_str.push(ch);
+                self.advance();
+            } else if ch == '.' {
+                // Prüfe, ob das nächste Zeichen auch ein '.' ist (Range-Operator)
+                let next_ch = self.input.clone().next();
+                if next_ch == Some('.') {
+                    // Zwei aufeinanderfolgende Punkte = Range-Operator, nicht Teil der Zahl
+                    break;
+                }
+                // Ein einzelner Punkt ist Teil der Dezimalzahl
+                if has_dot {
+                    // Bereits ein Punkt vorhanden, nicht noch einen akzeptieren
+                    break;
+                }
+                has_dot = true;
                 num_str.push(ch);
                 self.advance();
             } else {
@@ -269,11 +438,17 @@ impl<'a> Lexer<'a> {
             "for" => Token::For,
             "while" => Token::While,
             "match" => Token::Match,
+            "throw" => Token::Throw,
+            "break" => Token::Break,
+            "try" => Token::Try,
+            "catch" => Token::Catch,
+            "finally" => Token::Finally,
             "type" => Token::Type,
             "struct" => Token::Struct,
             "enum" => Token::Enum,
             "impl" => Token::Impl,
             "trait" => Token::Trait,
+            "interface" => Token::Interface,
             "pub" => Token::Pub,
             "use" => Token::Use,
             "mod" => Token::Mod,
@@ -328,7 +503,9 @@ impl<'a> Lexer<'a> {
                 '/' => {
                     self.advance();
                     if let Some('/') | Some('*') = self.current {
-                        self.skip_comment();
+                        if let Some(token) = self.skip_comment() {
+                            return Ok(token);
+                        }
                         return self.next_token();
                     }
                     Token::Slash
@@ -432,7 +609,17 @@ impl<'a> Lexer<'a> {
                 }
                 '.' => {
                     self.advance();
-                    Token::Dot
+                    if let Some('.') = self.current {
+                        self.advance();
+                        if let Some('=') = self.current {
+                            self.advance();
+                            Token::DotDotEq
+                        } else {
+                            Token::DotDot
+                        }
+                    } else {
+                        Token::Dot
+                    }
                 }
                 '\r' => {
                     self.advance();
@@ -447,8 +634,37 @@ impl<'a> Lexer<'a> {
                     Token::Newline
                 }
                 '"' | '\'' => {
-                    let string = self.read_string()?;
-                    Token::String(string)
+                    // Check if this is a format string by peeking ahead
+                    let quote = ch;
+                    let mut peek_iter = self.input.clone();
+                    let mut is_format_string = false;
+                    
+                    // Skip the quote
+                    peek_iter.next();
+                    
+                    // Look for '{' before the closing quote
+                    while let Some(peek_ch) = peek_iter.next() {
+                        if peek_ch == quote {
+                            break;
+                        }
+                        if peek_ch == '{' {
+                            is_format_string = true;
+                            break;
+                        }
+                        if peek_ch == '\\' {
+                            // Skip escaped character
+                            peek_iter.next();
+                            continue;
+                        }
+                    }
+                    
+                    if is_format_string {
+                        let parts = self.read_format_string()?;
+                        Token::FormatString(parts)
+                    } else {
+                        let string = self.read_string()?;
+                        Token::String(string)
+                    }
                 }
                 '0'..='9' => {
                     let num = self.read_number();

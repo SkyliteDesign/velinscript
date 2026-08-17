@@ -1,10 +1,36 @@
 # VelinScript Language Specification
 
-Version 0.1.0
+Version 3.1.0
 
 ## Übersicht
 
 VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die Einfachheit von modernen Sprachen mit leistungsstarken Features für API-Entwicklung, Security und KI/ML-Integration.
+
+**Neu in Version 2.5**: 
+- 13 neue Standard Library Module mit 117+ Funktionen
+- VelinAutoDoc für automatische Dokumentationsgenerierung
+- VelinPipeline für automatische Performance-Optimierung
+- VelinFlow Runtime für transaktionales Flow-Management
+
+**Neu in Version 2.6**: 
+- 5 neue kritische Standard Library Module mit 50+ Funktionen
+- path, url, stream, redis, tracing Module hinzugefügt
+- Alle Mock-Funktionen durch echte Implementierungen ersetzt
+- Verbesserte Pipeline-Optimierung mit echter Dependency-Tracking
+
+**Neu in Version 3.0**: 
+- KI-Compiler-Passes für automatische Code-Analyse und -Generierung
+- System-Generierung für boilerplate-freie Systeme
+- Automatische Parallelisierung (Multithreading, GPU, Async, SIMD)
+
+**Neu in Version 3.0.1**: 
+- IR-Repräsentation (SSA-Format) für optimierte Code-Generierung
+- Borrow Checker (Ownership & Borrowing System)
+- Prompt Optimizer (90%+ Token-Ersparnis)
+
+**Neu in Version 3.1.0**: 
+- Multi-Target Compilation (Rust, PHP, Python, TypeScript, JavaScript, Go, Java, C#)
+- Erweiterte GPU-Acceleration und SIMD Vectorization
 
 ## Design-Prinzipien
 
@@ -25,7 +51,25 @@ VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die
  * Multi-line Kommentar
  * Kann mehrere Zeilen umfassen
  */
+
+/// Doc-Comment (für @VelinAutoDoc)
+/// Diese Kommentare werden vom Compiler erfasst
+/// und für automatische Dokumentationsgenerierung verwendet
+/// 
+/// @param name - Der Name des Parameters
+/// @returns Eine Beschreibung des Rückgabewerts
+@VelinAutoDoc
+fn example(name: string): string {
+    // ...
+}
 ```
+
+**Doc-Comments (`///`):**
+- Neu in Version 2.5 ✅
+- Werden als First-Class-Citizens im AST erfasst
+- Werden für automatische Dokumentationsgenerierung mit `@VelinAutoDoc` verwendet
+- Unterstützen Markdown-Formatierung
+- Können Parameter und Rückgabewerte dokumentieren
 
 ### Keywords
 
@@ -35,6 +79,7 @@ VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die
 - `if`, `else` - Bedingte Ausführung
 - `for`, `while` - Schleifen
 - `match` - Pattern Matching
+- `try`, `catch`, `finally` - Fehlerbehandlung (Syntaktischer Zucker, Version 3.0.1)
 - `struct` - Struktur definieren
 - `enum` - Enumeration definieren
 - `type` - Type Alias
@@ -44,6 +89,9 @@ VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die
 - `const`, `static` - Konstanten
 - `async`, `await` - Asynchrone Programmierung
 - `in` - For-Loop Iterator
+- `trait` - Trait definieren (Rust-ähnlich)
+- `interface` - Interface definieren (TypeScript-ähnlich)
+- `impl` - Trait/Interface Implementierung
 
 ### Identifikatoren
 
@@ -61,6 +109,26 @@ VelinScript ist eine moderne Programmiersprache für KI-APIs. Sie kombiniert die
 'Hello, World!'
 "String mit \"Escapes\""
 ```
+
+#### Format-Strings (String Interpolation)
+
+Format-Strings ermöglichen die Interpolation von Ausdrücken innerhalb von String-Literalen:
+
+```velin
+let name = "John";
+let message = "Hello, {name}!";
+// Ergebnis: "Hello, John!"
+
+let x = 10;
+let y = 20;
+let result = "Sum: {x + y}";
+// Ergebnis: "Sum: 30"
+```
+
+**Syntax:**
+- Format-Strings verwenden geschweifte Klammern `{}` für Interpolation
+- Beliebige Ausdrücke können innerhalb der Klammern verwendet werden
+- Escaping: `\{` für literal `{`, `\}` für literal `}`
 
 #### Number Literale
 
@@ -127,6 +195,7 @@ null
 - `List<T>` - Liste von Elementen
 - `Map<K, V>` - Schlüssel-Wert-Paarung
 - `Optional<T>` - Optionaler Wert (kann null sein)
+- `Result<T, E>` - Result Type für explizite Fehlerbehandlung
 
 ### Funktionstypen
 
@@ -232,9 +301,235 @@ enum Status {
     Inactive,
 }
 
-enum Result {
-    Ok(value: string),
-    Error(message: string),
+enum Status {
+    Pending,
+    Active,
+    Inactive,
+}
+```
+
+### Ownership & Borrowing Types (Neu in 3.0.1)
+
+VelinScript unterstützt ein Ownership-System ähnlich Rust für Memory-Safety:
+
+```velin
+// Owned (Standard - Move Semantics)
+fn take_ownership(data: string) {
+    // data wird moved (owned)
+    // Nach dem Aufruf ist data nicht mehr gültig
+}
+
+// Immutable Borrow (&T)
+fn process(data: &string) {
+    // data ist eine immutable Referenz
+    // data kann nicht modifiziert werden
+}
+
+// Mutable Borrow (&mut T)
+fn modify(data: &mut string) {
+    // data ist eine mutable Referenz
+    // data kann modifiziert werden
+}
+
+// Shared Ownership (Arc<T> / Rc<T>)
+fn shared_data(data: shared<string>) {
+    // data wird geteilt (Arc/Rc)
+    // Mehrere Referenzen möglich
+}
+
+// Copy Semantics (primitive types)
+fn copy_value(x: number) {
+    // number ist Copy, wird kopiert
+    // x bleibt nach dem Aufruf gültig
+}
+```
+
+**Ownership-Typen:**
+- **Owned** (Standard) - Variable besitzt den Wert (move semantics)
+- **&T** - Immutable Referenz (Borrow)
+- **&mut T** - Mutable Referenz (Mutable Borrow)
+- **shared<T>** - Shared Ownership (Arc/Rc)
+- **Copy** - Copy-Semantik (primitive types: `number`, `boolean`)
+
+**Borrow-Regeln:**
+- Nur eine mutable Referenz (`&mut T`) gleichzeitig
+- Mehrere immutable Referenzen (`&T`) gleichzeitig möglich
+- Keine mutable und immutable Referenzen gleichzeitig
+- Use-After-Move wird erkannt
+
+**Siehe:** [Borrow Checker Dokumentation](../architecture/borrow-checker.md)
+
+### Result Type
+
+Der `Result<T, E>` Type ermöglicht explizite Fehlerbehandlung:
+
+```velin
+fn parseNumber(input: string): Result<number, string> {
+    // ... Parsing-Logik
+    if (isValid) {
+        return Result::Ok(parsedValue);
+    } else {
+        return Result::Error("Invalid number");
+    }
+}
+
+// Result verwenden
+let result = parseNumber("42");
+if (result.isOk()) {
+    let value = result.unwrap();
+} else {
+    let error = result.unwrapErr();
+}
+```
+
+**Result Methoden:**
+- `isOk()` - Prüft ob Result Ok ist
+- `isErr()` - Prüft ob Result Error ist
+- `unwrap()` - Extrahiert Ok-Wert (panics bei Error)
+- `unwrapOr(default)` - Extrahiert Ok-Wert oder gibt Default zurück
+- `map(fn)` - Transformiert Ok-Wert
+- `mapErr(fn)` - Transformiert Error-Wert
+
+### try-catch-finally (Syntaktischer Zucker) ✅ (Version 3.0.1)
+
+`try-catch-finally` ist syntaktischer Zucker, der automatisch in `Result`-basiertes Error-Handling desugared wird. Dies ermöglicht eine vertraute, exception-basierte Syntax, während die Typsicherheit von `Result<T, E>` erhalten bleibt.
+
+#### Einfacher try-catch
+
+```velin
+try {
+    let result = db.query("SELECT * FROM users");
+    return result;
+} catch (err) {
+    log.error("Database error: " + err.message);
+    return [];
+}
+```
+
+#### Mehrere catch-Blöcke mit Typ-Dispatch
+
+```velin
+try {
+    return processData(data);
+} catch (err: ValidationError) {
+    return Result.err("Validation failed");
+} catch (err: NetworkError) {
+    return Result.err("Network failed");
+} catch (err) {
+    return Result.err("Unknown error");
+}
+```
+
+#### try-catch mit finally
+
+```velin
+try {
+    return openFile(path);
+} catch (err) {
+    log.error(err.message);
+} finally {
+    closeResources();
+}
+```
+
+**Wichtige Hinweise:**
+- **Explizites return erforderlich**: Jedes `return` im try-Block wird automatisch in `Result.ok(...)` gewrappt
+- **Typ-Dispatch**: Mehrere catch-Blöcke mit spezifischen Fehlertypen werden zu `match`-Statements desugared
+- **finally immer ausgeführt**: Der finally-Block wird immer ausgeführt, unabhängig von Erfolg oder Fehler
+- **Desugaring**: Die Transformation erfolgt automatisch während der Kompilierung, der generierte Code nutzt `Result<T, E>`
+
+### Traits
+
+Traits definieren Verträge für Typen (ähnlich wie Interfaces in anderen Sprachen):
+
+```velin
+trait Serialize {
+    fn toJson(): string;
+    fn fromJson(json: string): Self;
+}
+
+trait Clone {
+    fn clone(): Self;
+}
+
+// Trait mit generischen Parametern
+trait Comparable<T> {
+    fn compare(other: T): number;
+}
+```
+
+### Trait Implementierungen
+
+```velin
+impl Serialize for User {
+    fn toJson(): string {
+        // ... Implementation
+    }
+    
+    fn fromJson(json: string): User {
+        // ... Implementation
+    }
+}
+
+// Trait für mehrere Typen implementieren
+impl Clone for User {
+    fn clone(): User {
+        // ... Implementation
+    }
+}
+```
+
+### Interfaces
+
+Interfaces sind syntaktisch identisch zu Traits, bieten aber TypeScript-ähnliche Semantik:
+
+```velin
+interface IUserService {
+    fn getUser(id: string): User;
+    fn createUser(user: User): User;
+}
+
+// Interface implementieren
+impl IUserService for UserService {
+    fn getUser(id: string): User {
+        // ... Implementation
+    }
+    
+    fn createUser(user: User): User {
+        // ... Implementation
+    }
+}
+```
+
+### Generics mit Constraints
+
+Generics ermöglichen wiederverwendbaren Code mit Type Safety:
+
+```velin
+// Einfaches Generic
+fn identity<T>(value: T): T {
+    return value;
+}
+
+// Generic mit Constraint (T muss Serialize implementieren)
+fn serialize<T: Serialize>(item: T): string {
+    return item.toJson();
+}
+
+// Multiple Constraints
+fn process<T: Serialize & Clone>(item: T): string {
+    let cloned = item.clone();
+    return cloned.toJson();
+}
+
+// Generic Struct
+struct Container<T> {
+    value: T,
+}
+
+// Generic mit Constraints in Struct
+struct Cache<T: Clone> {
+    data: T,
 }
 ```
 
@@ -294,6 +589,9 @@ Decorators sind Metadaten, die Funktionen, Structs oder andere Items annotieren.
 
 ```velin
 @test
+@describe("Test Suite Name")
+@fixture("fixture-name")
+@mock("TraitName")
 ```
 
 **Beispiel:**
@@ -357,9 +655,86 @@ match (value) {
     pattern1 => {
         // body
     },
-    pattern2 => {
-        // body
+    pattern2 if condition => {
+        // body with guard
     },
+    pattern3 | pattern4 => {
+        // or pattern
+    },
+    _ => {
+        // wildcard
+    }
+}
+```
+
+#### Pattern Types
+
+- **Literal Patterns**: `"hello"`, `42`, `true`
+- **Identifier Patterns**: `value` (bindet Wert an Variable)
+- **Wildcard Pattern**: `_` (matched alles)
+- **Range Patterns**: `0..10` (exclusive), `0..=10` (inclusive)
+- **Tuple Patterns**: `(a, b, c)`
+- **Struct Patterns**: `User { name, email }`
+- **Enum Variant Patterns**: `Result::Ok(value)`, `Result::Error(err)`
+- **Or Patterns**: `pattern1 | pattern2`
+
+#### Pattern Guards
+
+Pattern Guards erlauben zusätzliche Bedingungen:
+
+```velin
+match (value) {
+    Ok(x) if x > 0 => "positive",
+    Ok(x) if x < 0 => "negative",
+    Ok(0) => "zero",
+```
+
+### Try Statement ✅ (Version 3.0.1)
+
+Der `try-catch-finally` Statement ist syntaktischer Zucker für `Result`-basiertes Error-Handling:
+
+```velin
+// Einfacher try-catch
+try {
+    let result = someFunction();
+    return result;
+} catch (err) {
+    handleError(err);
+}
+
+// Mehrere catch-Blöcke mit Typ-Dispatch
+try {
+    return processData(data);
+} catch (err: ValidationError) {
+    handleValidationError(err);
+} catch (err: NetworkError) {
+    handleNetworkError(err);
+} catch (err) {
+    handleGenericError(err);
+}
+
+// Mit finally-Block
+try {
+    return openFile(path);
+} catch (err) {
+    log.error(err.message);
+} finally {
+    closeResources(); // Wird immer ausgeführt
+}
+```
+
+**Wichtige Hinweise:**
+- Jedes `return` im try-Block wird automatisch in `Result.ok(...)` gewrappt
+- Mehrere catch-Blöcke mit spezifischen Fehlertypen werden zu `match`-Statements desugared
+- Der finally-Block wird immer ausgeführt, unabhängig von Erfolg oder Fehler
+- Die Transformation erfolgt automatisch während der Kompilierung
+
+```velin
+match (value) {
+    Ok(x) if x > 0 => "positive",
+    Ok(x) if x < 0 => "negative",
+    Ok(0) => "zero",
+    _ => "unknown"
 }
 ```
 
@@ -444,6 +819,50 @@ condition ? thenExpr : elseExpr
 }
 ```
 
+### Lambda Expressions
+
+```velin
+// Lambda mit Expression Body
+let add = (a: number, b: number) => a + b;
+
+// Lambda mit Block Body
+let multiply = (a: number, b: number) => {
+    let result = a * b;
+    return result;
+};
+
+// Lambda mit Type Inference
+let square = (x) => x * x;
+```
+
+### LLM-Call Expressions (Neu in 3.0.1)
+
+Kompakte Syntax für LLM-Aufrufe mit automatischer Prompt-Optimierung (90%+ Token-Ersparnis):
+
+```velin
+// Kompakte LLM-Syntax
+let result = await @llm.analyze(text);
+let summary = await @llm.summarize(long_text);
+let sentiment = await @llm.sentiment(comment);
+let translated = await @llm.translate(text, "en");
+let extracted = await @llm.extract(text, "email addresses");
+let evaluation = await @llm.evaluate(review_text);
+```
+
+**Syntax:**
+- `@llm.<method>(args...)` - Kompakte LLM-Call Syntax
+- Unterstützte Methoden: `analyze`, `summarize`, `extract`, `evaluate`, `translate`, `sentiment`
+- Automatische Prompt-Optimierung durch Prompt Optimizer
+- 90-95% Token-Ersparnis im Vergleich zu klassischen Prompts
+
+**Vorteile:**
+- Deutlich weniger Tokens (5-10 statt 100+)
+- Automatische Prompt-Optimierung
+- System-Prompt-Caching
+- Einfache, lesbare Syntax
+
+**Siehe:** [Prompt Optimizer Dokumentation](../architecture/prompt-optimizer.md)
+
 ## Standard Library
 
 ### Database Funktionen
@@ -453,6 +872,102 @@ db.find(Entity, id)        // Findet ein Entity
 db.findAll(Entity)         // Findet alle Entities
 db.save(entity)            // Speichert ein Entity
 db.delete(Entity, id)      // Löscht ein Entity
+```
+
+### Collections Library
+
+#### List<T>
+
+```velin
+let list = List<number>([1, 2, 3, 4, 5]);
+
+// Transformation
+let doubled = list.map((x: number) => x * 2);
+let evens = list.filter((x: number) => x % 2 == 0);
+let sum = list.reduce((acc: number, x: number) => acc + x, 0);
+
+// Suche
+let found = list.find((x: number) => x > 3);
+let hasFive = list.contains(5);
+let index = list.indexOf(3);
+
+// Sortierung
+let sorted = list.sort();
+let reversed = list.reverse();
+
+// Chunking & Slicing
+let chunks = list.chunk(2);
+let slice = list.slice(1, 3);
+```
+
+#### Map<K, V>
+
+```velin
+let map = Map<string, number>();
+
+map.set("one", 1);
+let value = map.get("one");
+let has = map.has("one");
+let keys = map.keys();
+let values = map.values();
+let entries = map.entries();
+map.delete("one");
+let size = map.size();
+```
+
+#### Set<T>
+
+```velin
+let set = Set<number>();
+
+set.add(1);
+set.remove(1);
+let has = set.has(1);
+let size = set.size();
+let union = set1.union(set2);
+let intersection = set1.intersection(set2);
+let difference = set1.difference(set2);
+```
+
+### HTTP Client Library
+
+```velin
+let client = HttpClient.new();
+
+// GET Request
+let response = await client.get("https://api.example.com/users");
+let data = response.json();
+
+// POST Request
+let response = await client.post(
+    "https://api.example.com/users",
+    { name: "John", email: "john@example.com" }
+);
+
+// PUT, DELETE, PATCH
+let response = await client.put(url, body);
+let response = await client.delete(url);
+let response = await client.patch(url, body);
+
+// Response Handling
+let json = response.json();
+let text = response.text();
+let status = response.status();
+```
+
+### Rate Limiting Library
+
+```velin
+@RateLimit(
+    requests: 100,
+    window: "1m",
+    strategy: "sliding-window",
+    key: "user:{userId}"
+)
+@GET("/api/users")
+fn getUsers(): List<User> {
+    // ...
+}
 ```
 
 ### Assert Funktionen
@@ -621,17 +1136,25 @@ let [mut] name[: type] = value;
 ## Bekannte Einschränkungen (v0.1.0)
 
 - Module System: Basis-Implementierung
-- Generic Constraints: Noch nicht vollständig
 - Pattern Matching: Vereinfacht
-- Error Handling: Basis-Implementierung
 - Async/Await: Basis-Implementierung
+- Macros: Noch nicht implementiert
+
+## Implementierte Features (v0.1.0)
+
+✅ **Result<T, E> Type** - Explizite Fehlerbehandlung mit Result Type
+✅ **try-catch-finally** (Version 3.0.1) - Syntaktischer Zucker für Result-basiertes Error-Handling
+✅ **Traits/Interfaces** - Polymorphismus durch Traits und Interfaces
+✅ **Generics mit Constraints** - Type-safe generische Programmierung mit Trait Constraints
+✅ **Erweiterte Test-Features** - @describe, @fixture, @mock Decorators
+✅ **Package Manager (velin-pkg)** - Dependency Management mit velin.toml
+✅ **Security Scanner (velin-security)** - Automatische Security-Vulnerability-Erkennung
+✅ **LSP Server** - Language Server Protocol für IDE-Integration
+✅ **VS Code Extension** - Vollständige IDE-Unterstützung
 
 ## Zukünftige Features
 
-- Traits/Interfaces
-- Generics mit Constraints
 - Erweiterte Pattern Matching
-- Error Handling mit Result<T, E>
 - Macros
-- Package Manager
-- LSP Server
+- Compile-time Evaluation
+- Advanced Type System Features

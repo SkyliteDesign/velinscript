@@ -1,0 +1,28 @@
+# {{ModuleName}}
+
+Global object: `{{module_name}}`
+
+{{description}}
+
+{{#if category}}
+**Category:** {{category}}
+{{/if}}
+
+## Overview
+
+Das `{{module_name}}` Modul bietet {{function_count}} Funktionen für {{description}}.
+
+## Functions
+
+{{function_list}}
+
+{{#if types}}
+## Types
+
+{{type_list}}
+{{/if}}
+
+## See Also
+
+- [Standard Library Overview](../../docs/api/standard-library.md)
+- [Module System](../../docs/architecture/module-resolution.md)

@@ -48,6 +48,9 @@ pnpm-lock.yaml
 # Logs
 *.log
 logs/
+checker_debug.log
+parser_debug.log
+env_debug.log
 
 # Environment variables
 .env
@@ -72,13 +75,31 @@ coverage/
 !compiler/src/**/*.rs
 !tools/**/src/**/*.rs
 
+# VS Code Extension build outputs
+tools/vscode-extension/out/
+tools/vscode-extension/*.vsix
+tools/vscode-extension/node_modules/
+
+# Local compiler cache / profiling (never commit)
+**/.velin/
+
 # Config files with secrets
 **/velin.config.json
 !**/velin.config.example.json
 
 # Internal/Development files
 bauplan/
+velisch.info/
 DOKUMENTATION.md
 GITHUB_SETUP.md
 PRE_COMMIT_CHECKLIST.md
 GIT_COMMIT_MESSAGE.txt
+.trae
+# Test files (temporary)
+test-api-project/
+test_*.velin
+prepare-git-upload.ps1
+scripts
+
+# Generated Wiki files (nur lokal, nicht committen)
+.wiki/

@@ -1,6 +1,6 @@
 [package]
 name = "velin-lsp"
-version = "0.1.0"
+version = "3.5.0"
 edition = "2021"
 
 [dependencies]
@@ -14,6 +14,7 @@ velin-compiler = { path = "../../compiler" }
 name = "velin-lsp"
 path = "src/main.rs"
 
-[[test]]
-name = "lsp_test"
-path = "tests/lsp_test.rs"
+[lib]
+name = "velin_lsp"
+path = "src/lib.rs"
+

@@ -1,0 +1,14 @@
+// Auth Test API
+
+@Auth
+@GET("/api/secure")
+fn secureEndpoint(): string {
+    return "Secure Data";
+}
+
+@Auth
+@Role("admin")
+@GET("/api/admin")
+fn adminEndpoint(): string {
+    return "Admin Data";
+}

@@ -2,6 +2,10 @@
 
 Willkommen bei VelinScript! Diese Anleitung führt dich durch die ersten Schritte.
 
+**Velisch** = Sprache / Produkt · **VelinScript** = Compiler (`velin`) · Einstieg: [velisch.info](https://velisch.info).
+
+VelinScript 3.5.0 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum. Weitere Funktionen wie zusätzliche Target-Runtimes, erweiterte Authentifizierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses 3.5.0-Stable-Umfangs.
+
 ## Installation
 
 ### Voraussetzungen
@@ -22,15 +26,20 @@ cd velinscript
 cd compiler
 cargo build --release
 
-# Binary ist in: compiler/target/release/velin-compiler
+# Binary: compiler/target/release/velin
 # Optional: In PATH einbinden
 export PATH=$PATH:$(pwd)/target/release
+velin --version
 ```
 
-#### Option 2: Installation Script (später verfügbar)
+#### Option 2: Installation Script
 
 ```bash
-curl https://velinscript.dev/install.sh | sh
+# Auf Linux/macOS:
+curl -sSL https://velisch.dev/install | sh
+
+# Auf Windows (PowerShell):
+curl -sSL https://velisch.dev/install | bash
 ```
 
 ## Dein erstes Programm
@@ -38,7 +47,11 @@ curl https://velinscript.dev/install.sh | sh
 ### 1. Projekt initialisieren
 
 ```bash
+# Beide Befehle funktionieren:
 velin init my-first-api
+# oder
+velin new my-first-api
+
 cd my-first-api
 ```
 
@@ -64,6 +77,18 @@ velin compile -i main.velin -o main.rs
 ```
 
 Dies erstellt `main.rs` mit dem kompilierten Rust-Code.
+
+**Optional: Andere Ziel-Sprachen**
+
+Du kannst auch PHP oder Python Code generieren:
+
+```bash
+# Für PHP
+velin compile -i main.velin -o main.php --target php
+
+# Für Python
+velin compile -i main.velin -o main.py --target python
+```
 
 ### 4. Type Checking
 
@@ -140,16 +165,40 @@ fn createUser(name: string, email: string): User {
 5. **Tutorial 5: Validation** - [tutorial-5-validation.md](tutorial-5-validation.md)
 6. **Tutorial 6: Authentication** - [tutorial-6-authentication.md](tutorial-6-authentication.md)
 7. **Tutorial 7: ML Integration** - [tutorial-7-ml.md](tutorial-7-ml.md)
+8. **Tutorial 8: Intelligence** - [tutorial-8-intelligence.md](tutorial-8-intelligence.md)
+
+## Entwickler-Tools
+
+- **Auto-Import Management** - [auto-imports.md](auto-imports.md)
+- **AutoFix Engine** - Automatische Fehlerkorrektur mit `--autofix` Flag
+- **VelinAutoDoc** - Automatische Dokumentationsgenerierung
+- **VelinAutoTest** - Automatische Test-Generierung
+- **VelinInsight** - Code-Analyse und Qualitätsprüfung
+- **VelinPipeline** - Automatische Performance-Optimierung
+- **Dead Code Detector** - [../tools/dead-code-detector.md](../tools/dead-code-detector.md)
+- **API Documentation Generator** - [../tools/api-doc-generator.md](../tools/api-doc-generator.md)
+- **Bibliotheks-Generator** - [../tools/library-generator.md](../tools/library-generator.md) ✅ (Neu in 2.7)
+- **VS Code Extension** - [../tools/vscode-extension.md](../tools/vscode-extension.md) ✅
+- **Package Manager** - Siehe `tools/package-manager/README.md`
 
 ## Beispiele
 
 Siehe [examples/](../../examples/) für vollständige Beispiel-Projekte.
 
+**Empfohlene Beispiele:**
+- **[01-hello-api](../../examples/01-hello-api/)** - Einfaches Einstiegsbeispiel
+- **[02-llm-chat](../../examples/02-llm-chat/)** - LLM-Integration
+- **[05-ultimate-showcase](../../examples/05-ultimate-showcase/)** - Alle Features 2.5 (VelinAutoDoc, VelinPipeline, @Flow) ✅
+- **[Custom Recommender](../../examples/custom-recommender/)** - Production-Ready Recommendation System
+
 ## Hilfe
 
-- **Language Specification:** [../language/specification.md](../language/specification.md)
-- **API Documentation:** [../api/](../api/)
-- **GitHub Issues:** Für Fragen und Bug Reports
+- **[Quick Start Guide](../../QUICK_START.md)** - 5 Minuten bis zur ersten API
+- **[API-Keys Setup](api-keys-setup.md)** - 🔑 API-Keys konfigurieren
+- **[Language Specification](../language/specification.md)** - Vollständige Sprachspezifikation
+- **[API Documentation](../api/)** - API-Referenz
+- **[Dokumentations-Übersicht](../README.md)** - Alle Dokumente
+- **[GitHub Issues](https://github.com/SkyliteDesign/velinscript/issues)** - Fragen und Bug Reports
 
 ## Häufige Probleme
 
@@ -162,6 +211,8 @@ cd compiler
 cargo build --release
 export PATH=$PATH:$(pwd)/target/release
 ```
+
+**Hinweis:** Der Binary heißt `velin-compiler` (oder `velin-compiler.exe` auf Windows), aber der Befehl ist `velin`. Stelle sicher, dass der Binary im PATH ist oder erstelle einen Alias/Symlink.
 
 ### Type Errors
 

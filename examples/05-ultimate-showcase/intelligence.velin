@@ -1,0 +1,26 @@
+
+use models
+
+/// KI-Integrations-Modul
+/// Simuliert das Laden und Verwenden eines Machine-Learning-Modells.
+@VelinAutoDoc
+mod intelligence {
+
+    /// Lädt das Produktempfehlungsmodell
+    @VelinAutoDoc
+    fn loadModel(modelPath: string): any {
+        log.info("Lade KI-Modell von: " + modelPath);
+        return { "loaded": true };
+    }
+
+    /// Sagt das Benutzerinteresse an einer Produktkategorie vorher
+    /// Gibt einen Wert zwischen 0.0 und 1.0 zurück
+    @VelinAutoTest
+    fn predictInterest(user: User, category: string): number {
+        // Simulierte ML-Logik
+        if (category == "tech" && user.age < 30) {
+            return 0.9;
+        }
+        return 0.5;
+    }
+}

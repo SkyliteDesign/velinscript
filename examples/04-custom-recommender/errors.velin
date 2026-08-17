@@ -1,0 +1,180 @@
+use logging;
+
+// Custom Recommender - Error Handling
+// Error Definitions and Error Codes
+
+// Application Error
+struct AppError {
+    code: ApiErrorCode,
+    message: string,
+    details: Map<string, string>,
+    cause: string,
+    stackTrace: string,
+    timestamp: string,
+}
+
+// API Error Codes
+enum ApiErrorCode {
+    ValidationError,
+    NotFound,
+    Unauthorized,
+    Forbidden,
+    RateLimitExceeded,
+    InternalServerError,
+    DatabaseError,
+    LLMError,
+    VectorDBError,
+    CacheError,
+    ConfigurationError,
+    TimeoutError,
+}
+
+// Error Code zu String Mapping
+fn errorCodeToString(code: ApiErrorCode): string {
+    if (code == ApiErrorCode.ValidationError) { return "VALIDATION_ERROR"; }
+    if (code == ApiErrorCode.NotFound) { return "NOT_FOUND"; }
+    if (code == ApiErrorCode.Unauthorized) { return "UNAUTHORIZED"; }
+    if (code == ApiErrorCode.Forbidden) { return "FORBIDDEN"; }
+    if (code == ApiErrorCode.RateLimitExceeded) { return "RATE_LIMIT_EXCEEDED"; }
+    if (code == ApiErrorCode.InternalServerError) { return "INTERNAL_SERVER_ERROR"; }
+    if (code == ApiErrorCode.DatabaseError) { return "DATABASE_ERROR"; }
+    if (code == ApiErrorCode.LLMError) { return "LLM_ERROR"; }
+    if (code == ApiErrorCode.VectorDBError) { return "VECTOR_DB_ERROR"; }
+    if (code == ApiErrorCode.CacheError) { return "CACHE_ERROR"; }
+    if (code == ApiErrorCode.ConfigurationError) { return "CONFIGURATION_ERROR"; }
+    if (code == ApiErrorCode.TimeoutError) { return "TIMEOUT_ERROR"; }
+    return "UNKNOWN_ERROR";
+}
+
+// Error Code zu HTTP Status Mapping
+fn errorCodeToHttpStatus(code: ApiErrorCode): number {
+    if (code == ApiErrorCode.ValidationError) { return 400; }
+    if (code == ApiErrorCode.NotFound) { return 404; }
+    if (code == ApiErrorCode.Unauthorized) { return 401; }
+    if (code == ApiErrorCode.Forbidden) { return 403; }
+    if (code == ApiErrorCode.RateLimitExceeded) { return 429; }
+    if (code == ApiErrorCode.InternalServerError) { return 500; }
+    if (code == ApiErrorCode.DatabaseError) { return 500; }
+    if (code == ApiErrorCode.LLMError) { return 502; }
+    if (code == ApiErrorCode.VectorDBError) { return 502; }
+    if (code == ApiErrorCode.CacheError) { return 500; }
+    if (code == ApiErrorCode.ConfigurationError) { return 500; }
+    if (code == ApiErrorCode.TimeoutError) { return 504; }
+    return 500;
+}
+
+fn getStackTrace(): string {
+    return "";
+}
+
+// createError - Erstellt AppError
+fn createError(code: ApiErrorCode, message: string, details: Map<string, string>, cause: string): AppError {
+    return AppError {
+        code: code,
+        message: message,
+        details: details,
+        cause: cause,
+        stackTrace: getStackTrace(),
+        timestamp: logging.getCurrentTimestamp(),
+    };
+}
+
+// createValidationError - Erstellt Validierungs-Fehler
+fn createValidationError(field: string, message: string): AppError {
+    let details = models.createEmptyMapStringString();
+    details.insert("field", field);
+    
+    let code = ApiErrorCode.ValidationError;
+    return createError(
+        code,
+        message,
+        details,
+        "Validation failed"
+    );
+}
+
+// createNotFoundError - Erstellt Not-Found-Fehler
+fn createNotFoundError(resource: string, id: string): AppError {
+    let details = models.createEmptyMapStringString();
+    details.insert("resource", resource);
+    details.insert("id", id);
+    
+    let code = ApiErrorCode.NotFound;
+    return createError(
+        code,
+        "Resource not found: " + resource,
+        details,
+        "Not Found"
+    );
+}
+
+// createUnauthorizedError - Erstellt Unauthorized-Fehler
+fn createUnauthorizedError(reason: string): AppError {
+    let details = models.createEmptyMapStringString();
+    details.insert("reason", reason);
+    
+    let code = ApiErrorCode.Unauthorized;
+    return createError(
+        code,
+        "Unauthorized: " + reason,
+        details,
+        "Authentication failed"
+    );
+}
+
+// createRateLimitError - Erstellt Rate-Limit-Fehler
+fn createRateLimitError(limit: number, window: string): AppError {
+    let details = models.createEmptyMapStringString();
+    // Convert number to string workaround or simplification
+    details.insert("limit", "limit_exceeded");
+    details.insert("window", window);
+    
+    let code = ApiErrorCode.RateLimitExceeded;
+    return createError(
+        code,
+        "Rate limit exceeded",
+        details,
+        "Rate limiting"
+    );
+}
+
+// createLLMError - Erstellt LLM-Fehler
+fn createLLMError(provider: string, message: string): AppError {
+    let details = models.createEmptyMapStringString();
+    details.insert("provider", provider);
+    
+    let code = ApiErrorCode.LLMError;
+    return createError(
+        code,
+        "LLM error (" + provider + ")",
+        details,
+        message
+    );
+}
+
+// createVectorDBError - Erstellt Vector-DB-Fehler
+fn createVectorDBError(operation: string, message: string): AppError {
+    let details = models.createEmptyMapStringString();
+    details.insert("operation", operation);
+    
+    let code = ApiErrorCode.VectorDBError;
+    return createError(
+        code,
+        "Vector DB error during " + operation,
+        details,
+        message
+    );
+}
+
+// createInternalServerError - Erstellt Internal-Server-Fehler
+fn createInternalServerError(message: string): AppError {
+    let details = models.createEmptyMapStringString();
+    
+    let code = ApiErrorCode.InternalServerError;
+    return createError(
+        code,
+        message,
+        details,
+        "Internal server error"
+    );
+}

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, master, develop ]
 
 jobs:
   test:
@@ -44,7 +44,7 @@ jobs:
     - name: Check Format
       working-directory: compiler
       run: cargo fmt -- --check || true
-    
+
     - name: Clippy
       working-directory: compiler
       run: cargo clippy -- -D warnings || true

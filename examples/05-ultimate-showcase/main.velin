@@ -1,0 +1,83 @@
+
+use models
+use security
+use services
+use intelligence
+
+@VelinInsight
+mod UltimateShowcase {
+    fn version(): string { return "1.0.0"; }
+    
+    // --- Öffentliche Endpunkte ---
+    
+    /// Gibt den Status der API zurück
+    @GET("/api/health")
+    @VelinAutoDoc
+    fn healthCheck(): Map<string, string> {
+        let mut status = Map<string, string>();
+        status.insert("status", "ok");
+        status.insert("version", "1.0.0");
+        return status;
+    }
+    
+    /// Listet alle Produkte mit optionalem Caching
+    @GET("/api/products")
+    @Cache(ttl: "5m")
+    @VelinAutoDoc
+    fn listProducts(): List<Product> {
+        return db.findAll(Product);
+    }
+    
+    // --- Geschützte Endpunkte ---
+    
+    /// Platziert eine neue Bestellung unter Verwendung der transaktionalen Flow-Engine
+    @POST("/api/checkout")
+    @Auth
+    @VelinAutoDoc
+    fn checkout(items: List<OrderItem>): OrderResult {
+        let user = currentUser(); // Injiziert durch @Auth Middleware
+        
+        // Aufruf des Flow-Services
+        // Wenn dies fehlschlägt, rollt VelinFlow DB-Änderungen automatisch zurück!
+        return services.processCheckout(user, items);
+    }
+    
+    /// Ruft das Benutzer-Dashboard ab (Parallelisiert)
+    @GET("/api/dashboard")
+    @Auth
+    @VelinAutoDoc
+    async fn getDashboard() {
+        let user = currentUser();
+        
+        // Verwendet VelinPipeline Optimierung
+        return await services.loadUserDashboard(user.id);
+    }
+    
+    /// Nur Admin: Produkt auffüllen
+    @POST("/api/admin/restock/:id")
+    @Auth
+    @Role("admin")
+    @VelinAutoDoc
+    fn restockProduct(id: string, amount: number): Product {
+        // Struct-Feld manuell aktualisieren, da Compiler strikt bei Mutation ist
+        let mut p = db.find(Product, id);
+        let newStock = p.stock + amount;
+        
+        return db.save(Product {
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            stock: newStock,
+            category: p.category
+        });
+    }
+    
+    /// KI-Feature: Personalisierte Empfehlungen erhalten
+    @GET("/api/recommendations")
+    @Auth
+    fn getRecommendations(): List<Product> {
+        let mut products = List<Product>();
+        return products;
+    }
+}

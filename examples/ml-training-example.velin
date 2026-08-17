@@ -1,0 +1,87 @@
+// ML Model Training Beispiel
+
+use stdlib::ml::{TrainingService, ONNXTrainingConfig, TensorFlowTrainingConfig};
+
+fn trainSentimentModel(): void {
+    let mut service = TrainingService.new();
+    
+    // Training-Daten hinzufügen
+    service.add_example("I love this product", "positive");
+    service.add_example("This is terrible", "negative");
+    service.add_example("It's okay", "neutral");
+    
+    // ONNX Training
+    let config = ONNXTrainingConfig {
+        epochs: 100,
+        batch_size: 32,
+        learning_rate: 0.001,
+        optimizer: "Adam",
+        loss_function: "CrossEntropy"
+    };
+    
+    let result = service.train_with_onnx("sentiment_model", config);
+    
+    match (result) {
+        Ok(training_result) => {
+            // Training erfolgreich
+            // training_result.accuracy, training_result.loss, etc.
+        },
+        Error(err) => {
+            // Fehlerbehandlung
+        }
+    }
+}
+
+fn trainClassificationModel(): void {
+    let mut service = TrainingService.new();
+    
+    // Training-Daten
+    for (data in trainingDataset) {
+        service.add_example(data.input, data.label);
+    }
+    
+    // TensorFlow Training
+    let config = TensorFlowTrainingConfig {
+        epochs: 150,
+        batch_size: 64,
+        learning_rate: 0.0005,
+        optimizer: "RMSprop",
+        loss_function: "SparseCategoricalCrossentropy",
+        validation_split: 0.2
+    };
+    
+    let result = service.train_with_tensorflow("classification_model", config);
+    
+    match (result) {
+        Ok(training_result) => {
+            // Model erfolgreich trainiert
+            // training_result.accuracy, training_result.loss, etc.
+            
+            // Model evaluieren
+            let testData = [
+                TrainingExample { input: "test1", output: "expected1" },
+                TrainingExample { input: "test2", output: "expected2" }
+            ];
+            
+            let evalResult = service.evaluate_model("classification_model", testData);
+            
+            match (evalResult) {
+                Ok(metrics) => {
+                    // Evaluation erfolgreich
+                    // metrics.accuracy, metrics.precision, metrics.recall, metrics.f1_score
+                },
+                Error(err) => {
+                    // Evaluation fehlgeschlagen
+                }
+            }
+        },
+        Error(err) => {
+            // Training fehlgeschlagen
+        }
+    }
+}
+
+fn main(): void {
+    trainSentimentModel();
+    trainClassificationModel();
+}

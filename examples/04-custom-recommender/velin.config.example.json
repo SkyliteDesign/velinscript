@@ -1,0 +1,60 @@
+{
+  "name": "custom-recommender",
+  "version": "1.0.0",
+  "description": "Hybrid Recommendation System Beispiel",
+  
+  "api": {
+    "port": 8080,
+    "host": "localhost",
+    "cors": {
+      "enabled": true,
+      "origins": ["http://localhost:3000"]
+    }
+  },
+  
+  "database": {
+    "type": "vector",
+    "provider": "local",
+    "connectionString": "local://vectors"
+  },
+  
+  "ml": {
+    "llm": {
+      "provider": "openai",
+      "apiKey": "${OPENAI_API_KEY}",
+      "anthropicApiKey": "${ANTHROPIC_API_KEY}",
+      "geminiApiKey": "${GOOGLE_GEMINI_API_KEY}",
+      "model": "gpt-4",
+      "anthropicModel": "claude-3-opus-20240229",
+      "geminiModel": "gemini-pro"
+    },
+    "recommendation": {
+      "embeddingWeight": 0.6,
+      "collaborativeWeight": 0.4
+    }
+  },
+  
+  "cache": {
+    "enabled": true,
+    "ttl": 3600
+  },
+  
+  "logging": {
+    "level": "info"
+  },
+  "security": {
+    "apiKeyRequired": true,
+    "jwt": {
+      "enabled": true,
+      "secret": "${JWT_SECRET}"
+    },
+    "rateLimit": {
+      "enabled": true,
+      "requestsPerMinute": 100
+    }
+  },
+  "wasm": {
+    "enabled": true,
+    "target": "wasm32-unknown-unknown"
+  }
+}

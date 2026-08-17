@@ -1,0 +1,185 @@
+use models;
+use app_config;
+
+// Custom Recommender - Security Features
+// Erweiterte Security-Funktionen für Server und Cloud-Dienste
+
+// Security-Middleware und Validierung
+
+// validateApiKey - Validiert API Key aus Request Header
+fn validateApiKey(request: models.HttpRequest): boolean {
+    let appConfig = app_config.getConfig();
+    let isRequired = appConfig.security.apiKeyRequired;
+    
+    if (models.isTrue(isRequired == false)) {
+        return true;
+    }
+    
+    let headerName = appConfig.security.apiKeyHeader;
+    
+    if (models.isTrue(request.headers.contains(headerName) == false)) {
+        return false;
+    }
+
+    // Safe extraction
+    let mut apiKey: string = "";
+    if (models.isTrue(request.headers.contains(headerName))) {
+        apiKey = models.anyToString(request.headers.get(headerName));
+    }
+    
+    if (models.isTrue(apiKey == "")) {
+        return false;
+    }
+    
+    // In Production: Validiere gegen gespeicherte API Keys
+    // return db.validateApiKey(apiKey);
+    return true;
+}
+
+// validateJWT - Validiert JWT Token
+fn validateJWT(token: string): boolean {
+    let appConfig = app_config.getConfig();
+    let isEnabled = appConfig.security.jwt.enabled;
+    
+    if (models.isTrue(isEnabled == false)) {
+        return true;
+    }
+    
+    // In Production: Validiere JWT mit Secret
+    // return JWT.verify(token, config.security.jwt.secret);
+    return true;
+}
+
+// applySecurityHeaders - Fügt Security Headers zu ApiResponse hinzu
+fn applySecurityHeaders<T>(response: models.ApiResponse<T>): models.ApiResponse<T> {
+    // Security Headers werden in createHttpResponse gesetzt
+    // Diese Funktion kann für zusätzliche Header-Logik verwendet werden
+    return response;
+}
+
+// applySecurityHeadersToHttpResponse - Fügt Security Headers zu HttpResponse hinzu
+fn applySecurityHeadersToHttpResponse(response: models.HttpResponse): models.HttpResponse {
+    let config = app_config.getConfig();
+    let secHeaders = config.security.headers;
+    
+    // Apply headers using insert instead of set
+    response.headers.insert("X-Frame-Options", secHeaders.xFrameOptions);
+    response.headers.insert("X-Content-Type-Options", secHeaders.xContentTypeOptions);
+    response.headers.insert("X-XSS-Protection", secHeaders.xXSSProtection);
+    
+    if (models.isTrue(secHeaders.strictTransportSecurity != "")) {
+        response.headers.insert("Strict-Transport-Security", secHeaders.strictTransportSecurity);
+    }
+    
+    return response;
+}
+
+// checkRateLimit - Prüft Rate Limit für IP-Adresse
+fn checkRateLimit(ipAddress: string): boolean {
+    let appConfig = app_config.getConfig();
+    let isEnabled = appConfig.security.rateLimit.enabled;
+    
+    if (models.isTrue(isEnabled == false)) {
+        return true;
+    }
+    
+    // In Production: Verwende Redis oder ähnliches für Rate Limiting
+    let allowed = true;
+    return allowed;
+}
+
+// validateInputSize - Validiert Request-Größe
+fn validateInputSize(request: models.HttpRequest): boolean {
+    let appConfig = app_config.getConfig();
+    
+    if (models.isTrue(request.headers.contains("Content-Length"))) {
+        let contentLength: string = models.anyToString(request.headers.get("Content-Length"));
+        // Simple check, real implementation would parse string to int
+        // if (contentLength > config.security.maxRequestSize) {
+        //    return false;
+        // }
+    }
+    
+    return true;
+}
+
+// sanitizeInput - Sanitized User Input (erweitert)
+fn sanitizeInput(input: string): string {
+    // String shouldn't be null usually, but handle just in case
+    // if (input == null) { return ""; }
+    if (models.isTrue(input == "")) {
+        return "";
+    }
+    
+    // Entferne potenziell gefährliche Zeichen und Patterns
+    let s = input;
+    s = s.replace("<script>", "");
+    s = s.replace("</script>", "");
+    s = s.replace("javascript:", "");
+    s = s.replace("onerror=", "");
+    s = s.replace("onload=", "");
+    
+    s = s.replace("';", "");
+    s = s.replace("DROP TABLE", "");
+    s = s.replace("DELETE FROM", "");
+    
+    s = s.replace(";", "");
+    s = s.replace("|", "");
+    s = s.replace("`", "");
+    
+    s = s.replace("<", "&lt;");
+    s = s.replace(">", "&gt;");
+    s = s.replace("\"", "&quot;");
+    s = s.replace("'", "&#x27;");
+    
+    return s.trim();
+}
+
+// sanitizeRequest - Sanitized gesamten Request
+fn sanitizeRequest(request: models.HttpRequest): models.HttpRequest {
+    // Sanitize Body
+    if (models.isTrue(models.isNotNull(request.body))) {
+        request.body = sanitizeObject(request.body);
+    }
+    
+    // Sanitize Query Parameters
+    // Map is usually not null if initialized, but check anyway
+    if (models.isTrue(models.isNotNull(request.queryParams))) {
+        let mut sanitizedParams = models.createEmptyMapStringString();
+        for (key in request.queryParams.keys()) {
+            if (models.isTrue(request.queryParams.contains(key))) {
+                let val: string = models.anyToString(request.queryParams.get(key));
+                sanitizedParams.insert(key, sanitizeInput(val));
+            }
+        }
+        request.queryParams = sanitizedParams;
+    }
+    
+    // Sanitize Path Parameters
+    if (models.isTrue(models.isNotNull(request.pathParams))) {
+        let mut sanitizedPathParams = models.createEmptyMapStringString();
+        for (key in request.pathParams.keys()) {
+            if (models.isTrue(request.pathParams.contains(key))) {
+                let val: string = models.anyToString(request.pathParams.get(key));
+                sanitizedPathParams.insert(key, sanitizeInput(val));
+            }
+        }
+        request.pathParams = sanitizedPathParams;
+    }
+    
+    return request;
+}
+
+// sanitizeObject - Sanitized Objekt rekursiv
+fn sanitizeObject(obj: any): any {
+    if (models.isTrue(models.isNotNull(obj) == false)) {
+        return null;
+    }
+    
+    // if (typeof(obj) == "string") {
+    //     return sanitizeInput(obj);
+    // }
+    
+    // Deep sanitization skipped for simplicity in this example
+    return obj;
+}

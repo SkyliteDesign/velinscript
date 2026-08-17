@@ -1,82 +1,88 @@
 # VelinScript Installation Script für Windows
-# PowerShell Script
+# Usage:
+#   .\install.ps1 -Prefix "I:\Projekte\VelinScript\test_sandbox\bin" -SourceRepo "I:\Projekte\VelinScript\velinscript"
+#   .\install.ps1   # default: %ProgramFiles%\velin (legacy)
 
-# Fehlerbehandlung: Script stoppt bei Fehlern
+param(
+    [string]$Prefix = "",
+    [string]$SourceRepo = "",
+    [switch]$SkipClone
+)
+
 $ErrorActionPreference = "Stop"
 
-Write-Host "🚀 VelinScript Installation" -ForegroundColor Green
+Write-Host "VelinScript Installation (Windows)" -ForegroundColor Green
 Write-Host ""
 
-# Prüfe ob Rust installiert ist
 if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ Rust ist nicht installiert." -ForegroundColor Red
-    Write-Host "Bitte installiere Rust zuerst:"
-    Write-Host "  https://rustup.rs/"
+    Write-Host "Rust/cargo nicht gefunden. Installiere zuerst: https://rustup.rs/" -ForegroundColor Red
     exit 1
 }
+Write-Host "Rust gefunden" -ForegroundColor Green
 
-Write-Host "✓ Rust gefunden" -ForegroundColor Green
+$startDir = Get-Location
 
-# Repository klonen oder aktualisieren
-if (Test-Path "velinscript") {
-    Write-Host "📦 Repository aktualisieren..." -ForegroundColor Yellow
-    Set-Location velinscript
-    git pull
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Fehler beim Aktualisieren des Repositories" -ForegroundColor Red
-        exit 1
-    }
+if ($SourceRepo -ne "" -and (Test-Path $SourceRepo)) {
+    $repoRoot = (Resolve-Path $SourceRepo).Path
+    Write-Host "Verwende lokales Repo: $repoRoot" -ForegroundColor Yellow
+    Set-Location (Join-Path $repoRoot "compiler")
+} elseif ($SkipClone -and (Test-Path "compiler")) {
+    Set-Location compiler
+} elseif (Test-Path "velinscript\compiler") {
+    Set-Location velinscript\compiler
+} elseif (Test-Path "compiler\Cargo.toml") {
+    Set-Location compiler
 } else {
-    Write-Host "📦 Repository klonen..." -ForegroundColor Yellow
+    Write-Host "Repository klonen..." -ForegroundColor Yellow
     git clone https://github.com/SkyliteDesign/velinscript.git
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Fehler beim Klonen des Repositories" -ForegroundColor Red
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+    Set-Location velinscript\compiler
+}
+
+Write-Host "Compiler bauen (release)..." -ForegroundColor Yellow
+cargo build --release --bin velin --bin velin-compiler
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build fehlgeschlagen" -ForegroundColor Red
+    exit 1
+}
+
+$releaseDir = Join-Path (Get-Location) "target\release"
+if ($env:CARGO_TARGET_DIR -and (Test-Path $env:CARGO_TARGET_DIR)) {
+    $alt = Join-Path $env:CARGO_TARGET_DIR "release"
+    if (Test-Path (Join-Path $alt "velin.exe")) { $releaseDir = $alt }
+    elseif (Test-Path (Join-Path $alt "velin-compiler.exe")) { $releaseDir = $alt }
+}
+$velinSrc = Join-Path $releaseDir "velin.exe"
+$compilerSrc = Join-Path $releaseDir "velin-compiler.exe"
+if (-not (Test-Path $velinSrc)) {
+    if (Test-Path $compilerSrc) {
+        $velinSrc = $compilerSrc
+    } else {
+        Write-Host "Binary nicht gefunden unter $releaseDir" -ForegroundColor Red
+        Get-ChildItem $releaseDir -ErrorAction SilentlyContinue | Select-Object -First 30 Name
         exit 1
     }
-    Set-Location velinscript
 }
 
-# Compiler bauen
-Write-Host "🔨 Compiler bauen..." -ForegroundColor Yellow
-Set-Location compiler
-cargo build --release
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Fehler beim Bauen des Compilers" -ForegroundColor Red
-    exit 1
+if ($Prefix -eq "") {
+    $INSTALL_DIR = Join-Path $env:ProgramFiles "velin"
+} else {
+    $INSTALL_DIR = $Prefix
+    if (-not [System.IO.Path]::IsPathRooted($INSTALL_DIR)) {
+        $INSTALL_DIR = Join-Path $startDir $INSTALL_DIR
+    }
 }
 
-# Binary Pfad
-$BINARY_PATH = Join-Path (Get-Location) "target\release\velin-compiler.exe"
-$INSTALL_PATH = Join-Path $env:ProgramFiles "velin\velin.exe"
-
-# Installations-Verzeichnis erstellen
-$INSTALL_DIR = Split-Path $INSTALL_PATH
-if (-not (Test-Path $INSTALL_DIR)) {
-    New-Item -ItemType Directory -Path $INSTALL_DIR -Force | Out-Null
-}
-
-# Binary kopieren
-Write-Host "📦 Binary installieren..." -ForegroundColor Yellow
-if (-not (Test-Path $BINARY_PATH)) {
-    Write-Host "❌ Binary nicht gefunden: $BINARY_PATH" -ForegroundColor Red
-    exit 1
-}
-Copy-Item $BINARY_PATH $INSTALL_PATH -Force
-
-# PATH aktualisieren (optional)
-$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($currentPath -notlike "*$INSTALL_DIR*") {
-    Write-Host "⚠️  Bitte füge $INSTALL_DIR zu deinem PATH hinzu" -ForegroundColor Yellow
-    $newPath = "$currentPath;$INSTALL_DIR"
-    Write-Host "  Oder verwende: [Environment]::SetEnvironmentVariable('Path', '$newPath', 'User')"
+New-Item -ItemType Directory -Path $INSTALL_DIR -Force | Out-Null
+Copy-Item $velinSrc (Join-Path $INSTALL_DIR "velin.exe") -Force
+if (Test-Path $compilerSrc) {
+    Copy-Item $compilerSrc (Join-Path $INSTALL_DIR "velin-compiler.exe") -Force
 }
 
 Write-Host ""
-Write-Host "✅ VelinScript erfolgreich installiert!" -ForegroundColor Green
+Write-Host "Installiert nach: $INSTALL_DIR" -ForegroundColor Green
+Write-Host "Session-PATH (Beispiel):"
+Write-Host "  `$env:PATH = `"$INSTALL_DIR;`$env:PATH`""
+Write-Host "  velin --version"
 Write-Host ""
-Write-Host "Verwendung:"
-Write-Host "  velin compile -i main.velin"
-Write-Host "  velin check -i main.velin"
-Write-Host "  velin init my-project"
-Write-Host ""
-Write-Host "Dokumentation: https://github.com/SkyliteDesign/velinscript"
+Set-Location $startDir

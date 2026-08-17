@@ -1,6 +1,8 @@
 # Custom Recommender - Hybrid Recommendation System
 
-Ein vollständiges Beispiel für ein hybrides Recommendation System in VelinScript, das Embedding-basierte und Collaborative Filtering Ansätze kombiniert.
+Ein vollständiges, production-ready Beispiel für ein hybrides Recommendation System in VelinScript, das Embedding-basierte und Collaborative Filtering Ansätze kombiniert.
+
+> **Status**: ✅ Vollständig implementiert mit echten VectorDB-Integrationen (Pinecone, Weaviate, Qdrant) und LLM-API-Calls (OpenAI, Anthropic, Google Gemini)
 
 ## Übersicht
 
@@ -219,8 +221,8 @@ Findet ähnliche Items.
 ### 1. Voraussetzungen
 
 - VelinScript Compiler installiert
-- Vector Database (optional, für Production)
-- LLM API Key (z.B. OpenAI) für Embedding-Generierung
+- Vector Database (Pinecone, Weaviate oder Qdrant) - **erforderlich für Production**
+- LLM API Key (z.B. OpenAI, Anthropic oder Google Gemini) für Embedding-Generierung
 
 ### 2. Konfiguration
 
@@ -252,6 +254,24 @@ cp velin.config.example.json velin.config.json
 # API Keys werden automatisch aus Umgebungsvariablen geladen
 ```
 
+#### Vector Database Setup
+
+**Pinecone:**
+1. Erstelle einen Account auf [pinecone.io](https://www.pinecone.io)
+2. Erstelle einen neuen Index (z.B. "items" mit 1536 Dimensionen für OpenAI Embeddings)
+3. Hole deine API Key und Environment-Name
+4. Connection String Format: `api-key@environment` (z.B. `abc123@us-east-1`)
+
+**Weaviate:**
+1. Installiere Weaviate lokal oder nutze Weaviate Cloud
+2. Starte Weaviate: `docker run -p 8080:8080 semitechnologies/weaviate`
+3. Connection String Format: `http://localhost:8080` oder `https://your-instance.weaviate.network`
+
+**Qdrant:**
+1. Installiere Qdrant: `docker run -p 6333:6333 qdrant/qdrant`
+2. Oder nutze Qdrant Cloud
+3. Connection String Format: `http://localhost:6333` oder `https://your-instance.qdrant.io`
+
 #### Konfigurationsdatei anpassen
 
 Bearbeite `velin.config.json`:
@@ -259,9 +279,45 @@ Bearbeite `velin.config.json`:
 - Setze `ml.llm.anthropicApiKey` auf `${ANTHROPIC_API_KEY}` für Claude
 - Setze `ml.llm.geminiApiKey` auf `${GOOGLE_GEMINI_API_KEY}` für Gemini
 - Setze `security.jwt.secret` auf `${JWT_SECRET}` für JWT-Authentifizierung
+- Setze `database.provider` auf `"pinecone"`, `"weaviate"` oder `"qdrant"`
+- Setze `database.connectionString` entsprechend dem gewählten Provider (siehe oben)
 - Passe `ml.recommendation.embeddingWeight` und `collaborativeWeight` an
-- Konfiguriere `database.connectionString` für Production
 - Aktiviere Security-Features für Production (`security.apiKeyRequired: true`)
+
+**Beispiel-Konfigurationen:**
+
+```json
+{
+  "database": {
+    "provider": "pinecone",
+    "connectionString": "your-api-key@us-east-1"
+  },
+  "ml": {
+    "llm": {
+      "provider": "openai",
+      "apiKey": "${OPENAI_API_KEY}"
+    }
+  }
+}
+```
+
+```json
+{
+  "database": {
+    "provider": "weaviate",
+    "connectionString": "http://localhost:8080"
+  }
+}
+```
+
+```json
+{
+  "database": {
+    "provider": "qdrant",
+    "connectionString": "http://localhost:6333"
+  }
+}
+```
 
 ### 3. Kompilieren
 
@@ -326,12 +382,55 @@ curl http://localhost:8080/api/items/item456/similar?limit=5
 
 ## Best Practices
 
-1. **Model Loading**: Lade Embedding-Models beim Start, nicht bei jedem Request
-2. **Caching**: Cache User-Embeddings und häufige Empfehlungen
-3. **Error Handling**: Behandle Vector DB und LLM API Fehler gracefully
-4. **Validation**: Validiere alle Inputs vor Verarbeitung
-5. **Monitoring**: Track Recommendation Quality und User Feedback
-6. **A/B Testing**: Teste verschiedene Gewichtungen für Hybrid-Algorithmus
+1. **Vector Database**: 
+   - Initialisiere VectorDB beim Start mit `initializeVectorDB()`
+   - Verwende Batch-Upserts für bessere Performance
+   - Konfiguriere passende Index-Parameter (Dimensionen, Metrik)
+2. **Embedding-Generierung**: 
+   - Cache generierte Embeddings um API-Kosten zu reduzieren
+   - Verwende Batch-Embeddings wenn möglich
+3. **Caching**: Cache User-Embeddings und häufige Empfehlungen
+4. **Error Handling**: Behandle Vector DB und LLM API Fehler gracefully mit Retry-Logik
+5. **Validation**: Validiere alle Inputs vor Verarbeitung
+6. **Monitoring**: Track Recommendation Quality und User Feedback
+7. **A/B Testing**: Teste verschiedene Gewichtungen für Hybrid-Algorithmus
+8. **Performance**: 
+   - Nutze Connection Pooling für VectorDB
+   - Implementiere Pagination für große Result-Sets
+   - Verwende Async-Operationen für teure Embedding-Generierungen
+
+## Troubleshooting
+
+### VectorDB-Verbindungsfehler
+
+**Pinecone:**
+- Prüfe API Key und Environment-Name
+- Stelle sicher, dass der Index existiert und die richtige Dimension hat
+- Prüfe Firewall-Regeln für `*.pinecone.io`
+
+**Weaviate:**
+- Prüfe ob Weaviate läuft: `curl http://localhost:8080/v1/meta`
+- Stelle sicher, dass das Schema erstellt wurde
+- Prüfe CORS-Einstellungen wenn von Browser aus genutzt
+
+**Qdrant:**
+- Prüfe ob Qdrant läuft: `curl http://localhost:6333/collections`
+- Stelle sicher, dass die Collection existiert
+- Prüfe Collection-Konfiguration (Dimensionen, Distance-Metrik)
+
+### Embedding-Generierung
+
+- Prüfe API Keys für LLM-Provider
+- Stelle sicher, dass genug Credits/Quota vorhanden sind
+- Implementiere Retry-Logik bei Rate Limits
+- Verwende Caching um API-Calls zu reduzieren
+
+### Performance-Probleme
+
+- Erhöhe Connection Pool Size für VectorDB
+- Nutze Batch-Operations wo möglich
+- Implementiere Caching für häufige Queries
+- Optimiere Embedding-Dimensionen (kleinere = schneller)
 
 ## Erweiterungsmöglichkeiten
 

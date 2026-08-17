@@ -1,0 +1,12 @@
+@Spring
+@Controller("/api/${1:resource}")
+struct ${1:Resource}Controller {
+    // fields
+}
+
+impl ${1:Resource}Controller {
+    @Get
+    fn getAll(self): List<${2:Type}> {
+        return [];
+    }
+}

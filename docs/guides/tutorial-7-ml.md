@@ -2,14 +2,16 @@
 
 Lerne, wie du KI/ML-Features in VelinScript verwendest.
 
+> **Hinweis**: Für detaillierte Informationen zum Model Training siehe [ML Training Tutorial](tutorial-ml-training.md).
+
 ## ML Model Loading
 
 ### Model laden
 
 ```velin
-let mut loader = ModelLoader::new();
-loader.load_model("sentiment", ModelType::Sentiment, "models/sentiment.onnx");
-loader.load_model("classifier", ModelType::Classification, "models/classifier.onnx");
+let loader: ModelLoader = ModelLoader.new();
+loader.loadModel("sentiment", "sentiment", "models/sentiment.onnx");
+loader.loadModel("classifier", "classification", "models/classifier.onnx");
 ```
 
 ### Prediction
@@ -18,7 +20,7 @@ loader.load_model("classifier", ModelType::Classification, "models/classifier.on
 @AI(model: "sentiment")
 @POST("/api/analyze/sentiment")
 fn analyzeSentiment(text: string): SentimentResult {
-    let loader = ModelLoader::new();
+    let loader: ModelLoader = ModelLoader.new();
     let prediction = loader.predict("sentiment", text);
     
     return SentimentResult {
@@ -30,13 +32,20 @@ fn analyzeSentiment(text: string): SentimentResult {
 
 ## LLM Integration
 
-### OpenAI
+### OpenAI, Anthropic, Gemini, Local
+
+Die LLM-Integration ist nun vollständig implementiert und unterstützt echte API-Calls.
 
 ```velin
 @POST("/api/chat")
 fn chat(message: string): string {
-    let llm = LLMClient::new(LLMProvider::OpenAI, getApiKey());
-    return llm.generate(message);
+    // Unterstützte Provider: "openai", "anthropic", "gemini", "local"
+    // "local" Modus simuliert Antworten für Tests ohne API-Kosten
+    let llm: LLMClient = LLMClient.new("openai", "api-key");
+    
+    // Asynchroner Aufruf via HTTP Client
+    let result = await llm.generate(message);
+    return result;
 }
 ```
 
@@ -45,7 +54,8 @@ fn chat(message: string): string {
 ```velin
 @POST("/api/embed")
 fn embed(text: string): List<number> {
-    let llm = LLMClient::new(LLMProvider::OpenAI, getApiKey());
+    let llm: LLMClient = LLMClient.new("openai", "api-key");
+    // Generiert echte Vektor-Embeddings (z.B. 1536 Dimensionen für OpenAI)
     return llm.embed(text);
 }
 ```
@@ -89,6 +99,8 @@ fn searchDocuments(query: string): List<Document> {
 
 ## Model Training
 
+### Basis-Training
+
 ```velin
 @POST("/api/train")
 fn trainModel(modelName: string): void {
@@ -102,6 +114,48 @@ fn trainModel(modelName: string): void {
     training.train(modelName);
 }
 ```
+
+### ONNX Training
+
+```velin
+let config = ONNXTrainingConfig {
+    epochs: 100,
+    batch_size: 32,
+    learning_rate: 0.001,
+    optimizer: "Adam",
+    loss_function: "CrossEntropy"
+};
+
+let result = training.train_with_onnx("my_model", config);
+```
+
+### TensorFlow Training
+
+```velin
+let config = TensorFlowTrainingConfig {
+    epochs: 100,
+    batch_size: 32,
+    learning_rate: 0.001,
+    optimizer: "Adam",
+    loss_function: "SparseCategoricalCrossentropy",
+    validation_split: 0.2
+};
+
+let result = training.train_with_tensorflow("tf_model", config);
+```
+
+### Model Evaluation
+
+```velin
+let testData = [
+    TrainingExample { input: "test1", output: "expected1" }
+];
+
+let evalResult = training.evaluate_model("my_model", testData);
+// evalResult.accuracy, evalResult.precision, evalResult.recall, evalResult.f1_score
+```
+
+> **Siehe auch**: [ML Training Tutorial](tutorial-ml-training.md) für detaillierte Informationen.
 
 ## Best Practices
 

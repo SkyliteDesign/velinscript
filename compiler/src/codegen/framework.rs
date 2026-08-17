@@ -7,6 +7,15 @@ use crate::parser::ast::*;
 pub enum Framework {
     Axum,
     Actix,
+    Laravel,
+    Symfony,
+    FastAPI,
+    Flask,
+    Gin,
+    Express,
+    NestJS,
+    Spring,
+    AspNet,
 }
 
 pub struct FrameworkSelector;
@@ -19,6 +28,15 @@ impl FrameworkSelector {
             match fw.to_lowercase().as_str() {
                 "axum" => return Framework::Axum,
                 "actix" | "actix-web" => return Framework::Actix,
+                "laravel" => return Framework::Laravel,
+                "symfony" => return Framework::Symfony,
+                "fastapi" => return Framework::FastAPI,
+                "flask" => return Framework::Flask,
+                "gin" | "gogin" => return Framework::Gin,
+                "express" => return Framework::Express,
+                "nestjs" => return Framework::NestJS,
+                "spring" | "springboot" => return Framework::Spring,
+                "aspnet" | "aspnetcore" | "dotnet" => return Framework::AspNet,
                 _ => {}
             }
         }
@@ -30,6 +48,15 @@ impl FrameworkSelector {
                     match decorator.name.as_str() {
                         "Axum" | "@Axum" => return Framework::Axum,
                         "Actix" | "@Actix" | "ActixWeb" | "@ActixWeb" => return Framework::Actix,
+                        "Laravel" | "@Laravel" => return Framework::Laravel,
+                        "Symfony" | "@Symfony" => return Framework::Symfony,
+                        "FastAPI" | "@FastAPI" => return Framework::FastAPI,
+                        "Flask" | "@Flask" => return Framework::Flask,
+                        "Gin" | "@Gin" => return Framework::Gin,
+                        "Express" | "@Express" => return Framework::Express,
+                        "NestJS" | "@NestJS" | "@Nest" => return Framework::NestJS,
+                        "Spring" | "@Spring" | "SpringBoot" | "@SpringBoot" => return Framework::Spring,
+                        "AspNet" | "@AspNet" | "AspNetCore" | "@AspNetCore" => return Framework::AspNet,
                         _ => {}
                     }
                 }
@@ -49,10 +76,127 @@ impl FrameworkSelector {
             Framework::Actix => {
                 "use actix_web::{web, HttpResponse, Responder, HttpRequest, HttpMessage};\nuse serde::{Deserialize, Serialize};\n".to_string()
             }
+            Framework::Laravel => {
+                "use Illuminate\\Http\\Request;\nuse Illuminate\\Support\\Facades\\Route;\nuse App\\Http\\Controllers\\Controller;\n".to_string()
+            }
+            Framework::Symfony => {
+                "use Symfony\\Component\\HttpFoundation\\Response;\nuse Symfony\\Component\\HttpFoundation\\Request;\nuse Symfony\\Component\\Routing\\Annotation\\Route;\n".to_string()
+            }
+            Framework::FastAPI => {
+                "from fastapi import FastAPI, HTTPException\nfrom pydantic import BaseModel\nimport uvicorn\n".to_string()
+            }
+            Framework::Flask => {
+                "from flask import Flask, jsonify, request\n".to_string()
+            }
+            Framework::Gin => {
+                "import (\n\t\"github.com/gin-gonic/gin\"\n\t\"net/http\"\n\t\"strconv\"\n)\n".to_string()
+            }
+            Framework::Express => {
+                "import express, { Request, Response } from 'express';\n".to_string()
+            }
+            Framework::NestJS => {
+                "import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';\n".to_string()
+            }
+            Framework::Spring => {
+                "import org.springframework.boot.SpringApplication;\nimport org.springframework.boot.autoconfigure.SpringBootApplication;\nimport org.springframework.web.bind.annotation.*;\nimport org.springframework.http.ResponseEntity;\n".to_string()
+            }
+            Framework::AspNet => {
+                "using Microsoft.AspNetCore.Mvc;\nusing System.Collections.Generic;\n".to_string()
+            }
         }
     }
 
-    /// Generiert Router/App-Initialisierung
+    pub fn generate_node_main(framework: Framework, routes: Vec<(String, String, String)>) -> String {
+        match framework {
+            Framework::Express => {
+                let mut code = "const app = express();\napp.use(express.json());\n\n".to_string();
+                for (method, path, handler) in routes {
+                    // app.get('/path', handler);
+                    // convert /:id to :id (express format matches)
+                    code.push_str(&format!("app.{}(\"{}\", {});\n", method.to_lowercase(), path, handler));
+                }
+                code.push_str("\nconst port = 3000;\napp.listen(port, () => {\n  console.log(`Server running on port ${port}`);\n});\n");
+                code
+            },
+            _ => String::new()
+        }
+    }
+
+    /// Generiert Python App-Initialisierung und Routing
+    pub fn generate_python_app_init(framework: Framework, routes: Vec<(String, String, String)>) -> String {
+        match framework {
+            Framework::FastAPI => {
+                let mut code = "app = FastAPI()\n\n".to_string();
+                for (method, path, handler) in routes {
+                    // app.add_api_route("/path", handler, methods=["GET"])
+                    code.push_str(&format!("app.add_api_route(\"{}\", {}, methods=[\"{}\"])\n", path, handler, method.to_uppercase()));
+                }
+                code.push_str("\nif __name__ == \"__main__\":\n    uvicorn.run(app, host=\"0.0.0.0\", port=8000)\n");
+                code
+            },
+            Framework::Flask => {
+                let mut code = "app = Flask(__name__)\n\n".to_string();
+                for (method, path, handler) in routes {
+                    // app.add_url_rule('/path', view_func=handler, methods=['GET'])
+                    code.push_str(&format!("app.add_url_rule(\"{}\", view_func={}, methods=[\"{}\"])\n", path, handler, method.to_uppercase()));
+                }
+                code.push_str("\nif __name__ == \"__main__\":\n    app.run(debug=True)\n");
+                code
+            },
+            _ => String::new(),
+        }
+    }
+
+    /// Generiert Go Main Function mit Router Setup
+    pub fn generate_go_main(framework: Framework, routes: Vec<(String, String, String)>) -> String {
+        match framework {
+            Framework::Gin => {
+                let mut code = "func main() {\n\tr := gin.Default()\n\n".to_string();
+                for (method, path, handler) in routes {
+                    // r.GET("/path", handler)
+                    code.push_str(&format!("\tr.{}(\"{}\", {})\n", method.to_uppercase(), path, handler));
+                }
+                code.push_str("\n\tr.Run()\n}\n");
+                code
+            },
+            _ => String::new(),
+        }
+    }
+
+    /// Generiert PHP Routing Code (für Laravel/Symfony)
+    pub fn generate_php_routes(framework: Framework, routes: Vec<(String, String, String)>, controller_name: &str) -> String {
+        match framework {
+            Framework::Laravel => {
+                let mut code = String::new();
+                if !routes.is_empty() {
+                    code.push_str("// Routes\n");
+                    for (method, path, func_name) in routes {
+                        // Laravel: Route::get('/path', [AppController::class, 'methodName']);
+                        code.push_str(&format!("Route::{}('{}', [{}::class, '{}']);\n", method.to_lowercase(), path, controller_name, func_name));
+                    }
+                }
+                code
+            },
+            Framework::Symfony => {
+                // Symfony typically uses Attributes on methods, so explicit route definition at the bottom is not needed
+                // unless we want to support YAML/PHP config style. For now, we rely on Attributes.
+                String::new()
+            },
+            _ => String::new(),
+        }
+    }
+
+    /// Generiert Attribute/Decorators für Methoden (z.B. Symfony Route)
+    pub fn generate_method_attributes(framework: Framework, method: &str, path: &str) -> Option<String> {
+        match framework {
+            Framework::Symfony => {
+                Some(format!("#[Route('{}', methods: ['{}'])]", path, method.to_uppercase()))
+            },
+            _ => None,
+        }
+    }
+
+    /// Generiert Router/App-Initialisierung (Rust)
     pub fn generate_app_init(framework: Framework, routes: Vec<(String, String, String)>) -> String {
         match framework {
             Framework::Axum => {
@@ -73,6 +217,7 @@ impl FrameworkSelector {
                 code.push_str("}\n");
                 code
             }
+            _ => String::new(),
         }
     }
 

@@ -63,7 +63,7 @@ pub async fn exchange_code(
     /// Generiert OpenID Connect Discovery
     pub fn generate_oidc_discovery(issuer_url: &str) -> String {
         format!(
-            r#"use openidconnect::{IssuerUrl, ClientId, ClientSecret, RedirectUrl, reqwest::async_http_client};
+            r#"use openidconnect::{{IssuerUrl, ClientId, ClientSecret, RedirectUrl, reqwest::async_http_client}};
 use openidconnect::core::{{CoreClient, CoreProviderMetadata}};
 
 pub async fn discover_oidc_provider() -> Result<CoreClient, Box<dyn std::error::Error>> {{

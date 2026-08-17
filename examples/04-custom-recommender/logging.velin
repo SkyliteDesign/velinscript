@@ -1,0 +1,74 @@
+use app_config;
+use models;
+
+// Custom Recommender - Logging System
+// Zentralisiertes Logging mit verschiedenen Log-Levels und Outputs
+
+// Log Levels
+enum LogLevel {
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR,
+}
+
+// Logger Konfiguration
+struct LoggerConfig {
+    level: string, // Changed from LogLevel to string to match config
+    format: string, // "json" or "text"
+    output: string, // "console", "file", "both"
+}
+
+struct Logger {
+    config: LoggerConfig,
+    context: Map<string, string>,
+}
+
+// Helper for timestamp
+fn getCurrentTimestamp(): string {
+    return "2024-01-01T12:00:00Z";
+}
+
+// Logger initialisieren
+fn initLogger(): Logger {
+    let appConfig = app_config.getConfig();
+    let loggerConfig = LoggerConfig {
+        level: appConfig.logging.level,
+        format: "text",
+        output: "console",
+    };
+    
+    return Logger {
+        config: loggerConfig,
+        context: models.createEmptyMapStringString(),
+    };
+}
+
+fn logDebug(logger: any, message: string, component: string, context: Map<string, string>) {
+    if (models.isTrue(logger.config.level == "DEBUG")) {
+        log("DEBUG", message, component, context);
+    }
+}
+
+fn logInfo(logger: any, message: string, component: string, context: Map<string, string>) {
+    // DEBUG and INFO
+    if (models.isTrue(logger.config.level == "DEBUG") || models.isTrue(logger.config.level == "INFO")) {
+        log("INFO", message, component, context);
+    }
+}
+
+fn logWarn(logger: any, message: string, component: string, context: Map<string, string>) {
+    if (models.isTrue(logger.config.level != "ERROR")) {
+        log("WARN", message, component, context);
+    }
+}
+
+fn logError(logger: any, message: string, component: string, context: Map<string, string>) {
+    log("ERROR", message, component, context);
+}
+
+fn log(level: string, message: string, component: string, context: Map<string, string>) {
+    let ts = getCurrentTimestamp();
+    // Simplified print
+    // print("[" + ts + "] [" + level + "] [" + component + "] " + message);
+}

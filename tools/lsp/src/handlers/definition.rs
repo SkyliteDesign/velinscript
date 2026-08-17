@@ -10,7 +10,7 @@ pub fn find_definition(program: &Program, word: &str, text: &str) -> Option<Loca
             if f.name == word {
                 if let Some(pos) = find_name_position(text, &f.name, "fn") {
                     return Some(Location {
-                        uri: "file:///current".to_string(),
+                        uri: tower_lsp::lsp_types::Url::parse("file:///current").unwrap(),
                         range: pos,
                     });
                 }
@@ -24,7 +24,7 @@ pub fn find_definition(program: &Program, word: &str, text: &str) -> Option<Loca
             if s.name == word {
                 if let Some(pos) = find_name_position(text, &s.name, "struct") {
                     return Some(Location {
-                        uri: "file:///current".to_string(),
+                        uri: tower_lsp::lsp_types::Url::parse("file:///current").unwrap(),
                         range: pos,
                     });
                 }
@@ -38,7 +38,7 @@ pub fn find_definition(program: &Program, word: &str, text: &str) -> Option<Loca
             if e.name == word {
                 if let Some(pos) = find_name_position(text, &e.name, "enum") {
                     return Some(Location {
-                        uri: "file:///current".to_string(),
+                        uri: tower_lsp::lsp_types::Url::parse("file:///current").unwrap(),
                         range: pos,
                     });
                 }

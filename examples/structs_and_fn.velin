@@ -1,0 +1,21 @@
+struct ChatMessage {
+    id: string,
+    role: string,
+    content: string,
+    timestamp: string,
+}
+
+struct ChatRequest {
+    message: string,
+    context: List<ChatMessage>,
+}
+
+struct ChatResponse {
+    message: string,
+    tokens: number,
+    model: string
+}
+
+fn getLlmClient(): LLMClient {
+    return LLMClient::new();
+}

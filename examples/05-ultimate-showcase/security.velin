@@ -1,0 +1,58 @@
+
+use models
+
+mod security {
+    /// Benutzerdefinierte Middleware zur Prüfung von Benutzerrollen
+    /// Gibt true zurück, wenn Zugriff gewährt wird, wirft sonst einen Fehler
+    @VelinAutoDoc
+    fn requireRole(user: User, role: string): void {
+        let hasRole = false;
+        for (r in user.roles) {
+            if (r == role) {
+                hasRole = true;
+                break;
+            }
+        }
+        
+        if (!hasRole) {
+            throw Error("Zugriff verweigert: Benutzer fehlt Rolle " + role);
+        }
+    }
+
+    /// Validiert API-Token (Simuliert)
+    @VelinAutoDoc
+    fn validateToken(token: string): User {
+        if (token == "admin-token") {
+            return User {
+                id: "admin-1",
+                name: "Admin User",
+                email: "admin@velin.dev",
+                roles: ["admin", "user"],
+                age: 30
+            };
+        }
+        
+        if (token == "user-token") {
+             return User {
+                id: "user-1",
+                name: "Regular User",
+                email: "user@velin.dev",
+                roles: ["user"],
+                age: 25
+            };
+        }
+        
+        throw Error("Ungültiges Token");
+    }
+
+    /// Helper to get current user (Stub)
+    fn currentUser(): User {
+        return User {
+            id: "user-1",
+            name: "Regular User",
+            email: "user@velin.dev",
+            roles: ["user"],
+            age: 25
+        };
+    }
+}

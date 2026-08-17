@@ -118,13 +118,16 @@ fn generateUserEmbedding(
 // Output: Erfolg/Fehler
 fn storeItemEmbedding(item: Item): boolean {
     // Generiere Embedding falls noch nicht vorhanden
-    if (item.embedding.length == 0) {
-        let embedding = generateItemEmbedding(item);
-        // In Production: Aktualisiere Item in Datenbank mit neuem Embedding
+    let mut itemToStore = item;
+    if (itemToStore.embedding.length == 0) {
+        let embedding = generateItemEmbedding(itemToStore);
+        itemToStore.embedding = embedding;
+        // Aktualisiere Item in Datenbank mit neuem Embedding
+        db.save(itemToStore);
     }
     
     // Speichere in Vector Database
-    let result = vectorDB.upsert("items", item.id, item.embedding);
+    let result = vectorDB.upsert("items", itemToStore.id, itemToStore.embedding);
     
     return result.isOk();
 }
@@ -147,13 +150,14 @@ fn searchSimilarItems(queryItem: Item, limit: number): List<Item> {
     }
     
     // Konvertiere SearchResults zu Items
-    // In Production: Hole vollständige Item-Objekte aus Datenbank
+    // Hole vollständige Item-Objekte aus Datenbank
     let mut similarItems = List<Item>();
     for (result in searchResults.unwrap()) {
-        // In Production: Hole Item aus Datenbank basierend auf result.id
-        // Für Beispiel: Erstelle Dummy-Item
-        // let item = db.find(Item, result.id);
-        // similarItems.push(item);
+        // Hole Item aus Datenbank basierend auf result.id
+        let item = db.find(Item, result.id);
+        if (item != null) {
+            similarItems.push(item);
+        }
     }
     
     return similarItems;
@@ -176,8 +180,11 @@ fn searchSimilarByText(textQuery: string, limit: number): List<Item> {
     // Konvertiere zu Items (wie in searchSimilarItems)
     let mut similarItems = List<Item>();
     for (result in searchResults.unwrap()) {
-        // In Production: Hole Item aus Datenbank
-        // similarItems.push(db.find(Item, result.id));
+        // Hole Item aus Datenbank
+        let item = db.find(Item, result.id);
+        if (item != null) {
+            similarItems.push(item);
+        }
     }
     
     return similarItems;

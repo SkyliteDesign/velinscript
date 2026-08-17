@@ -1,0 +1,231 @@
+/// Advanced VelinScript Beispiel
+/// WebSocket-Echo, Mini-Chatbot mit Embeddings,
+/// Mini-Scheduler, JWT-Auth, File-Upload, In-Memory-CRUD
+
+// ---------- Gemeinsame Datentypen ----------
+
+struct ChatMemoryItem {
+    id: string,
+    text: string,
+    embedding: List<number>,
+}
+
+struct JwtLoginRequest {
+    email: string,
+    password: string,
+}
+
+struct Profile {
+    userId: string,
+    email: string,
+    roles: List<string>,
+}
+
+struct FileUploadRequest {
+    filename: string,
+    content: string, // z.B. Base64 oder Klartext
+}
+
+struct FileUploadResponse {
+    path: string,
+    size: number,
+}
+
+struct CronJob {
+    id: string,
+    name: string,
+    intervalSeconds: number,
+    lastRun: number,
+}
+
+struct UserInput {
+    name: string,
+    email: string,
+}
+
+struct User {
+    id: string,
+    name: string,
+    email: string,
+}
+
+// ---------- WebSocket Echo (Client-basiert) ----------
+
+fn websocketEcho(url: string, message: string): string {
+    let wsResult = websocket.connect(url);
+    if (!wsResult.isOk()) {
+        return "WebSocket connect error: " + wsResult.unwrapErr();
+    }
+
+    let ws = wsResult.unwrap();
+
+    let sendResult = websocket.send(ws, message);
+    if (!sendResult.isOk()) {
+        return "WebSocket send error: " + sendResult.unwrapErr();
+    }
+
+    let receiveResult = websocket.receive(ws);
+    if (!receiveResult.isOk()) {
+        return "WebSocket receive error: " + receiveResult.unwrapErr();
+    }
+
+    let echo = receiveResult.unwrap();
+
+    let _ = websocket.close(ws);
+
+    return echo;
+}
+
+// ---------- Mini-Chatbot mit Embeddings ----------
+
+fn embedText(text: string): List<number> {
+    let result = llm.embed(text);
+    if (!result.isOk()) {
+        return [];
+    }
+
+    return result.unwrap();
+}
+
+fn chooseBestAnswer(userMessage: string, candidates: List<ChatMemoryItem>): string {
+    let queryEmbedding = embedText(userMessage);
+
+    let mut bestScore: number = -1.0;
+    let mut bestText: string = "Ich weiß es nicht.";
+
+    for (item in candidates) {
+        let score = embedding.similarity(queryEmbedding, item.embedding);
+        if (score > bestScore) {
+            bestScore = score;
+            bestText = item.text;
+        }
+    }
+
+    return bestText;
+}
+
+// ---------- Mini-Cronjob / Scheduler ----------
+
+fn runScheduler(jobs: List<CronJob>, now: number): List<CronJob> {
+    let mut updated: List<CronJob> = [];
+
+    for (job in jobs) {
+        let shouldRun = (now - job.lastRun) >= job.intervalSeconds;
+
+        if (shouldRun) {
+            log.info("Running job: " + job.name);
+
+            let updatedJob = CronJob {
+                id: job.id,
+                name: job.name,
+                intervalSeconds: job.intervalSeconds,
+                lastRun: now,
+            };
+
+            updated.push(updatedJob);
+        } else {
+            updated.push(job);
+        }
+    }
+
+    return updated;
+}
+
+// ---------- JWT-Auth-Beispiel ----------
+
+fn getJwtSecret(): string {
+    // In Production: aus Umgebungsvariable JWT_SECRET lesen
+    return "change-me";
+}
+
+fn createAuthService(): AuthService {
+    let secret = getJwtSecret();
+    return AuthService::new(secret);
+}
+
+@POST("/api/auth/login")
+fn login(request: JwtLoginRequest): JWTToken {
+    if (request.email != "admin@example.com" || request.password != "secret") {
+        return HttpResponse::unauthorized("Invalid credentials");
+    }
+
+    let auth = createAuthService();
+
+    let claims = UserClaims {
+        sub: "admin",
+        user_id: "admin",
+        email: request.email,
+        roles: ["admin"],
+        exp: 0,
+        iat: 0,
+    };
+
+    return auth.generateToken(claims);
+}
+
+@Auth
+@GET("/api/auth/me")
+fn getProfile(token: string): Profile {
+    let auth = createAuthService();
+    let claims = auth.verifyToken(token);
+
+    if (claims == null) {
+        return HttpResponse::unauthorized("Invalid token");
+    }
+
+    return Profile {
+        userId: claims.user_id,
+        email: claims.email,
+        roles: claims.roles,
+    };
+}
+
+// ---------- File-Upload-API ----------
+
+@POST("/api/upload")
+fn uploadFile(request: FileUploadRequest): FileUploadResponse {
+    let path = "uploads/" + request.filename;
+
+    let writeResult = file.write(path, request.content);
+    if (!writeResult.isOk()) {
+        return FileUploadResponse {
+            path: path,
+            size: 0,
+        };
+    }
+
+    let sizeResult = fs.get_size(path);
+
+    let size: number = 0;
+    if (sizeResult.isOk()) {
+        size = sizeResult.unwrap();
+    }
+
+    return FileUploadResponse {
+        path: path,
+        size: size,
+    };
+}
+
+// ---------- Mini-ORM-Mock (CRUD in Memory mit List<User>) ----------
+
+fn createUser(users: List<User>, input: UserInput): List<User> {
+    let newUser = User {
+        id: generateId(),
+        name: input.name,
+        email: input.email,
+    };
+
+    let mut updated = users;
+    updated.push(newUser);
+    return updated;
+}
+
+fn listUsers(users: List<User>): List<User> {
+    return users;
+}
+
+fn deleteUser(users: List<User>, id: string): List<User> {
+    let filtered = users.filter(|u| u.id != id);
+    return filtered;
+}

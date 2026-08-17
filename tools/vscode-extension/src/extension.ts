@@ -2,26 +2,28 @@ import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node';
 import * as path from 'path';
 import * as fs from 'fs';
+import { registerDebugger } from './debugger';
+import { buildCompileCommand, resolveTarget } from './compileArgs';
 
 let client: LanguageClient;
 
 export function activate(context: vscode.ExtensionContext) {
+	registerDebugger(context);
 	const config = vscode.workspace.getConfiguration('velin');
 	const lspPath = config.get<string>('lsp.path', 'velin-lsp');
-	const compilerPath = config.get<string>('compiler.path', 'velin');
+	const compilerPath = config.get<string>('compiler.path', 'velin-compiler');
 
-	// Server options
 	const serverOptions: ServerOptions = {
 		command: lspPath,
 		args: []
 	};
 
-	// Client options
 	const clientOptions: LanguageClientOptions = {
 		documentSelector: [{ scheme: 'file', language: 'velin' }],
+		diagnosticCollectionName: 'velin',
+		initializationOptions: {},
 	};
 
-	// Create language client
 	client = new LanguageClient(
 		'velinLanguageServer',
 		'VelinScript Language Server',
@@ -29,8 +31,14 @@ export function activate(context: vscode.ExtensionContext) {
 		clientOptions
 	);
 
-	// Start the client
-	client.start();
+	try {
+		context.subscriptions.push(client.start());
+	} catch (err: unknown) {
+		const msg = err instanceof Error ? err.message : String(err);
+		vscode.window.showErrorMessage(
+			`Velin LSP konnte nicht gestartet werden (${lspPath}). Bitte Binary bauen/PATH setzen. ${msg}`
+		);
+	}
 
 	// Helper function to read template file
 	function readTemplate(templateName: string): string {
@@ -64,6 +72,44 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage(`Template ${templateName} eingefügt`);
 	}
 
+	context.subscriptions.push(
+		vscode.tasks.registerTaskProvider('velin', {
+			provideTasks() {
+				const cfg = vscode.workspace.getConfiguration('velin');
+				const target = resolveTarget(
+					cfg.get<string>('compiler.target'),
+					cfg.get<string>('target')
+				);
+				const framework = cfg.get<string>('compiler.framework');
+				const buildCmd = buildCompileCommand({
+					compilerPath,
+					filePath: 'main.velin',
+					target,
+					framework,
+				});
+				return [
+					new vscode.Task(
+						{ type: 'velin', task: 'build' },
+						vscode.TaskScope.Workspace,
+						'Build',
+						'velin',
+						new vscode.ShellExecution(buildCmd)
+					),
+					new vscode.Task(
+						{ type: 'velin', task: 'check' },
+						vscode.TaskScope.Workspace,
+						'Check',
+						'velin',
+						new vscode.ShellExecution(`${compilerPath} check -i main.velin`)
+					),
+				];
+			},
+			resolveTask(task) {
+				return task;
+			},
+		})
+	);
+
 	// Register commands
 	context.subscriptions.push(
 		vscode.commands.registerCommand('velin.compile', async () => {
@@ -73,11 +119,22 @@ export function activate(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			const document = editor.document;
-			const filePath = document.fileName;
+			const filePath = editor.document.fileName;
+			const cfg = vscode.workspace.getConfiguration('velin');
+			const target = resolveTarget(
+				cfg.get<string>('compiler.target'),
+				cfg.get<string>('target')
+			);
+			const framework = cfg.get<string>('compiler.framework');
+			const cmd = buildCompileCommand({
+				compilerPath,
+				filePath,
+				target,
+				framework,
+			});
 
 			const terminal = vscode.window.createTerminal('VelinScript Compiler');
-			terminal.sendText(`${compilerPath} compile -i "${filePath}"`);
+			terminal.sendText(cmd);
 			terminal.show();
 		}),
 
@@ -125,6 +182,17 @@ export function activate(context: vscode.ExtensionContext) {
 		}),
 
 		// Neue Template-Commands
+		vscode.commands.registerCommand('velin.generate.tsExpress', async () => {
+			await insertTemplate('ts-express-endpoint.velin');
+		}),
+
+		vscode.commands.registerCommand('velin.generate.javaSpring', async () => {
+			await insertTemplate('java-spring-controller.velin');
+		}),
+
+		vscode.commands.registerCommand('velin.generate.csharpAspNet', async () => {
+			await insertTemplate('csharp-aspnet-controller.velin');
+		}),
 		vscode.commands.registerCommand('velin.generate.responses', async () => {
 			await insertTemplate('responses.velin');
 		}),

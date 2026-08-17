@@ -1,6 +1,7 @@
 use crate::parser::ast::*;
-use crate::parser::lexer::{Lexer, Token};
+use crate::parser::lexer::{Lexer, Token, FormatStringPart as LexerFormatStringPart};
 use crate::error::{CompilerError, ErrorLocation};
+use crate::compiler::language::VELISCH_LANGUAGE_NAME;
 
 // Legacy ParseError für Rückwärtskompatibilität
 #[derive(Debug, Clone)]
@@ -14,10 +15,16 @@ pub struct ParseError {
     pub source_context: Option<String>,
 }
 
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} (found: {}) at line {}, column {}", self.message, self.found, self.line, self.column)
+    }
+}
+
 impl From<ParseError> for CompilerError {
     fn from(err: ParseError) -> Self {
         CompilerError::parse_error_with_context(
-            err.message,
+            format!("{} (found: {})", err.message, err.found),
             ErrorLocation::new(err.line, err.column),
             err.expected,
             err.found,
@@ -49,6 +56,9 @@ impl Parser {
     }
     
     pub fn parse(input: &str) -> Result<Program, ParseError> {
+        // Velisch Identity Check - Fingerabdruck im Parser
+        let _velisch_check = VELISCH_LANGUAGE_NAME;
+        
         let mut lexer = Lexer::new(input);
         let tokens = lexer.tokenize().map_err(|e| ParseError {
             message: e.message,
@@ -88,6 +98,13 @@ impl Parser {
             // Check if it's a let statement at top level (global variable)
             if self.check(&Token::Let) {
                 items.push(self.parse_top_level_let()?);
+            } else if self.is_top_level_expression() {
+                // Top-level expression statements like init(); or startFileWatcher();
+                let expr = self.parse_expression()?;
+                if self.check(&Token::Semicolon) {
+                    self.advance();
+                }
+                items.push(Item::TopLevelCode(ExpressionStatement { expression: expr }));
             } else {
                 items.push(self.parse_item()?);
             }
@@ -100,16 +117,87 @@ impl Parser {
         // Consume 'let' token
         self.advance();
         
-        // Parse let statement as a global variable
-        // For now, we'll treat it as a statement that needs to be wrapped
-        // This is a temporary solution - in the future we might want a GlobalVariable item type
-        let let_stmt = self.parse_let()?;
+        // Skip newlines after 'let'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        // Check for 'mut' keyword
+        let mutable = if let Some(Token::Identifier(name)) = self.peek() {
+            if name == "mut" {
+                self.advance();
+                // Skip newlines after 'mut'
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        
+        // Get variable name
+        let name = match self.consume_identifier()? {
+            Token::Identifier(name) => name,
+            _ => unreachable!(),
+        };
+        
+        // Skip newlines before type or '='
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        // Parse type annotation if present
+        let var_type = if self.check(&Token::Colon) {
+            self.advance();
+            // Skip newlines after colon
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            Some(self.parse_type()?)
+        } else {
+            None
+        };
+        
+        // Skip newlines before '='
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        self.consume(&Token::Eq, "Expected '='")?;
+        
+        // Skip newlines after '='
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        let value = self.parse_expression()?;
+        
+        // Skip newlines before semicolon
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        if self.check(&Token::Semicolon) {
+            self.advance();
+        }
+        
+        let let_stmt = LetStatement {
+            name,
+            var_type,
+            value,
+            mutable,
+        };
+        
         // Convert LetStatement to a function that initializes the variable
         // This is a workaround until we add proper global variable support
         Ok(Item::Function(Function {
             decorators: Vec::new(),
             visibility: Visibility::Private,
             name: format!("__init_{}", let_stmt.name),
+            type_params: Vec::new(),
             params: Vec::new(),
             return_type: None,
             body: Block {
@@ -117,15 +205,35 @@ impl Parser {
             },
             is_async: false,
             is_const: false,
+            documentation: None,
         }))
     }
     
     fn parse_item(&mut self) -> Result<Item, ParseError> {
-        // Skip leading newlines and comments
+        // Skip leading newlines
         while matches!(self.peek(), Some(Token::Newline)) {
             self.advance();
         }
-        
+
+        // Parse doc comments
+        let mut documentation = None;
+        // Accumulate multiple doc comments
+        let mut doc_string = String::new();
+        while let Some(Token::DocComment(doc)) = self.peek() {
+            if !doc_string.is_empty() {
+                doc_string.push('\n');
+            }
+            doc_string.push_str(doc);
+            self.advance();
+            // Skip newlines between doc comments
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+        }
+        if !doc_string.is_empty() {
+            documentation = Some(doc_string);
+        }
+
         // Parse decorators if present
         let decorators = self.parse_decorators()?;
         
@@ -177,15 +285,17 @@ impl Parser {
             Some(Token::Fn) => {
                 self.advance(); // consume 'fn'
                 // Newlines after 'fn' are handled in parse_function
-                Ok(Item::Function(self.parse_function(decorators, visibility, is_async, is_const)?))
+                let func = self.parse_function(decorators, visibility, is_async, is_const, documentation)?;
+                // For top-level functions, type_params are already parsed in parse_function
+                Ok(Item::Function(func))
             }
             Some(Token::Struct) => {
                 self.advance(); // consume 'struct'
-                Ok(Item::Struct(self.parse_struct(visibility, decorators)?))
+                Ok(Item::Struct(self.parse_struct(visibility, decorators, documentation)?))
             }
             Some(Token::Enum) => {
                 self.advance(); // consume 'enum'
-                Ok(Item::Enum(self.parse_enum(visibility)?))
+                Ok(Item::Enum(self.parse_enum(visibility, documentation)?))
             }
             Some(Token::Type) => {
                 self.advance(); // consume 'type'
@@ -197,9 +307,17 @@ impl Parser {
             }
             Some(Token::Mod) => {
                 self.advance(); // consume 'mod'
-                Ok(Item::Module(self.parse_module(visibility)?))
+                Ok(Item::Module(self.parse_module(visibility, documentation)?))
             }
-            _ => Err(self.error("Expected function, struct, enum, type, use, or module")),
+            Some(Token::Trait) | Some(Token::Interface) => {
+                self.advance(); // consume 'trait' or 'interface'
+                Ok(Item::Trait(self.parse_trait(visibility)?))
+            }
+            Some(Token::Impl) => {
+                self.advance(); // consume 'impl'
+                Ok(Item::Impl(self.parse_impl()?))
+            }
+            _ => Err(self.error("Expected function, struct, enum, type, use, module, trait, interface, or impl")),
         }
     }
     
@@ -337,7 +455,7 @@ impl Parser {
             let name_clone = name.clone();
             self.advance();
             
-            if self.check(&Token::Colon) {
+            if self.check(&Token::Colon) || self.check(&Token::Eq) {
                 self.advance();
                 let value = Box::new(self.parse_decorator_arg()?);
                 return Ok(DecoratorArg::Named {
@@ -382,6 +500,7 @@ impl Parser {
         visibility: Visibility,
         is_async: bool,
         is_const: bool,
+        documentation: Option<String>,
     ) -> Result<Function, ParseError> {
         // Skip newlines after 'fn'
         while matches!(self.peek(), Some(Token::Newline)) {
@@ -392,6 +511,100 @@ impl Parser {
             Token::Identifier(name) => name,
             _ => unreachable!(),
         };
+        
+        // Parse generic type parameters with constraints if present
+        let mut type_params = Vec::new();
+        if self.check(&Token::Lt) {
+            self.advance(); // consume '<'
+            
+            // Skip newlines after '<'
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            loop {
+                let param_name = match self.consume_identifier()? {
+                    Token::Identifier(name) => name,
+                    _ => unreachable!(),
+                };
+                
+                // Skip newlines after param name
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                
+                // Parse constraints if present (T: Trait1 & Trait2)
+                let mut constraints = Vec::new();
+                if self.check(&Token::Colon) {
+                    self.advance(); // consume ':'
+                    
+                    // Skip newlines after ':'
+                    while matches!(self.peek(), Some(Token::Newline)) {
+                        self.advance();
+                    }
+                    
+                    // Parse constraint list (Trait1 & Trait2)
+                    let mut trait_names = Vec::new();
+                    loop {
+                        let trait_name = match self.consume_identifier()? {
+                            Token::Identifier(name) => name,
+                            _ => unreachable!(),
+                        };
+                        trait_names.push(trait_name);
+                        
+                        // Skip newlines after trait name
+                        while matches!(self.peek(), Some(Token::Newline)) {
+                            self.advance();
+                        }
+                        
+                        // Check for '&' (multiple constraints)
+                        if self.check(&Token::And) {
+                            self.advance(); // consume '&'
+                            
+                            // Skip newlines after '&'
+                            while matches!(self.peek(), Some(Token::Newline)) {
+                                self.advance();
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    if trait_names.len() == 1 {
+                        constraints.push(GenericConstraint::Trait(trait_names[0].clone()));
+                    } else {
+                        constraints.push(GenericConstraint::Multiple(trait_names));
+                    }
+                }
+                
+                type_params.push(GenericParam {
+                    name: param_name,
+                    constraints,
+                });
+                
+                // Skip newlines before comma or closing '>'
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                
+                if !self.check(&Token::Comma) {
+                    break;
+                }
+                self.advance();
+                
+                // Skip newlines after comma
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+            }
+            
+            // Skip newlines before closing '>'
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            self.consume(&Token::Gt, "Expected '>'")?;
+        }
         
         // Skip newlines before '('
         while matches!(self.peek(), Some(Token::Newline)) {
@@ -435,11 +648,13 @@ impl Parser {
             decorators,
             visibility,
             name,
+            type_params,
             params,
             return_type,
             body,
             is_async,
             is_const,
+            documentation,
         })
     }
     
@@ -570,6 +785,21 @@ impl Parser {
                 self.advance();
                 Ok(Statement::Match(self.parse_match()?))
             }
+            Some(Token::Throw) => {
+                self.advance();
+                Ok(Statement::Throw(self.parse_throw()?))
+            }
+            Some(Token::Break) => {
+                self.advance();
+                if self.check(&Token::Semicolon) {
+                    self.advance();
+                }
+                Ok(Statement::Break(BreakStatement))
+            }
+            Some(Token::Try) => {
+                self.advance();
+                Ok(Statement::Try(self.parse_try()?))
+            }
             _ => {
                 let expr = self.parse_expression()?;
                 if self.check(&Token::Semicolon) {
@@ -580,6 +810,79 @@ impl Parser {
         }
     }
     
+    fn parse_throw(&mut self) -> Result<ThrowStatement, ParseError> {
+        let expression = self.parse_expression()?;
+        if self.check(&Token::Semicolon) {
+            self.advance();
+        }
+        Ok(ThrowStatement { expression })
+    }
+
+    fn parse_try(&mut self) -> Result<TryStatement, ParseError> {
+        let try_block = self.parse_block()?;
+        
+        let mut catch_blocks = Vec::new();
+        while self.check(&Token::Catch) {
+            catch_blocks.push(self.parse_catch()?);
+        }
+        
+        let finally_block = if self.check(&Token::Finally) {
+            self.advance();
+            Some(self.parse_block()?)
+        } else {
+            None
+        };
+        
+        Ok(TryStatement {
+            try_block,
+            catch_blocks,
+            finally_block,
+        })
+    }
+
+    fn parse_catch(&mut self) -> Result<CatchBlock, ParseError> {
+        self.advance(); // consume 'catch'
+        
+        let error_var;
+        let error_type;
+        
+        if self.check(&Token::LParen) {
+            self.advance(); // consume '('
+            
+            if let Some(Token::Identifier(_)) = self.peek() {
+                let var_token = self.consume_identifier()?;
+                if let Token::Identifier(name) = var_token {
+                    error_var = Some(name);
+                } else {
+                    error_var = None;
+                }
+                
+                if self.check(&Token::Colon) {
+                    self.advance(); // consume ':'
+                    error_type = Some(self.parse_type()?);
+                } else {
+                    error_type = None;
+                }
+            } else {
+                error_var = None;
+                error_type = None;
+            }
+            
+            self.consume(&Token::RParen, "Expected ')' after catch parameter")?;
+        } else {
+            error_var = None;
+            error_type = None;
+        }
+        
+        let body = self.parse_block()?;
+        
+        Ok(CatchBlock {
+            error_var,
+            error_type,
+            body,
+        })
+    }
+
     fn parse_let(&mut self) -> Result<LetStatement, ParseError> {
         // Skip newlines before 'let'
         while matches!(self.peek(), Some(Token::Newline)) {
@@ -669,9 +972,16 @@ impl Parser {
     }
     
     fn parse_if(&mut self) -> Result<IfStatement, ParseError> {
-        self.consume(&Token::LParen, "Expected '('")?;
-        let condition = self.parse_expression()?;
-        self.consume(&Token::RParen, "Expected ')'")?;
+        // Parse optional parentheses around condition
+        // If we see '(', parse a parenthesized expression, otherwise parse expression directly
+        let condition = if self.check(&Token::LParen) {
+            self.advance(); // consume '('
+            let expr = self.parse_expression()?;
+            self.consume(&Token::RParen, "Expected ')' after condition")?;
+            expr
+        } else {
+            self.parse_expression()?
+        };
         
         let then_block = self.parse_block()?;
         
@@ -690,7 +1000,13 @@ impl Parser {
     }
     
     fn parse_for(&mut self) -> Result<ForStatement, ParseError> {
-        self.consume(&Token::LParen, "Expected '('")?;
+        let has_paren = if self.check(&Token::LParen) {
+            self.advance();
+            true
+        } else {
+            false
+        };
+        
         let variable = match self.consume_identifier()? {
             Token::Identifier(name) => name,
             _ => unreachable!(),
@@ -702,7 +1018,10 @@ impl Parser {
         }
         self.advance();
         let iterable = self.parse_expression()?;
-        self.consume(&Token::RParen, "Expected ')'")?;
+        
+        if has_paren {
+            self.consume(&Token::RParen, "Expected ')'")?;
+        }
         
         let body = self.parse_block()?;
         
@@ -714,9 +1033,18 @@ impl Parser {
     }
     
     fn parse_while(&mut self) -> Result<WhileStatement, ParseError> {
-        self.consume(&Token::LParen, "Expected '('")?;
+        let has_paren = if self.check(&Token::LParen) {
+            self.advance();
+            true
+        } else {
+            false
+        };
+        
         let condition = self.parse_expression()?;
-        self.consume(&Token::RParen, "Expected ')'")?;
+        
+        if has_paren {
+            self.consume(&Token::RParen, "Expected ')'")?;
+        }
         
         let body = self.parse_block()?;
         
@@ -728,8 +1056,27 @@ impl Parser {
         self.consume(&Token::LBrace, "Expected '{'")?;
         
         let mut arms = Vec::new();
-        while !self.check(&Token::RBrace) {
+        while !self.check(&Token::RBrace) && !self.is_at_end() {
+            // Skip newlines before match arm
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            if self.check(&Token::RBrace) {
+                break;
+            }
+            
             arms.push(self.parse_match_arm()?);
+            
+            // Skip optional comma after arm
+            if self.check(&Token::Comma) {
+                self.advance();
+            }
+            
+            // Skip newlines after comma or arm
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
         }
         
         self.consume(&Token::RBrace, "Expected '}'")?;
@@ -738,15 +1085,81 @@ impl Parser {
     }
     
     fn parse_match_arm(&mut self) -> Result<MatchArm, ParseError> {
-        let pattern = self.parse_pattern()?;
-        self.consume(&Token::FatArrow, "Expected '=>'")?;
-        let body = self.parse_block()?;
+        // Skip leading whitespace/newlines
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
         
-        Ok(MatchArm { pattern, body })
+        let pattern = self.parse_pattern()?;
+        
+        // Parse optional guard: `if condition` (with or without parentheses)
+        let guard = if self.check(&Token::If) {
+            self.advance();
+            
+            // Skip whitespace
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            // Check if there's a parenthesis (optional)
+            let condition = if self.check(&Token::LParen) {
+                self.advance();
+                let cond = self.parse_expression()?;
+                self.consume(&Token::RParen, "Expected ')' after guard condition")?;
+                cond
+            } else {
+                // No parentheses - parse expression directly
+                self.parse_expression()?
+            };
+            
+            Some(condition)
+        } else {
+            None
+        };
+        
+        self.consume(&Token::FatArrow, "Expected '=>'")?;
+        
+        // Skip whitespace before body
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        // Body can be a block or a single expression
+        let body = if self.check(&Token::LBrace) {
+            self.parse_block()?
+        } else {
+            // Single expression body - wrap in block
+            let expr = self.parse_expression()?;
+            Block {
+                statements: vec![Statement::Expression(ExpressionStatement { expression: expr })],
+            }
+        };
+        
+        Ok(MatchArm { pattern, guard, body })
     }
     
     fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
-        // Simplified pattern parsing
+        // Parse pattern with support for Or patterns (pattern1 | pattern2)
+        let mut patterns = vec![self.parse_pattern_atom()?];
+        
+        // Accept both Token::Or (||) and Token::Unknown('|') for pattern matching
+        while self.check(&Token::Or) || matches!(self.peek(), Some(Token::Unknown('|'))) {
+            if matches!(self.peek(), Some(Token::Unknown('|'))) {
+                self.advance(); // consume Token::Unknown('|')
+            } else if self.check(&Token::Or) {
+                self.advance(); // consume Token::Or
+            }
+            patterns.push(self.parse_pattern_atom()?);
+        }
+        
+        if patterns.len() == 1 {
+            Ok(patterns.into_iter().next().unwrap())
+        } else {
+            Ok(Pattern::Or(patterns))
+        }
+    }
+    
+    fn parse_pattern_atom(&mut self) -> Result<Pattern, ParseError> {
         match self.peek() {
             Some(Token::String(s)) => {
                 let s_clone = s.clone();
@@ -756,6 +1169,49 @@ impl Parser {
             Some(Token::Number(n)) => {
                 let n_clone = *n;
                 self.advance();
+                
+                // Check for range pattern: number..number or number..=number
+                // The lexer tokenizes ..= as a single Token::DotDotEq
+                // But we also handle the case where it might be tokenized as DotDot + Eq
+                if self.check(&Token::DotDotEq) {
+                    // Single token case: ..=
+                    self.advance(); // consume DotDotEq
+                    let end = if let Some(Token::Number(end_num)) = self.peek() {
+                        let num = *end_num;
+                        self.advance();
+                        Expression::Literal(Literal::Number(num))
+                    } else {
+                        self.parse_expression()?
+                    };
+                    return Ok(Pattern::Range {
+                        start: Box::new(Expression::Literal(Literal::Number(n_clone))),
+                        end: Box::new(end),
+                        inclusive: true,
+                    });
+                } else if self.check(&Token::DotDot) {
+                    // Two token case: DotDot followed by Eq (for ..=) or just DotDot (for ..)
+                    self.advance(); // consume DotDot
+                    let inclusive = if self.check(&Token::Eq) {
+                        self.advance(); // consume Eq
+                        true
+                    } else {
+                        false
+                    };
+                    // Parse the end expression (should be a number for range patterns)
+                    let end = if let Some(Token::Number(end_num)) = self.peek() {
+                        let num = *end_num;
+                        self.advance();
+                        Expression::Literal(Literal::Number(num))
+                    } else {
+                        self.parse_expression()?
+                    };
+                    return Ok(Pattern::Range {
+                        start: Box::new(Expression::Literal(Literal::Number(n_clone))),
+                        end: Box::new(end),
+                        inclusive,
+                    });
+                }
+                
                 Ok(Pattern::Literal(Literal::Number(n_clone)))
             }
             Some(Token::Boolean(b)) => {
@@ -764,11 +1220,162 @@ impl Parser {
                 Ok(Pattern::Literal(Literal::Boolean(b_clone)))
             }
             Some(Token::Identifier(name)) => {
+                // Check for wildcard pattern: _
+                if name == "_" {
+                    self.advance();
+                    return Ok(Pattern::Wildcard);
+                }
+                
                 let name_clone = name.clone();
                 self.advance();
+                
+                // Check for enum variant pattern: EnumName::Variant or EnumName::Variant(data)
+                if self.check(&Token::Colon) {
+                    self.advance();
+                    if self.check(&Token::Colon) {
+                        self.advance();
+                        // Enum variant
+                        if let Some(Token::Identifier(variant_name)) = self.peek() {
+                            let variant = variant_name.clone();
+                            self.advance();
+                            
+                            // Check for variant data: Variant(data1, data2)
+                            if self.check(&Token::LParen) {
+                                self.advance();
+                                let mut data = Vec::new();
+                                if !self.check(&Token::RParen) {
+                                    loop {
+                                        data.push(self.parse_pattern()?);
+                                        if self.check(&Token::RParen) {
+                                            break;
+                                        }
+                                        self.consume(&Token::Comma, "Expected ',' or ')'")?;
+                                    }
+                                }
+                                self.consume(&Token::RParen, "Expected ')'")?;
+                                return Ok(Pattern::EnumVariant {
+                                    name: format!("{}::{}", name_clone, variant),
+                                    data: Some(data),
+                                });
+                            }
+                            
+                            return Ok(Pattern::EnumVariant {
+                                name: format!("{}::{}", name_clone, variant),
+                                data: None,
+                            });
+                        }
+                    }
+                    // Not an enum variant, treat as identifier with type annotation
+                    // This is for patterns like: Error(err: DatabaseError)
+                    if let Some(Token::Identifier(type_name)) = self.peek() {
+                        let _type_name_clone = type_name.clone();
+                        self.advance();
+                        // This is a binding with type annotation: identifier: Type
+                        // For now, we'll treat it as an identifier pattern
+                        // The type annotation will be handled in type checking
+                        return Ok(Pattern::Identifier(name_clone));
+                    }
+                }
+                
+                // Check for struct pattern: StructName { field1: pattern1, field2: pattern2 }
+                if self.check(&Token::LBrace) {
+                    self.advance();
+                    let mut fields = Vec::new();
+                    if !self.check(&Token::RBrace) {
+                        loop {
+                            let field_name = if let Some(Token::Identifier(name)) = self.peek() {
+                                let name_clone = name.clone();
+                                self.advance();
+                                name_clone
+                            } else {
+                                return Err(self.error("Expected field name"));
+                            };
+                            
+                            // Optional pattern binding: field: pattern or field: "literal"
+                            // OR field: Type (type annotation, skip it)
+                            let field_pattern = if self.check(&Token::Colon) {
+                                self.advance();
+                                // Check if it's a type annotation (field: Type) or a pattern (field: pattern)
+                                // Type annotations in patterns are identifiers, patterns can be literals or other patterns
+                                match self.peek() {
+                                    Some(Token::String(s)) => {
+                                        // Literal pattern: name: "admin"
+                                        let s_clone = s.clone();
+                                        self.advance();
+                                        Pattern::Literal(Literal::String(s_clone))
+                                    }
+                                    Some(Token::Number(n)) => {
+                                        // Literal pattern: age: 18
+                                        let n_clone = *n;
+                                        self.advance();
+                                        Pattern::Literal(Literal::Number(n_clone))
+                                    }
+                                    Some(Token::Identifier(_)) => {
+                                        // Could be a type annotation or a pattern identifier
+                                        // In patterns, we treat it as a pattern identifier
+                                        self.parse_pattern()?
+                                    }
+                                    _ => self.parse_pattern()?
+                                }
+                            } else {
+                                Pattern::Identifier(field_name.clone())
+                            };
+                            
+                            fields.push((field_name, field_pattern));
+                            
+                            // Skip newlines before comma or closing brace
+                            while matches!(self.peek(), Some(Token::Newline)) {
+                                self.advance();
+                            }
+                            
+                            if self.check(&Token::RBrace) {
+                                break;
+                            }
+                            if self.check(&Token::Comma) {
+                                self.advance();
+                            } else {
+                                return Err(self.error("Expected ',' or '}'"));
+                            }
+                        }
+                    }
+                    self.consume(&Token::RBrace, "Expected '}'")?;
+                    return Ok(Pattern::Struct {
+                        name: name_clone,
+                        fields,
+                    });
+                }
+                
+                // Check for tuple pattern: (pattern1, pattern2, ...)
+                if self.check(&Token::LParen) {
+                    self.advance();
+                    let mut patterns = Vec::new();
+                    if !self.check(&Token::RParen) {
+                        loop {
+                            patterns.push(self.parse_pattern()?);
+                            if self.check(&Token::RParen) {
+                                break;
+                            }
+                            self.consume(&Token::Comma, "Expected ',' or ')'")?;
+                        }
+                    }
+                    self.consume(&Token::RParen, "Expected ')'")?;
+                    return Ok(Pattern::Tuple(patterns));
+                }
+                
                 Ok(Pattern::Identifier(name_clone))
             }
-            _ => Err(self.error("Expected pattern")),
+            Some(Token::DotDot) | Some(Token::DotDotEq) => {
+                // Range pattern starting with .. (e.g., ..10)
+                let inclusive = self.check(&Token::DotDotEq);
+                self.advance();
+                let end = self.parse_expression()?;
+                Ok(Pattern::Range {
+                    start: Box::new(Expression::Literal(Literal::Number(0.0))), // Default start
+                    end: Box::new(end),
+                    inclusive,
+                })
+            }
+            _ => Err(self.error("Expected pattern"))
         }
     }
     
@@ -777,7 +1384,25 @@ impl Parser {
     }
     
     fn parse_assignment(&mut self) -> Result<Expression, ParseError> {
-        self.parse_or()
+        let expr = self.parse_or()?;
+        
+        if self.check(&Token::Eq) {
+            self.advance();
+            let value = self.parse_assignment()?; // Right-associative
+            
+            // Check if left side is a valid assignment target
+            match expr {
+                Expression::Identifier(_) | Expression::Member { .. } | Expression::Index { .. } => {
+                    Ok(Expression::Assignment {
+                        target: Box::new(expr),
+                        value: Box::new(value),
+                    })
+                }
+                _ => Err(self.error("Invalid assignment target")),
+            }
+        } else {
+            Ok(expr)
+        }
     }
     
     fn parse_or(&mut self) -> Result<Expression, ParseError> {
@@ -996,28 +1621,256 @@ impl Parser {
     fn finish_call(&mut self, callee: Expression) -> Result<Expression, ParseError> {
         self.advance(); // consume '('
         let mut args = Vec::new();
-        
+
         if !self.check(&Token::RParen) {
             loop {
-                args.push(self.parse_expression()?);
+                // Skip newlines before argument
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
                 
+                args.push(self.parse_expression()?);
+
+                // Skip newlines after argument
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+
                 if !self.check(&Token::Comma) {
                     break;
                 }
                 self.advance();
+                
+                // Skip newlines after comma
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
             }
         }
-        
+
+        // Skip newlines before closing paren
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+
         self.consume(&Token::RParen, "Expected ')'")?;
-        
+
         Ok(Expression::Call {
             callee: Box::new(callee),
             args,
         })
     }
     
+    fn is_struct_literal_start(&self) -> bool {
+        if !self.check(&Token::LBrace) {
+            return false;
+        }
+        
+        let mut offset = 1;
+        // Skip newlines after LBrace
+        while let Some(Token::Newline) = self.peek_n(offset) {
+            offset += 1;
+        }
+        
+        match self.peek_n(offset) {
+            Some(Token::RBrace) => true,
+            Some(Token::Identifier(_)) => {
+                matches!(self.peek_n(offset + 1), Some(Token::Colon))
+            }
+            _ => false,
+        }
+    }
+
+    fn parse_struct_literal_fields(&mut self) -> Result<Vec<(String, Expression)>, ParseError> {
+        self.consume(&Token::LBrace, "Expected '{'")?;
+        let mut fields = Vec::new();
+        
+        while !self.check(&Token::RBrace) {
+             // Skip newlines
+             while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+             if self.check(&Token::RBrace) { break; }
+
+             let name = match self.consume_identifier()? {
+                 Token::Identifier(n) => n,
+                 _ => unreachable!(),
+             };
+             
+             self.consume(&Token::Colon, "Expected ':'")?;
+             let value = self.parse_expression()?;
+             fields.push((name, value));
+             
+             // Skip newlines
+             while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+
+             if self.check(&Token::Comma) {
+                 self.advance();
+             }
+             
+             // Skip newlines after comma
+             while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+        }
+        self.consume(&Token::RBrace, "Expected '}'")?;
+        Ok(fields)
+    }
+
+    fn is_map_literal_start(&self) -> bool {
+        if !self.check(&Token::LBrace) {
+            return false;
+        }
+        
+        let mut offset = 1;
+        // Skip newlines after LBrace
+        while let Some(Token::Newline) = self.peek_n(offset) {
+            offset += 1;
+        }
+        
+        // Check for { "string": ...
+        if let Some(Token::String(_)) = self.peek_n(offset) {
+            // Check if followed by colon
+             let mut next_offset = offset + 1;
+             while let Some(Token::Newline) = self.peek_n(next_offset) {
+                next_offset += 1;
+            }
+            if let Some(Token::Colon) = self.peek_n(next_offset) {
+                return true;
+            }
+        }
+        
+        // Check for { identifier: ...
+        if let Some(Token::Identifier(_)) = self.peek_n(offset) {
+             let mut next_offset = offset + 1;
+             while let Some(Token::Newline) = self.peek_n(next_offset) {
+                next_offset += 1;
+            }
+            if let Some(Token::Colon) = self.peek_n(next_offset) {
+                return true;
+            }
+        }
+        
+        false
+    }
+
+    fn parse_map_literal(&mut self) -> Result<Vec<(String, Expression)>, ParseError> {
+        self.consume(&Token::LBrace, "Expected '{'")?;
+        let mut entries = Vec::new();
+        
+        while !self.check(&Token::RBrace) {
+             // Skip newlines
+             while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+             if self.check(&Token::RBrace) { break; }
+
+             let key = if let Some(Token::String(s)) = self.peek() {
+                 let s = s.clone();
+                 self.advance();
+                 s
+             } else if let Some(Token::Identifier(s)) = self.peek() {
+                 let s = s.clone();
+                 self.advance();
+                 s
+             } else {
+                 return Err(self.error("Expected string key or identifier in map literal"));
+             };
+             
+             // Skip newlines
+             while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+             
+             self.consume(&Token::Colon, "Expected ':'")?;
+             
+             // Skip newlines
+             while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+             
+             let value = self.parse_expression()?;
+             entries.push((key, value));
+             
+             // Skip newlines
+             while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+
+             if self.check(&Token::Comma) {
+                 self.advance();
+             }
+             
+             // Skip newlines after comma
+             while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+        }
+        self.consume(&Token::RBrace, "Expected '}'")?;
+        Ok(entries)
+    }
+
     fn parse_primary(&mut self) -> Result<Expression, ParseError> {
+        // Neue Syntax: @llm.analyze(text)
+        if self.check(&Token::At) {
+            self.advance(); // @
+            
+            if let Some(Token::Identifier(ref name)) = self.peek() {
+                if name == "llm" {
+                    self.advance(); // llm
+                    self.consume(&Token::Dot, "Expected '.' after 'llm'")?; // .
+                    
+                    let method = match self.consume_identifier()? {
+                        Token::Identifier(m) => m,
+                        _ => return Err(self.error("Expected method name after 'llm.'")),
+                    };
+                    
+                    self.consume(&Token::LParen, "Expected '(' after method name")?; // (
+                    
+                    // Argumente parsen
+                    let mut args = Vec::new();
+                    if !self.check(&Token::RParen) {
+                        loop {
+                            args.push(self.parse_expression()?);
+                            
+                            if !self.check(&Token::Comma) {
+                                break;
+                            }
+                            self.advance();
+                        }
+                    }
+                    
+                    self.consume(&Token::RParen, "Expected ')' after arguments")?; // )
+                    
+                    // Expression: @llm.analyze(text)
+                    return Ok(Expression::LLMCall {
+                        method,
+                        args,
+                    });
+                }
+            }
+        }
+        
         match self.peek() {
+            Some(Token::FormatString(parts)) => {
+                let parts_clone = parts.clone();
+                self.advance();
+                
+                // Convert lexer FormatStringParts to AST FormatStringParts
+                let mut ast_parts = Vec::new();
+                for part in parts_clone {
+                    match part {
+                        LexerFormatStringPart::Text(text) => {
+                            ast_parts.push(FormatStringPart::Text(text));
+                        }
+                        LexerFormatStringPart::Expression(expr_str) => {
+                            // Parse the expression string
+                            let mut expr_parser = Parser::new(
+                                Lexer::new(&expr_str).tokenize()
+                                    .map_err(|e| ParseError {
+                                        message: format!("Failed to tokenize format string expression: {}", e.message),
+                                        expected: "valid expression".to_string(),
+                                        found: expr_str.clone(),
+                                        position: 0,
+                                        line: e.line,
+                                        column: e.column,
+                                        source_context: None,
+                                    })?,
+                                expr_str.clone(),
+                            );
+                            let expr = expr_parser.parse_expression()?;
+                            ast_parts.push(FormatStringPart::Expression(Box::new(expr)));
+                        }
+                    }
+                }
+                Ok(Expression::FormatString { parts: ast_parts })
+            }
             Some(Token::String(s)) => {
                 let s_clone = s.clone();
                 self.advance();
@@ -1131,73 +1984,10 @@ impl Parser {
                     }
                 } else {
                     // Check if followed by struct literal: StructName { ... }
-                    if self.check(&Token::LBrace) {
-                        // Parse struct literal
-                        let struct_name = name_clone;
-                        self.advance(); // consume '{'
-                        
-                        let mut fields = Vec::new();
-                        
-                        // Skip newlines after '{'
-                        while matches!(self.peek(), Some(Token::Newline)) {
-                            self.advance();
-                        }
-                        
-                        while !self.check(&Token::RBrace) {
-                            // Skip newlines before field
-                            while matches!(self.peek(), Some(Token::Newline)) {
-                                self.advance();
-                            }
-                            
-                            if self.check(&Token::RBrace) {
-                                break;
-                            }
-                            
-                            let field_name = match self.consume_identifier()? {
-                                Token::Identifier(name) => name,
-                                _ => unreachable!(),
-                            };
-                            
-                            // Skip newlines before ':'
-                            while matches!(self.peek(), Some(Token::Newline)) {
-                                self.advance();
-                            }
-                            
-                            self.consume(&Token::Colon, "Expected ':'")?;
-                            
-                            // Skip newlines after ':'
-                            while matches!(self.peek(), Some(Token::Newline)) {
-                                self.advance();
-                            }
-                            
-                            let field_value = self.parse_expression()?;
-                            
-                            fields.push((field_name, field_value));
-                            
-                            // Skip newlines before comma or closing brace
-                            while matches!(self.peek(), Some(Token::Newline)) {
-                                self.advance();
-                            }
-                            
-                            if self.check(&Token::Comma) {
-                                self.advance();
-                            }
-                            
-                            // Skip newlines after comma
-                            while matches!(self.peek(), Some(Token::Newline)) {
-                                self.advance();
-                            }
-                        }
-                        
-                        // Skip newlines before closing brace
-                        while matches!(self.peek(), Some(Token::Newline)) {
-                            self.advance();
-                        }
-                        
-                        self.consume(&Token::RBrace, "Expected '}'")?;
-                        
+                    if self.check(&Token::LBrace) && self.is_struct_literal_start() {
+                        let fields = self.parse_struct_literal_fields()?;
                         Ok(Expression::StructLiteral {
-                            name: struct_name,
+                            name: name_clone,
                             fields,
                         })
                     } else {
@@ -1207,13 +1997,130 @@ impl Parser {
             }
             Some(Token::LParen) => {
                 self.advance();
-                let expr = self.parse_expression()?;
-                self.consume(&Token::RParen, "Expected ')'")?;
-                Ok(expr)
+                
+                // Check if this is a lambda: (params) => expression
+                // Simple heuristic: if we see identifier followed by colon, it's likely a lambda parameter
+                let is_lambda = if let Some(Token::Identifier(_)) = self.peek() {
+                    // Save position
+                    let saved_pos = self.current;
+                    
+                    // Try to parse a parameter
+                    let mut looks_like_lambda = false;
+                    if let Ok(Token::Identifier(_)) = self.consume_identifier() {
+                        if self.check(&Token::Colon) {
+                            looks_like_lambda = true;
+                        }
+                    }
+                    
+                    // Restore position
+                    self.current = saved_pos;
+                    looks_like_lambda
+                } else {
+                    false
+                };
+                
+                if is_lambda {
+                    // Parse lambda parameters
+                    let mut params = Vec::new();
+                    
+                    if !self.check(&Token::RParen) {
+                        loop {
+                            let param_name = match self.consume_identifier()? {
+                                Token::Identifier(name) => name,
+                                _ => return Err(self.error("Expected parameter name")),
+                            };
+                            
+                            self.consume(&Token::Colon, "Expected ':' after parameter name")?;
+                            let param_type = self.parse_type()?;
+                            
+                            params.push(Parameter {
+                                name: param_name,
+                                param_type,
+                                default: None,
+                            });
+                            
+                            if self.check(&Token::RParen) {
+                                break;
+                            }
+                            self.consume(&Token::Comma, "Expected ',' or ')'")?;
+                        }
+                    }
+                    
+                    self.consume(&Token::RParen, "Expected ')'")?;
+                    self.consume(&Token::FatArrow, "Expected '=>'")?;
+                    
+                    // Parse lambda body (can be expression or block)
+                    let body = if self.check(&Token::LBrace) {
+                        // Block body
+                        let block = self.parse_block()?;
+                        Expression::Block(block)
+                    } else {
+                        // Single expression body
+                        self.parse_expression()?
+                    };
+                    
+                    Ok(Expression::Lambda {
+                        params,
+                        return_type: None, // Type inference
+                        body: Box::new(body),
+                    })
+                } else {
+                    // Normal parenthesized expression
+                    let expr = self.parse_expression()?;
+                    self.consume(&Token::RParen, "Expected ')'")?;
+                    Ok(expr)
+                }
             }
             Some(Token::LBrace) => {
-                let block = self.parse_block()?;
-                Ok(Expression::Block(block))
+                if self.is_map_literal_start() {
+                    let entries = self.parse_map_literal()?;
+                    Ok(Expression::MapLiteral(entries))
+                } else {
+                    let block = self.parse_block()?;
+                    Ok(Expression::Block(block))
+                }
+            }
+            Some(Token::LBracket) => {
+                self.advance(); // consume '['
+                let mut elements = Vec::new();
+                
+                // Skip newlines
+                while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+                
+                if !self.check(&Token::RBracket) {
+                    loop {
+                        // Check if we've reached the end of the array literal
+                        if self.check(&Token::RBracket) {
+                            break;
+                        }
+                        
+                        elements.push(self.parse_expression()?);
+                        
+                        // Skip newlines
+                        while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+                        
+                        // Check if we've reached the end of the array literal
+                        if self.check(&Token::RBracket) {
+                            break;
+                        }
+                        
+                        if !self.check(&Token::Comma) {
+                            // If we don't have a comma and we don't have RBracket, it's an error
+                            // But first check if we're at the end
+                            if self.check(&Token::RBracket) {
+                                break;
+                            }
+                            return Err(self.error("Expected ',' or ']' in array literal"));
+                        }
+                        self.advance();
+                        
+                        // Skip newlines
+                        while matches!(self.peek(), Some(Token::Newline)) { self.advance(); }
+                    }
+                }
+                
+                self.consume(&Token::RBracket, "Expected ']'")?;
+                Ok(Expression::ListLiteral(elements))
             }
             Some(Token::If) => {
                 self.advance();
@@ -1229,6 +2136,65 @@ impl Parser {
                     else_expr: Box::new(else_expr),
                 })
             }
+            Some(Token::Fn) => {
+                // Anonymous function/lambda: fn() { ... } or fn() => expression
+                self.advance(); // consume 'fn'
+                
+                // Parse parameters
+                self.consume(&Token::LParen, "Expected '(' after 'fn'")?;
+                let mut params = Vec::new();
+                
+                if !self.check(&Token::RParen) {
+                    loop {
+                        let param_name = match self.consume_identifier()? {
+                            Token::Identifier(name) => name,
+                            _ => return Err(self.error("Expected parameter name")),
+                        };
+                        
+                        // Optional type annotation
+                        let param_type = if self.check(&Token::Colon) {
+                            self.advance();
+                            self.parse_type()?
+                        } else {
+                            // For anonymous functions, type is optional but Parameter requires it
+                            // Use a simple type inference placeholder - use "any" as fallback
+                            Type::Any
+                        };
+                        
+                        params.push(Parameter {
+                            name: param_name,
+                            param_type,
+                            default: None,
+                        });
+                        
+                        if self.check(&Token::RParen) {
+                            break;
+                        }
+                        self.consume(&Token::Comma, "Expected ',' or ')'")?;
+                    }
+                }
+                
+                self.consume(&Token::RParen, "Expected ')'")?;
+                
+                // Parse body
+                let body = if self.check(&Token::FatArrow) {
+                    // Arrow function: fn() => expression
+                    self.advance(); // consume '=>'
+                    self.parse_expression()?
+                } else if self.check(&Token::LBrace) {
+                    // Block body: fn() { ... }
+                    let block = self.parse_block()?;
+                    Expression::Block(block)
+                } else {
+                    return Err(self.error("Expected '=>' or '{' after function parameters"));
+                };
+                
+                Ok(Expression::Lambda {
+                    params,
+                    return_type: None,
+                    body: Box::new(body),
+                })
+            }
             _ => Err(self.error("Expected expression")),
         }
     }
@@ -1236,8 +2202,21 @@ impl Parser {
     fn parse_type(&mut self) -> Result<Type, ParseError> {
         let token = self.peek().cloned();
         match token {
-            Some(Token::Identifier(name)) => {
+            Some(Token::Identifier(initial_name)) => {
                 self.advance();
+                
+                let mut name = initial_name.clone();
+                // Handle qualified names (e.g. module.Type)
+                while self.check(&Token::Dot) {
+                    self.advance(); // consume '.'
+                    if let Some(Token::Identifier(part)) = self.peek() {
+                        name.push('.');
+                        name.push_str(part);
+                        self.advance();
+                    } else {
+                        return Err(self.error("Expected identifier after '.' in type name"));
+                    }
+                }
                 
                 // Check for generic types: List<T>, Map<K, V>
                 if self.check(&Token::Lt) {
@@ -1294,6 +2273,40 @@ impl Parser {
                                 Ok(Type::Named(name.clone()))
                             }
                         }
+                        "Result" => {
+                            // Result<T, E> syntax
+                            if self.check(&Token::Lt) {
+                                self.advance();
+                                let ok_type = self.parse_type()?;
+                                
+                                // Skip newlines before comma
+                                while matches!(self.peek(), Some(Token::Newline)) {
+                                    self.advance();
+                                }
+                                
+                                self.consume(&Token::Comma, "Expected ',' in Result<T, E>")?;
+                                
+                                // Skip newlines after comma
+                                while matches!(self.peek(), Some(Token::Newline)) {
+                                    self.advance();
+                                }
+                                
+                                let err_type = self.parse_type()?;
+                                
+                                // Skip newlines before closing '>'
+                                while matches!(self.peek(), Some(Token::Newline)) {
+                                    self.advance();
+                                }
+                                
+                                self.consume(&Token::Gt, "Expected '>'")?;
+                                Ok(Type::Result {
+                                    ok: Box::new(ok_type),
+                                    err: Box::new(err_type),
+                                })
+                            } else {
+                                Ok(Type::Named(name.clone()))
+                            }
+                        }
                         _ => Ok(Type::Named(name.clone())),
                     }
                 }
@@ -1321,7 +2334,7 @@ impl Parser {
         }
     }
     
-    fn parse_struct(&mut self, visibility: Visibility, decorators: Vec<Decorator>) -> Result<Struct, ParseError> {
+    fn parse_struct(&mut self, visibility: Visibility, decorators: Vec<Decorator>, documentation: Option<String>) -> Result<Struct, ParseError> {
         // Skip newlines after 'struct'
         while matches!(self.peek(), Some(Token::Newline)) {
             self.advance();
@@ -1396,6 +2409,8 @@ impl Parser {
                 break;
             }
             
+            let field_decorators = self.parse_decorators()?;
+            
             let field_visibility = if self.check(&Token::Pub) {
                 self.advance();
                 Visibility::Public
@@ -1431,6 +2446,7 @@ impl Parser {
                 name: field_name,
                 field_type,
                 visibility: field_visibility,
+                decorators: field_decorators,
             });
             
             // Skip newlines before comma
@@ -1451,10 +2467,11 @@ impl Parser {
             fields,
             visibility,
             decorators,
+            documentation,
         })
     }
     
-    fn parse_enum(&mut self, visibility: Visibility) -> Result<Enum, ParseError> {
+    fn parse_enum(&mut self, visibility: Visibility, documentation: Option<String>) -> Result<Enum, ParseError> {
         // Skip newlines after 'enum'
         while matches!(self.peek(), Some(Token::Newline)) {
             self.advance();
@@ -1473,7 +2490,16 @@ impl Parser {
         self.consume(&Token::LBrace, "Expected '{'")?;
         let mut variants = Vec::new();
         
-        while !self.check(&Token::RBrace) {
+        while !self.check(&Token::RBrace) && !self.is_at_end() {
+            // Skip newlines before variant
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            if self.check(&Token::RBrace) {
+                break;
+            }
+            
             let variant_name = match self.consume_identifier()? {
                 Token::Identifier(name) => name,
                 _ => unreachable!(),
@@ -1516,6 +2542,7 @@ impl Parser {
             name,
             variants,
             visibility,
+            documentation,
         })
     }
     
@@ -1545,7 +2572,7 @@ impl Parser {
         })
     }
     
-    fn parse_module(&mut self, visibility: Visibility) -> Result<Module, ParseError> {
+    fn parse_module(&mut self, visibility: Visibility, _documentation: Option<String>) -> Result<Module, ParseError> {
         // Skip newlines after 'mod'
         while matches!(self.peek(), Some(Token::Newline)) {
             self.advance();
@@ -1565,6 +2592,14 @@ impl Parser {
         let mut items = Vec::new();
         
         while !self.check(&Token::RBrace) {
+            // Skip newlines inside module body
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            if self.check(&Token::RBrace) {
+                break;
+            }
+            
             items.push(self.parse_item()?);
         }
         
@@ -1574,6 +2609,241 @@ impl Parser {
             name,
             items,
             visibility,
+            documentation: None,
+        })
+    }
+    
+    fn parse_trait(&mut self, visibility: Visibility) -> Result<Trait, ParseError> {
+        // Skip newlines after 'trait' or 'interface'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        let name = match self.consume_identifier()? {
+            Token::Identifier(name) => name,
+            _ => unreachable!(),
+        };
+        
+        // Parse generic type parameters if present
+        let mut type_params = Vec::new();
+        if self.check(&Token::Lt) {
+            self.advance();
+            loop {
+                let param_name = match self.consume_identifier()? {
+                    Token::Identifier(name) => name,
+                    _ => unreachable!(),
+                };
+                type_params.push(param_name);
+                
+                if !self.check(&Token::Comma) {
+                    break;
+                }
+                self.advance();
+            }
+            self.consume(&Token::Gt, "Expected '>'")?;
+        }
+        
+        // Skip newlines before '{'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        self.consume(&Token::LBrace, "Expected '{'")?;
+        let mut methods = Vec::new();
+        
+        // Skip newlines after '{'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        while !self.check(&Token::RBrace) {
+            // Parse trait method
+            let method_name = match self.consume_identifier()? {
+                Token::Identifier(name) => name,
+                _ => unreachable!(),
+            };
+            
+            // Skip newlines after method name
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            self.consume(&Token::LParen, "Expected '('")?;
+            let params = self.parse_parameters()?;
+            self.consume(&Token::RParen, "Expected ')'")?;
+            
+            // Skip newlines after params
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            let return_type = if self.check(&Token::Colon) {
+                self.advance();
+                // Skip newlines after ':'
+                while matches!(self.peek(), Some(Token::Newline)) {
+                    self.advance();
+                }
+                Some(self.parse_type()?)
+            } else {
+                None
+            };
+            
+            // Skip newlines after return type
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            // Trait methods end with semicolon (no body)
+            self.consume(&Token::Semicolon, "Expected ';' after trait method")?;
+            
+            methods.push(TraitMethod {
+                name: method_name,
+                params,
+                return_type,
+            });
+            
+            // Skip newlines after semicolon
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+        }
+        
+        self.consume(&Token::RBrace, "Expected '}'")?;
+        
+        Ok(Trait {
+            name,
+            type_params,
+            methods,
+            visibility,
+        })
+    }
+    
+    fn parse_impl(&mut self) -> Result<Impl, ParseError> {
+        // Skip newlines after 'impl'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        // Parse trait name (optional - can be blank impl)
+        let trait_name = if matches!(self.peek(), Some(Token::Identifier(_))) {
+            let name = match self.consume_identifier()? {
+                Token::Identifier(name) => name,
+                _ => unreachable!(),
+            };
+            
+            // Skip newlines after trait name
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+            
+            // Check for 'for'
+            if matches!(self.peek(), Some(Token::Identifier(_))) {
+                let for_keyword = match self.peek() {
+                    Some(Token::Identifier(s)) if s == "for" => {
+                        self.advance();
+                        true
+                    }
+                    _ => false,
+                };
+                
+                if !for_keyword {
+                    // This is a blank impl, trait_name is actually the type name
+                    return Err(self.error("Expected 'for' after trait name in impl"));
+                }
+            } else {
+                return Err(self.error("Expected 'for' after trait name in impl"));
+            }
+            
+            name
+        } else {
+            // Blank impl - no trait name
+            String::new()
+        };
+        
+        // Skip newlines after 'for'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        // Parse type that implements the trait
+        let for_type = self.parse_type()?;
+        
+        // Parse generic type parameters if present
+        let mut type_params = Vec::new();
+        if self.check(&Token::Lt) {
+            self.advance();
+            loop {
+                let param_name = match self.consume_identifier()? {
+                    Token::Identifier(name) => name,
+                    _ => unreachable!(),
+                };
+                type_params.push(param_name);
+                
+                if !self.check(&Token::Comma) {
+                    break;
+                }
+                self.advance();
+            }
+            self.consume(&Token::Gt, "Expected '>'")?;
+        }
+        
+        // Skip newlines before '{'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        self.consume(&Token::LBrace, "Expected '{'")?;
+        let mut methods = Vec::new();
+        
+        // Skip newlines after '{'
+        while matches!(self.peek(), Some(Token::Newline)) {
+            self.advance();
+        }
+        
+        while !self.check(&Token::RBrace) {
+            // Parse impl method (same as function)
+            let decorators = self.parse_decorators()?;
+            let visibility = if self.check(&Token::Pub) {
+                self.advance();
+                Visibility::Public
+            } else {
+                Visibility::Private
+            };
+            
+            let is_async = if self.check(&Token::Async) {
+                self.advance();
+                true
+            } else {
+                false
+            };
+            
+            let is_const = if self.check(&Token::Const) {
+                self.advance();
+                true
+            } else {
+                false
+            };
+            
+            if !self.check(&Token::Fn) {
+                return Err(self.error("Expected 'fn' in impl block"));
+            }
+            
+            self.advance(); // consume 'fn'
+            methods.push(self.parse_function(decorators, visibility, is_async, is_const, None)?);
+            
+            // Skip newlines after method
+            while matches!(self.peek(), Some(Token::Newline)) {
+                self.advance();
+            }
+        }
+        
+        self.consume(&Token::RBrace, "Expected '}'")?;
+        
+        Ok(Impl {
+            trait_name,
+            for_type,
+            type_params,
+            methods,
         })
     }
     
@@ -1587,11 +2857,14 @@ impl Parser {
             };
             path.push(name);
             
-            if !self.check(&Token::Colon) || !matches!(self.peek_n(1), Some(Token::Colon)) {
+            if self.check(&Token::Dot) {
+                self.advance(); // consume '.'
+            } else if self.check(&Token::Colon) && matches!(self.peek_n(1), Some(Token::Colon)) {
+                self.advance(); // consume ':'
+                self.advance(); // consume ':'
+            } else {
                 break;
             }
-            self.advance(); // consume ':'
-            self.advance(); // consume ':'
         }
         
         let alias = if let Some(Token::Identifier(name)) = self.peek() {
@@ -1607,6 +2880,10 @@ impl Parser {
         } else {
             None
         };
+        
+        if self.check(&Token::Semicolon) {
+            self.advance();
+        }
         
         Ok(Use { path, alias })
     }
@@ -1656,6 +2933,22 @@ impl Parser {
     
     fn is_at_end(&self) -> bool {
         matches!(self.peek(), Some(Token::EOF) | None)
+    }
+    
+    fn is_top_level_expression(&self) -> bool {
+        // Check if this looks like a top-level expression statement
+        // (e.g., init(); or startFileWatcher();)
+        // It should be an identifier followed by ( or .
+        if let Some(Token::Identifier(_)) = self.peek() {
+            // Check if next token is ( or . (for method calls)
+            if let Some(token) = self.peek_n(1) {
+                matches!(token, Token::LParen | Token::Dot)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
     
     fn get_line_column(&self, position: usize) -> (usize, usize) {

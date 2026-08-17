@@ -1,8 +1,12 @@
 # Tutorial 6: Authentication & Authorization
 
-Lerne, wie du Authentication und Authorization in VelinScript implementierst.
+Lerne, wie du Endpunkte mit `@Auth` schützt.
 
-## JWT Authentication
+`@Auth` schützt Routen gezielt; öffentliche Routen ohne `@Auth` bleiben ohne Auth-Middleware erreichbar.
+
+**3.5.0:** Der stabile Rust/Axum-Pfad prüft das Vorhandensein des `Authorization`-Headers (401 ohne Header). JWT-basierte Tokenvalidierung ist nicht Teil des stabilen 3.5.0-Umfangs. Die folgenden JWT-Beispiele sind erweiterte/Stdlib-Muster außerhalb dieses Stable-Defaults.
+
+## JWT Authentication (erweitert / außerhalb Stable 3.5.0)
 
 ### Token generieren
 
@@ -16,13 +20,13 @@ fn login(email: string, password: string): JWTToken {
     }
     
     // Generiere Token
-    let auth = AuthService::new(getSecret());
+    let auth: AuthService = AuthService.new("secret-key");
     let claims = UserClaims {
         user_id: user.id,
         email: user.email,
         roles: user.roles,
     };
-    return auth.generate_token(claims);
+    return auth.generateToken(claims);
 }
 ```
 
@@ -32,8 +36,8 @@ fn login(email: string, password: string): JWTToken {
 @Auth
 @GET("/api/profile")
 fn getProfile(token: string): User {
-    let auth = AuthService::new(getSecret());
-    let claims = auth.verify_token(token);
+    let auth: AuthService = AuthService.new("secret-key");
+    let claims = auth.verifyToken(token);
     
     if (claims == null) {
         return HttpResponse::unauthorized("Invalid token");
@@ -44,6 +48,8 @@ fn getProfile(token: string): User {
 ```
 
 ### Role-based Access Control
+
+Die `@Role` Annotation nutzt nun echte JWT-Claims. Der Token muss ein `roles` Array im Payload enthalten.
 
 ```velin
 @Auth
@@ -58,6 +64,20 @@ fn getAdminUsers(): List<User> {
 @GET("/api/users/:id")
 fn getUser(id: string): User {
     return db.find(User, id);
+}
+```
+
+### Multi-Factor Authentication (MFA)
+
+VelinScript unterstützt nun nativ TOTP (Time-based One-Time Passwords).
+
+```velin
+@POST("/api/auth/mfa/verify")
+fn verifyMfa(userId: string, code: string): boolean {
+    let user = db.find(User, userId);
+    // Verifiziert den Code gegen das gespeicherte Secret
+    // Nutzt im Hintergrund das 'totp-rs' Crate für RFC 6238 Konformität
+    return MFAService.verify_totp(code, user.mfaSecret);
 }
 ```
 

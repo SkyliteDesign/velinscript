@@ -1,0 +1,252 @@
+// Custom Recommender - Unit Tests
+// Unit Tests für alle Funktionen
+
+// Test-Daten
+let testUser = User {
+    id: "user123",
+    name: "Test User",
+    email: "test@example.com",
+    preferences: ["electronics", "gadgets"],
+    createdAt: "2024-01-01T00:00:00Z",
+};
+
+let testItem = Item {
+    id: "item456",
+    title: "Test Product",
+    description: "A test product",
+    tags: ["electronics", "gadgets"],
+    category: "electronics",
+    embedding: [0.1, 0.2, 0.3, 0.4, 0.5],
+    metadata: Map<string, string>(),
+    createdAt: "2024-01-01T00:00:00Z",
+};
+
+// ============================================================================
+// HELPER FUNCTIONS TESTS
+// ============================================================================
+
+@test
+fn testGenerateId() {
+    let id1 = generateId();
+    let id2 = generateId();
+    
+    assert(id1 != null, "ID should not be null");
+    assert(id2 != null, "ID should not be null");
+    assert(id1 != id2, "IDs should be unique");
+    assert(id1.startsWith("id-"), "ID should start with 'id-'");
+}
+
+@test
+fn testGetCurrentTimestamp() {
+    let timestamp = getCurrentTimestamp();
+    
+    assert(timestamp != null, "Timestamp should not be null");
+    assert(timestamp.length > 0, "Timestamp should not be empty");
+    assert(timestamp.contains("T"), "Timestamp should be ISO format");
+}
+
+@test
+fn testSanitizeInput() {
+    let malicious = "<script>alert('xss')</script>";
+    let sanitized = sanitizeInput(malicious);
+    
+    assert(!sanitized.contains("<script>"), "Should remove script tags");
+    assert(!sanitized.contains("alert"), "Should sanitize dangerous content");
+}
+
+@test
+fn testSanitizeInputSQLInjection() {
+    let sqlInjection = "'; DROP TABLE users; --";
+    let sanitized = sanitizeInput(sqlInjection);
+    
+    assert(!sanitized.contains("DROP TABLE"), "Should remove SQL commands");
+    assert(!sanitized.contains("';"), "Should sanitize SQL injection");
+}
+
+@test
+fn testGenerateRequestId() {
+    let requestId1 = generateRequestId();
+    let requestId2 = generateRequestId();
+    
+    assert(requestId1 != null, "Request ID should not be null");
+    assert(requestId2 != null, "Request ID should not be null");
+    assert(requestId1 != requestId2, "Request IDs should be unique");
+    assert(requestId1.startsWith("req-"), "Request ID should start with 'req-'");
+}
+
+// ============================================================================
+// CACHE TESTS
+// ============================================================================
+
+@test
+fn testCacheSetAndGet() {
+    let key = "test:key";
+    let value = "test value";
+    
+    cacheSet(key, value, 60);
+    let cached = cacheGet<string>(key);
+    
+    assert(cached == value, "Cached value should match");
+}
+
+@test
+fn testCacheExpiration() {
+    let key = "test:expire";
+    let value = "test value";
+    
+    cacheSet(key, value, 1); // 1 Sekunde TTL
+    // Warte 2 Sekunden
+    sleep(2000);
+    
+    let cached = cacheGet<string>(key);
+    assert(cached == null, "Expired cache should return null");
+}
+
+@test
+fn testCacheInvalidate() {
+    let key = "test:invalidate";
+    let value = "test value";
+    
+    cacheSet(key, value, 60);
+    cacheInvalidate(key);
+    
+    let cached = cacheGet<string>(key);
+    assert(cached == null, "Invalidated cache should return null");
+}
+
+@test
+fn testCacheKeyGeneration() {
+    let userId = "user123";
+    let embeddingKey = generateUserEmbeddingCacheKey(userId);
+    
+    assert(embeddingKey == format("user:embedding:{}", userId), "Cache key should match pattern");
+}
+
+// ============================================================================
+// ERROR HANDLING TESTS
+// ============================================================================
+
+@test
+fn testCreateValidationError() {
+    let error = createValidationError("field", "Field is required");
+    
+    assert(error.code == ApiErrorCode::ValidationError, "Error code should be ValidationError");
+    assert(error.message.contains("Field is required"), "Error message should contain message");
+    assert(error.details.contains("field"), "Error details should contain field");
+}
+
+@test
+fn testCreateNotFoundError() {
+    let error = createNotFoundError("User", "user123");
+    
+    assert(error.code == ApiErrorCode::NotFound, "Error code should be NotFound");
+    assert(error.message.contains("User"), "Error message should contain resource");
+    assert(error.message.contains("user123"), "Error message should contain ID");
+}
+
+@test
+fn testCreateUnauthorizedError() {
+    let error = createUnauthorizedError("Invalid API Key");
+    
+    assert(error.code == ApiErrorCode::Unauthorized, "Error code should be Unauthorized");
+    assert(error.message.contains("Invalid API Key"), "Error message should contain reason");
+}
+
+@test
+fn testErrorCodeToString() {
+    assert(errorCodeToString(ApiErrorCode::ValidationError) == "VALIDATION_ERROR", "Should convert to string");
+    assert(errorCodeToString(ApiErrorCode::NotFound) == "NOT_FOUND", "Should convert to string");
+}
+
+@test
+fn testIsRetryableError() {
+    let timeoutError = createError(ApiErrorCode::TimeoutError, "Timeout", Map<string, string>(), "");
+    let validationError = createError(ApiErrorCode::ValidationError, "Validation", Map<string, string>(), "");
+    
+    assert(isRetryableError(timeoutError) == true, "Timeout errors should be retryable");
+    assert(isRetryableError(validationError) == false, "Validation errors should not be retryable");
+}
+
+// ============================================================================
+// RESPONSE TESTS
+// ============================================================================
+
+@test
+fn testSuccessResponse() {
+    let data = RecommendationResponse {
+        userId: "user123",
+        recommendations: List<Recommendation>(),
+        totalCount: 0,
+        generatedAt: getCurrentTimestamp(),
+    };
+    
+    let requestId = generateRequestId();
+    let startTime = getCurrentTime();
+    
+    let response = successResponse(data, requestId, startTime);
+    
+    assert(response.success == true, "Response should be successful");
+    assert(response.data != null, "Response should have data");
+    assert(response.metadata.requestId == requestId, "Response should have request ID");
+    assert(response.error.code == "", "Error should be empty on success");
+}
+
+@test
+fn testErrorResponse() {
+    let requestId = generateRequestId();
+    let error = errorResponse<RecommendationResponse>(
+        "VALIDATION_ERROR",
+        "Invalid input",
+        requestId,
+        Map<string, string>()
+    );
+    
+    assert(error.success == false, "Response should not be successful");
+    assert(error.data == null, "Response should not have data");
+    assert(error.error.code == "VALIDATION_ERROR", "Error code should match");
+    assert(error.error.message == "Invalid input", "Error message should match");
+}
+
+// ============================================================================
+// RECOMMENDATION TESTS
+// ============================================================================
+
+@test
+fn testCalculateSimilarity() {
+    let embedding1 = [1.0, 2.0, 3.0];
+    let embedding2 = [1.0, 2.0, 3.0];
+    
+    let similarity = calculateSimilarity(embedding1, embedding2);
+    
+    assert(similarity == 1.0, "Identical embeddings should have similarity 1.0");
+}
+
+@test
+fn testCalculateSimilarityDifferent() {
+    let embedding1 = [1.0, 0.0, 0.0];
+    let embedding2 = [0.0, 1.0, 0.0];
+    
+    let similarity = calculateSimilarity(embedding1, embedding2);
+    
+    assert(similarity >= 0.0 && similarity <= 1.0, "Similarity should be between 0 and 1");
+    assert(similarity < 1.0, "Different embeddings should have similarity < 1.0");
+}
+
+@test
+fn testCalculateSimilarityEmpty() {
+    let embedding1 = [];
+    let embedding2 = [1.0, 2.0, 3.0];
+    
+    let similarity = calculateSimilarity(embedding1, embedding2);
+    
+    assert(similarity == 0.0, "Empty embeddings should return 0.0");
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+fn sleep(milliseconds: number) {
+    // In Production: Verwende echte Sleep-Funktion
+    // Thread.sleep(milliseconds);
+}

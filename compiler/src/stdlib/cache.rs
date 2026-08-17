@@ -92,9 +92,9 @@ pub struct CacheStdlib;
 
 impl CacheStdlib {
     /// Generiert Rust-Code für cache.set()
-    pub fn generate_set_code(key: &str, value: &str, ttl: Option<u64>) -> String {
-        if let Some(ttl_secs) = ttl {
-            format!("cache.set(\"{}\".to_string(), {}, Some({}))", key, value, ttl_secs)
+    pub fn generate_set_code(key: &str, value: &str, ttl: Option<&str>) -> String {
+        if let Some(ttl_val) = ttl {
+            format!("cache.set(\"{}\".to_string(), {}, Some({} as u64))", key, value, ttl_val)
         } else {
             format!("cache.set(\"{}\".to_string(), {}, None)", key, value)
         }
@@ -113,6 +113,16 @@ impl CacheStdlib {
     /// Generiert Rust-Code für cache.clear()
     pub fn generate_clear_code() -> String {
         "cache.clear()".to_string()
+    }
+    
+    /// Generiert Rust-Code für cache.exists()
+    pub fn generate_exists_code(key: &str) -> String {
+        format!("cache.exists(\"{}\")", key)
+    }
+
+    /// Generiert Rust-Code für cache.size()
+    pub fn generate_size_code() -> String {
+        "cache.size()".to_string()
     }
     
     /// Liste der verfügbaren Cache-Funktionen

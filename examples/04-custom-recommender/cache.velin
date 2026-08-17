@@ -1,0 +1,207 @@
+use app_config;
+
+// Custom Recommender - Caching System
+// Performance-Optimierung durch intelligentes Caching
+
+// Cache Entry (simplified without generics)
+struct CacheEntry {
+    key: string,
+    value: any,
+    expiresAt: number,
+    createdAt: number,
+    hits: number,
+    lastAccessed: number,
+}
+
+// Cache Statistics
+struct CacheStats {
+    hits: number,
+    misses: number,
+    totalRequests: number,
+    hitRate: number,
+    totalEntries: number,
+    memoryUsage: number,
+}
+
+// Cache-Konfiguration
+struct ServiceCacheConfig {
+    enabled: boolean,
+    defaultTTL: number,
+    maxSize: number,
+    evictionPolicy: string,
+}
+
+// Cache-Struktur
+struct CacheData {
+    entries: Map<string, CacheEntry>,
+    config: ServiceCacheConfig,
+}
+
+struct CacheService {
+    cache: CacheData,
+    stats: CacheStats,
+}
+
+// Helper to create empty map
+fn createEmptyCacheMap(): Map<string, CacheEntry> {
+    return Map<string, CacheEntry>();
+}
+
+// Helper for timestamp
+fn getCurrentTime(): number {
+    return 1704067200; // 2024-01-01
+}
+
+// Cache initialisieren
+fn createCacheService(): CacheService {
+    let appConfig = app_config.getConfig();
+    let cacheConf = appConfig.cache;
+    
+    let emptyEntries: Map<string, CacheEntry> = createEmptyCacheMap();
+    let cacheData = CacheData {
+        entries: emptyEntries,
+        config: ServiceCacheConfig {
+            enabled: cacheConf.enabled,
+            defaultTTL: cacheConf.ttl,
+            maxSize: 10000,
+            evictionPolicy: "LRU"
+        },
+    };
+
+    let cacheStats = CacheStats {
+        hits: 0,
+        misses: 0,
+        totalRequests: 0,
+        hitRate: 0.0,
+        totalEntries: 0,
+        memoryUsage: 0
+    };
+
+    // Return struct directly
+    return CacheService {
+        cache: cacheData,
+        stats: cacheStats
+    };
+}
+
+// cacheGet - Holt Wert aus Cache
+fn cacheGet(service: CacheService, key: string): any {
+    if (models.isTrue(!service.cache.config.enabled)) {
+        service.stats.misses = service.stats.misses + 1;
+        service.stats.totalRequests = service.stats.totalRequests + 1;
+        return null;
+    }
+    
+    service.stats.totalRequests = service.stats.totalRequests + 1;
+    
+    if (models.isTrue(!service.cache.entries.contains(key))) {
+        service.stats.misses = service.stats.misses + 1;
+        updateHitRate(service);
+        return null;
+    }
+    
+    let entry = service.cache.entries.get(key);
+    
+    // Prüfe ob abgelaufen
+    if (models.isTrue(getCurrentTime() > entry.expiresAt)) {
+        cacheInvalidate(service, key);
+        service.stats.misses = service.stats.misses + 1;
+        updateHitRate(service);
+        return null;
+    }
+    
+    // Update Zugriffs-Zeit und Hits
+    entry.lastAccessed = getCurrentTime();
+    entry.hits = entry.hits + 1;
+    service.stats.hits = service.stats.hits + 1;
+    updateHitRate(service);
+    
+    return entry.value;
+}
+
+// cacheSet - Setzt Wert im Cache
+fn cacheSet(service: CacheService, key: string, value: any, ttl: number) {
+    if (models.isTrue(!service.cache.config.enabled)) {
+        return;
+    }
+    
+    // Eviction wenn voll
+    if (models.isTrue(service.cache.entries.length >= service.cache.config.maxSize)) {
+        evictEntries(service);
+    }
+    
+    let effectiveTTL = ttl;
+    if (models.isTrue(effectiveTTL <= 0)) {
+        effectiveTTL = service.cache.config.defaultTTL;
+    }
+    
+    let entry = CacheEntry {
+        key: key,
+        value: value,
+        expiresAt: getCurrentTime() + effectiveTTL,
+        createdAt: getCurrentTime(),
+        hits: 0,
+        lastAccessed: getCurrentTime(),
+    };
+    
+    service.cache.entries.insert(key, entry);
+    service.stats.totalEntries = service.cache.entries.length;
+}
+
+// cacheInvalidate - Löscht Wert aus Cache
+fn cacheInvalidate(service: CacheService, key: string) {
+    if (models.isTrue(service.cache.entries.contains(key))) {
+        service.cache.entries.remove(key);
+        service.stats.totalEntries = service.cache.entries.length;
+    }
+}
+
+// cacheClear - Löscht gesamten Cache
+fn cacheClear(service: CacheService) {
+    // Re-initialize map
+    service.cache.entries = createEmptyCacheMap();
+    service.stats.totalEntries = 0;
+    service.stats.memoryUsage = 0;
+}
+
+// updateHitRate - Aktualisiert Hit Rate
+fn updateHitRate(service: CacheService) {
+    if (models.isTrue(service.stats.totalRequests > 0)) {
+        service.stats.hitRate = service.stats.hits / service.stats.totalRequests;
+    } else {
+        service.stats.hitRate = 0.0;
+    }
+}
+
+// evictEntries - Löscht alte Einträge (LRU)
+fn evictEntries(service: CacheService) {
+    // Implementierung eines einfachen LRU Algorithmus
+    // Hier vereinfacht: Lösche den ältesten Eintrag basierend auf lastAccessed
+    
+    let entries = service.cache.entries;
+    let keys = entries.keys();
+    
+    if (models.isTrue(keys.length == 0)) {
+        return;
+    }
+    
+    let mut oldestKey = keys[0];
+    let mut currentEntry = entries.get(oldestKey);
+    let mut oldestTime = currentEntry.lastAccessed;
+    
+    let i = 1;
+    while (models.isTrue(keys.length > i)) {
+        let key = keys[i];
+        let checkEntry = entries.get(key);
+        
+        if (models.isTrue(oldestTime > checkEntry.lastAccessed)) {
+            oldestTime = checkEntry.lastAccessed;
+            oldestKey = key;
+        }
+        
+        i = i + 1;
+    }
+    
+    cacheInvalidate(service, oldestKey);
+}
+

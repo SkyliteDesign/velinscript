@@ -1,13 +1,7 @@
-// VelinScript Language Server
-// LSP Implementation für IDE-Support
+//! Thin binary wrapper
 
 use tower_lsp::{LspService, Server};
-
-mod server;
-mod handlers;
-mod document;
-
-use server::VelinLanguageServer;
+use velin_lsp::server::VelinLanguageServer;
 
 #[tokio::main]
 async fn main() {
@@ -15,5 +9,5 @@ async fn main() {
     let stdout = tokio::io::stdout();
     
     let (service, socket) = LspService::new(|client| VelinLanguageServer::new(client));
-    Server::new(stdin, stdout, socket).serve().await;
+    Server::new(stdin, stdout, socket).serve(service).await;
 }

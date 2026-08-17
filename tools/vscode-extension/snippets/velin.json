@@ -158,5 +158,107 @@
       "}"
     ],
     "description": "Const-Funktion (Compile-time)"
+  },
+  "Flow Function": {
+    "prefix": "velin-flow",
+    "body": [
+      "@Flow",
+      "fn ${1:flowName}(input: ${2:InputType}): ${3:ResultType} {",
+      "    flow.snapshot_input(input);",
+      "    $0",
+      "}"
+    ],
+    "description": "VelinFlow Funktion mit automatischem Rollback"
+  },
+  "AutoDoc Function": {
+    "prefix": "velin-autodoc",
+    "body": [
+      "/// ${1:Beschreibung der Funktion}",
+      "///",
+      "/// # Arguments",
+      "/// * `input` - ${2:Beschreibung des Inputs}",
+      "@VelinAutoDoc",
+      "fn ${3:functionName}(${4:input}): ${5:ReturnType} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Funktion mit automatischer Dokumentation"
+  },
+  "AutoTest Function": {
+    "prefix": "velin-autotest",
+    "body": [
+      "@VelinAutoTest",
+      "fn ${1:functionName}(${2:params}): ${3:ReturnType} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Funktion mit automatisch generierten Tests"
+  },
+  "Pipeline Module": {
+    "prefix": "velin-pipeline",
+    "body": [
+      "@VelinPipeline",
+      "mod ${1:pipelineName} {",
+      "    // Pipeline steps",
+      "}"
+    ],
+    "description": "Daten-Pipeline Modul"
+  },
+  "TypeScript Express Endpoint": {
+    "prefix": "ts-express",
+    "body": [
+      "@Express",
+      "@GET(\"/$1\")",
+      "fn get${2:Resource}(): List<${3:Type}> {",
+      "    return [];",
+      "}"
+    ],
+    "description": "Express.js Endpoint (TypeScript)"
+  },
+  "Java Spring Controller": {
+    "prefix": "java-spring",
+    "body": [
+      "@Spring",
+      "@Controller(\"/$1\")",
+      "struct ${2:Name}Controller {",
+      "    // Dependency Injection here",
+      "}",
+      "",
+      "impl ${2:Name}Controller {",
+      "    @Get(\"/\")",
+      "    fn index(self): List<${3:Type}> {",
+      "        return [];",
+      "    }",
+      "}"
+    ],
+    "description": "Spring Boot Controller (Java)"
+  },
+  "C# ASP.NET Controller": {
+    "prefix": "csharp-aspnet",
+    "body": [
+      "@AspNet",
+      "@Controller(\"/$1\")",
+      "struct ${2:Name}Controller {",
+      "    // Dependency Injection here",
+      "}",
+      "",
+      "impl ${2:Name}Controller {",
+      "    @Get(\"/\")",
+      "    fn index(self): List<${3:Type}> {",
+      "        return [];",
+      "    }",
+      "}"
+    ],
+    "description": "ASP.NET Core Controller (C#)"
+  },
+  "Insight Project": {
+    "prefix": "velin-insight",
+    "body": [
+      "@VelinInsight",
+      "project ${1:ProjectName} {",
+      "    $0",
+      "}"
+    ],
+    "description": "Projekt mit KI-gestützter Analyse"
   }
 }

@@ -1,0 +1,20 @@
+[package]
+name = "velin-security"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "velin-security"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+velin-compiler = { path = "../../compiler" }
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1.0", features = ["full"] }
+walkdir = "2.0"
+toml = "0.8"
+urlencoding = "2.1"

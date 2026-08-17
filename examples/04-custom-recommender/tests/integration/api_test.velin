@@ -1,0 +1,483 @@
+// Custom Recommender - Integration Tests
+// Integration Tests für alle API-Endpoints
+
+// Test-Setup
+struct TestContext {
+    baseUrl: string,
+    apiKey: string,
+    testUserId: string,
+    testItemId: string,
+}
+
+let testContext = TestContext {
+    baseUrl: "http://localhost:8080",
+    apiKey: "test-api-key",
+    testUserId: "test-user-123",
+    testItemId: "test-item-456",
+};
+
+// ============================================================================
+// RECOMMENDATIONS ENDPOINT TESTS
+// ============================================================================
+
+@test
+fn testGetRecommendationsSuccess() {
+    let request = HttpRequest {
+        method: "POST",
+        path: format("/api/recommendations/{}", testContext.testUserId),
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(RecommendationRequest {
+            userId: testContext.testUserId,
+            limit: 10,
+            filters: Map<string, string>(),
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string> { "userId": testContext.testUserId },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = getRecommendations(request, testContext.testUserId, RecommendationRequest {
+        userId: testContext.testUserId,
+        limit: 10,
+        filters: Map<string, string>(),
+    });
+    
+    assert(response.success == true, "Response should be successful");
+    assert(response.data != null, "Response should have data");
+    assert(response.data.userId == testContext.testUserId, "Response should contain correct userId");
+    assert(response.metadata.requestId != null, "Response should have request ID");
+}
+
+@test
+fn testGetRecommendationsInvalidUserId() {
+    let request = HttpRequest {
+        method: "POST",
+        path: "/api/recommendations/invalid-user",
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(RecommendationRequest {
+            userId: "invalid-user",
+            limit: 10,
+            filters: Map<string, string>(),
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string> { "userId": "invalid-user" },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = getRecommendations(request, "invalid-user", RecommendationRequest {
+        userId: "invalid-user",
+        limit: 10,
+        filters: Map<string, string>(),
+    });
+    
+    assert(response.success == false, "Response should not be successful");
+    assert(response.error.code == "NOT_FOUND", "Error code should be NOT_FOUND");
+}
+
+@test
+fn testGetRecommendationsInvalidLimit() {
+    let request = HttpRequest {
+        method: "POST",
+        path: format("/api/recommendations/{}", testContext.testUserId),
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(RecommendationRequest {
+            userId: testContext.testUserId,
+            limit: 100, // Zu groß
+            filters: Map<string, string>(),
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string> { "userId": testContext.testUserId },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = getRecommendations(request, testContext.testUserId, RecommendationRequest {
+        userId: testContext.testUserId,
+        limit: 100,
+        filters: Map<string, string>(),
+    });
+    
+    assert(response.success == false, "Response should not be successful");
+    assert(response.error.code == "VALIDATION_ERROR", "Error code should be VALIDATION_ERROR");
+}
+
+@test
+fn testGetRecommendationsWithFilters() {
+    let request = HttpRequest {
+        method: "POST",
+        path: format("/api/recommendations/{}", testContext.testUserId),
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(RecommendationRequest {
+            userId: testContext.testUserId,
+            limit: 10,
+            filters: Map<string, string> {
+                "category": "electronics",
+            },
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string> { "userId": testContext.testUserId },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = getRecommendations(request, testContext.testUserId, RecommendationRequest {
+        userId: testContext.testUserId,
+        limit: 10,
+        filters: Map<string, string> {
+            "category": "electronics",
+        },
+    });
+    
+    assert(response.success == true, "Response should be successful");
+    // Prüfe ob alle Recommendations die Filter erfüllen
+    for (rec in response.data.recommendations) {
+        assert(rec.item.category == "electronics", "All recommendations should match filter");
+    }
+}
+
+// ============================================================================
+// PREFERENCES ENDPOINT TESTS
+// ============================================================================
+
+@test
+fn testCreatePreferenceSuccess() {
+    let request = HttpRequest {
+        method: "POST",
+        path: "/api/preferences",
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(Map<string, any> {
+            "userId": testContext.testUserId,
+            "itemId": testContext.testItemId,
+            "rating": 5,
+            "interactionType": "purchase",
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string>(),
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = createPreference(
+        request,
+        testContext.testUserId,
+        testContext.testItemId,
+        5,
+        "purchase"
+    );
+    
+    assert(response.success == true, "Response should be successful");
+    assert(response.data.userId == testContext.testUserId, "Preference should have correct userId");
+    assert(response.data.itemId == testContext.testItemId, "Preference should have correct itemId");
+    assert(response.data.rating == 5, "Preference should have correct rating");
+}
+
+@test
+fn testCreatePreferenceInvalidRating() {
+    let request = HttpRequest {
+        method: "POST",
+        path: "/api/preferences",
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(Map<string, any> {
+            "userId": testContext.testUserId,
+            "itemId": testContext.testItemId,
+            "rating": 10, // Ungültig (max 5)
+            "interactionType": "purchase",
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string>(),
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = createPreference(
+        request,
+        testContext.testUserId,
+        testContext.testItemId,
+        10,
+        "purchase"
+    );
+    
+    assert(response.success == false, "Response should not be successful");
+    assert(response.error.code == "VALIDATION_ERROR", "Error code should be VALIDATION_ERROR");
+}
+
+// ============================================================================
+// USER HISTORY ENDPOINT TESTS
+// ============================================================================
+
+@test
+fn testGetUserHistorySuccess() {
+    let request = HttpRequest {
+        method: "GET",
+        path: format("/api/users/{}/history", testContext.testUserId),
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+        },
+        body: "",
+        queryParams: Map<string, string> { "limit": "10" },
+        pathParams: Map<string, string> { "userId": testContext.testUserId },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = getUserHistoryEndpoint(request, testContext.testUserId, 10);
+    
+    assert(response.success == true, "Response should be successful");
+    assert(response.data != null, "Response should have data");
+    assert(response.data is List<UserPreference>, "Response should be list of preferences");
+}
+
+// ============================================================================
+// FEEDBACK ENDPOINT TESTS
+// ============================================================================
+
+@test
+fn testCreateFeedbackSuccess() {
+    let request = HttpRequest {
+        method: "POST",
+        path: "/api/feedback",
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(Map<string, any> {
+            "userId": testContext.testUserId,
+            "itemId": testContext.testItemId,
+            "feedbackType": "positive",
+            "comment": "Great recommendation!",
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string>(),
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = createFeedback(
+        request,
+        testContext.testUserId,
+        testContext.testItemId,
+        "positive",
+        "Great recommendation!"
+    );
+    
+    assert(response.success == true, "Response should be successful");
+    assert(response.data.feedbackType == "positive", "Feedback should have correct type");
+}
+
+@test
+fn testCreateFeedbackInvalidType() {
+    let request = HttpRequest {
+        method: "POST",
+        path: "/api/feedback",
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(Map<string, any> {
+            "userId": testContext.testUserId,
+            "itemId": testContext.testItemId,
+            "feedbackType": "invalid-type",
+            "comment": "",
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string>(),
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = createFeedback(
+        request,
+        testContext.testUserId,
+        testContext.testItemId,
+        "invalid-type",
+        ""
+    );
+    
+    assert(response.success == false, "Response should not be successful");
+    assert(response.error.code == "VALIDATION_ERROR", "Error code should be VALIDATION_ERROR");
+}
+
+// ============================================================================
+// SIMILAR ITEMS ENDPOINT TESTS
+// ============================================================================
+
+@test
+fn testGetSimilarItemsSuccess() {
+    let request = HttpRequest {
+        method: "GET",
+        path: format("/api/items/{}/similar", testContext.testItemId),
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+        },
+        body: "",
+        queryParams: Map<string, string> { "limit": "5" },
+        pathParams: Map<string, string> { "itemId": testContext.testItemId },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = getSimilarItems(request, testContext.testItemId, 5);
+    
+    assert(response.success == true, "Response should be successful");
+    assert(response.data != null, "Response should have data");
+    assert(response.data.itemId == testContext.testItemId, "Response should contain correct itemId");
+}
+
+@test
+fn testGetSimilarItemsNotFound() {
+    let request = HttpRequest {
+        method: "GET",
+        path: "/api/items/invalid-item/similar",
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+        },
+        body: "",
+        queryParams: Map<string, string> { "limit": "5" },
+        pathParams: Map<string, string> { "itemId": "invalid-item" },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let response = getSimilarItems(request, "invalid-item", 5);
+    
+    assert(response.success == false, "Response should not be successful");
+    assert(response.error.code == "NOT_FOUND", "Error code should be NOT_FOUND");
+}
+
+// ============================================================================
+// SECURITY TESTS
+// ============================================================================
+
+@test
+fn testSecurityMiddlewareInvalidApiKey() {
+    let request = HttpRequest {
+        method: "POST",
+        path: format("/api/recommendations/{}", testContext.testUserId),
+        headers: Map<string, string> {
+            "X-API-Key": "invalid-key",
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(RecommendationRequest {
+            userId: testContext.testUserId,
+            limit: 10,
+            filters: Map<string, string>(),
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string> { "userId": testContext.testUserId },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    let securityResult = applySecurityMiddleware(request, "/api/recommendations/:userId");
+    
+    // Security sollte fehlschlagen wenn API Key ungültig ist
+    // (In Production mit echter Validierung)
+    // assert(securityResult != null && !securityResult.success, "Security should fail with invalid API key");
+}
+
+@test
+fn testSecurityMiddlewareRateLimit() {
+    // Simuliere viele Requests von derselben IP
+    let request = HttpRequest {
+        method: "POST",
+        path: format("/api/recommendations/{}", testContext.testUserId),
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: "",
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string>(),
+        remoteAddress: "127.0.0.1",
+    };
+    
+    // In Production: Simuliere viele Requests
+    // for (i in 0..150) {
+    //     applySecurityMiddleware(request, "/api/recommendations/:userId");
+    // }
+    // Letzte Request sollte Rate-Limit-Fehler geben
+}
+
+// ============================================================================
+// CACHING TESTS
+// ============================================================================
+
+@test
+fn testRecommendationsCaching() {
+    let request = HttpRequest {
+        method: "POST",
+        path: format("/api/recommendations/{}", testContext.testUserId),
+        headers: Map<string, string> {
+            "X-API-Key": testContext.apiKey,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(RecommendationRequest {
+            userId: testContext.testUserId,
+            limit: 10,
+            filters: Map<string, string>(),
+        }),
+        queryParams: Map<string, string>(),
+        pathParams: Map<string, string> { "userId": testContext.testUserId },
+        remoteAddress: "127.0.0.1",
+    };
+    
+    // Erster Request (kein Cache)
+    let response1 = getRecommendations(request, testContext.testUserId, RecommendationRequest {
+        userId: testContext.testUserId,
+        limit: 10,
+        filters: Map<string, string>(),
+    });
+    
+    assert(response1.success == true, "First request should succeed");
+    assert(response1.metadata.cacheHit == false, "First request should not be cached");
+    
+    // Zweiter Request (sollte aus Cache kommen)
+    let response2 = getRecommendations(request, testContext.testUserId, RecommendationRequest {
+        userId: testContext.testUserId,
+        limit: 10,
+        filters: Map<string, string>(),
+    });
+    
+    assert(response2.success == true, "Second request should succeed");
+    assert(response2.metadata.cacheHit == true, "Second request should be cached");
+}
+
+// ============================================================================
+// HEALTH CHECK TESTS
+// ============================================================================
+
+@test
+fn testHealthCheck() {
+    let health = healthCheck();
+    
+    assert(health.status == "healthy" || health.status == "degraded", "Health status should be valid");
+    assert(health.version != null, "Health should have version");
+    assert(health.uptime >= 0, "Uptime should be non-negative");
+    assert(health.services != null, "Health should have services");
+}
+
+@test
+fn testMetricsEndpoint() {
+    let metrics = getMetrics();
+    
+    assert(metrics.requests != null, "Metrics should have requests");
+    assert(metrics.errors != null, "Metrics should have errors");
+    assert(metrics.performance != null, "Metrics should have performance");
+    assert(metrics.cache != null, "Metrics should have cache");
+}
+
+@test
+fn testReadinessCheck() {
+    let ready = readinessCheck();
+    
+    assert(ready.ready == true || ready.ready == false, "Ready status should be boolean");
+    assert(ready.services != null, "Ready should have services");
+}

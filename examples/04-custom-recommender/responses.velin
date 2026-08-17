@@ -1,0 +1,56 @@
+// Custom Recommender - Standardisierte API Responses
+// Einheitliches Response-Format für alle Endpoints
+use models;
+use app_config;
+use logging;
+
+// successResponse - Erstellt erfolgreiche Response
+fn successResponse<T>(data: T, requestId: string, startTime: number): models.ApiResponse<T> {
+    let processingTime = 0;
+    // let appConfig = app_config.getConfig(); // Unused here
+    
+    let error = models.createApiError("", "", models.createEmptyMapStringString(), "");
+    let metadata = models.createResponseMetadata(requestId, logging.getCurrentTimestamp(), processingTime, "1.0.0", false);
+    
+    return models.createApiResponse(true, data, error, metadata);
+}
+
+// successResponseWithCache - Erstellt erfolgreiche Response mit Cache-Info
+fn successResponseWithCache<T>(data: T, requestId: string, startTime: number, cacheHit: boolean): models.ApiResponse<T> {
+    let response = successResponse(data, requestId, startTime);
+    response.metadata.cacheHit = cacheHit;
+    return response;
+}
+
+// errorResponse - Erstellt Fehler-Response
+fn errorResponse<T>(errorCode: string, message: string, requestId: string, details: Map<string, string>): models.ApiResponse<T> {
+    // Note: data is null, assuming T allows null or we cast to any
+    let nullData: any = null;
+    
+    let error = models.createApiError(errorCode, message, details, logging.getCurrentTimestamp());
+    let metadata = models.createResponseMetadata(requestId, logging.getCurrentTimestamp(), 0, "1.0.0", false);
+    
+    return models.createApiResponse(false, nullData, error, metadata);
+}
+
+// createMetadata - Erstellt Response Metadata
+fn createMetadata(requestId: string, processingTime: number, cacheHit: boolean): models.ResponseMetadata {
+    
+    return models.createResponseMetadata(
+        requestId,
+        logging.getCurrentTimestamp(),
+        processingTime,
+        "1.0.0",
+        cacheHit
+    );
+}
+
+// Helper für leere Success-Response
+fn emptySuccessResponse(requestId: string, startTime: number): models.ApiResponse<string> {
+    // Manually construct response to avoid generic inference issues
+    let processingTime = 0;
+    let error = models.createApiError("", "", models.createEmptyMapStringString(), "");
+    let metadata = models.createResponseMetadata(requestId, logging.getCurrentTimestamp(), processingTime, "1.0.0", false);
+    
+    return models.createApiResponse(true, "", error, metadata);
+}

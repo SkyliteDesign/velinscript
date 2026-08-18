@@ -70,7 +70,7 @@ impl LanguageServer for VelinLanguageServer {
         Ok(InitializeResult {
             server_info: Some(ServerInfo {
                 name: "velin-lsp".to_string(),
-                version: Some("3.5.0".to_string()),
+                version: Some("3.5.1".to_string()),
             }),
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -113,15 +113,21 @@ impl LanguageServer for VelinLanguageServer {
         }
 
         self.publish_doc_diagnostics(uri.clone(), &text).await;
-        
-        // Use document info fields
-        if let Some(doc_info) = documents.get(&uri) {
-            let _doc_uri = &doc_info.uri;
-            if let Some(parse_errors) = documents.get_parse_errors(&uri) {
-                if !parse_errors.is_empty() {
-                    self.client
-                        .log_message(MessageType::WARNING, format!("Parse errors in {}: {:?}", uri, parse_errors))
-                        .await;
+
+        {
+            let documents = self.documents.read().await;
+            let key = uri.as_str();
+            if let Some(doc_info) = documents.get(key) {
+                let _doc_uri = &doc_info.uri;
+                if let Some(parse_errors) = documents.get_parse_errors(key) {
+                    if !parse_errors.is_empty() {
+                        self.client
+                            .log_message(
+                                MessageType::WARNING,
+                                format!("Parse errors in {}: {:?}", uri, parse_errors),
+                            )
+                            .await;
+                    }
                 }
             }
         }

@@ -1,7 +1,7 @@
 # VS Code Extension für VelinScript
 
-**Version:** 3.1.0  
-**Status:** ✅ Vollständig implementiert
+**Version:** 3.5.1  
+**Status:** Sprache `.velin` (kein stilles Umbenennen auf `.vel`)
 
 ---
 
@@ -243,5 +243,5 @@ code --install-extension velinscript-0.1.0.vsix
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
-**Version:** 2.5.0
+**Letzte Aktualisierung:** 2026-08-18  
+**Version:** 3.5.1 (Extension `package.json`; Sprache bleibt `.velin`)

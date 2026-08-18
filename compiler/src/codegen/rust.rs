@@ -1,14 +1,13 @@
 use crate::codegen::framework::{Framework, FrameworkSelector};
 use crate::compiler::language::VELISCH_FINGERPRINT;
 use crate::codegen::traits::{CodeGenerator, CodegenConfig, TargetLanguage};
+use crate::parser::ast::*;
 #[cfg(feature = "sea-orm")]
 use crate::stdlib::seaorm::SeaORMStdlib;
 #[cfg(feature = "oauth2")]
 use crate::stdlib::oauth2::OAuth2Stdlib;
 #[cfg(feature = "privacy")]
 use crate::stdlib::privacy::PrivacyStdlib;
-#[cfg(feature = "sea-orm")]
-use crate::stdlib::seaorm::SeaORMStdlib;
 
 pub struct RustCodeGenerator {
     output: String,
@@ -1901,55 +1900,6 @@ where
                     self.generate_expression(arg);
                 }
                 
-                self.write(")");
-            }
-            Expression::LLMCall { method, args } => {
-                // Generiert: llm_client.analyze(text) mit Prompt-Optimierung
-                self.write("llm_client.");
-                self.write(&self.to_snake_case(method));
-                self.write("(");
-                for (i, arg) in args.iter().enumerate() {
-                    if i > 0 {
-                        self.write(", ");
-                    }
-                    self.generate_expression(arg);
-                }
-                self.write(").await");
-            }
-            Expression::FormatString { parts } => {
-                // Generate Rust format! macro
-                self.write("format!(");
-
-                // Build format string and arguments
-                let mut format_str = String::new();
-                let mut args = Vec::new();
-                let mut arg_index = 0;
-
-                for part in parts {
-                    match part {
-                        FormatStringPart::Text(text) => {
-                            // Escape special characters for format! macro
-                            let escaped = text.replace('{', "{{").replace('}', "}}");
-                            format_str.push_str(&escaped);
-                        }
-                        FormatStringPart::Expression(expr) => {
-                            format_str.push_str(&format!("{{{}}}", arg_index));
-                            args.push(expr);
-                            arg_index += 1;
-                        }
-                    }
-                }
-
-                // Write format string
-                let escaped_format = format_str.replace('\\', "\\\\").replace('"', "\\\"");
-                self.write(&format!("\"{}\"", escaped_format));
-
-                // Write arguments
-                for arg in args {
-                    self.write(", ");
-                    self.generate_expression(arg);
-                }
-
                 self.write(")");
             }
             Expression::GenericConstructor {

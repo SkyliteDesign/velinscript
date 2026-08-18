@@ -1,6 +1,6 @@
 # CLI-Referenz
 
-**Version:** 3.5.0
+**Version:** 3.5.1
 
 Dokumentiert die nutzerrelevanten CLI-Befehle. Versteckte Hilfsbefehle erscheinen nicht in `velin --help`.
 
@@ -23,7 +23,7 @@ velin compile -i <input> [OPTIONS]
 
 | Parameter | Kurzform | Typ | Beschreibung | Standard |
 |-----------|----------|-----|--------------|----------|
-| `--input` | `-i` | Pfad | Eingabe-Datei (.velin) | **Erforderlich** |
+| `--input` | `-i` | Pfad | Eingabe-Datei (`.velin`; `.vel` Lese-Alias) | **Erforderlich** |
 | `--output` | `-o` | Pfad | Ausgabe-Datei | Auto (basierend auf target) |
 | `--target` | | String | Ziel-Sprache | `rust` |
 | `--framework` | | String | Web Framework | Auto |
@@ -101,7 +101,7 @@ velin check -i <input> [OPTIONS]
 
 | Parameter | Kurzform | Typ | Beschreibung | Standard |
 |-----------|----------|-----|--------------|----------|
-| `--input` | `-i` | Pfad | Eingabe-Datei (.velin) | **Erforderlich** |
+| `--input` | `-i` | Pfad | Eingabe-Datei (`.velin`; `.vel` Lese-Alias) | **Erforderlich** |
 | `--autofix` | | Flag | Automatische Fehlerkorrektur | `false` |
 
 **Beispiele:**
@@ -128,7 +128,7 @@ velin format -i <input> [OPTIONS]
 
 | Parameter | Kurzform | Typ | Beschreibung | Standard |
 |-----------|----------|-----|--------------|----------|
-| `--input` | `-i` | Pfad | Eingabe-Datei (.velin) | **Erforderlich** |
+| `--input` | `-i` | Pfad | Eingabe-Datei (`.velin`; `.vel` Lese-Alias) | **Erforderlich** |
 | `--in-place` | | Flag | Überschreibe die Datei | `false` |
 
 **Beispiele:**
@@ -155,7 +155,7 @@ velin info -i <input>
 
 | Parameter | Kurzform | Typ | Beschreibung | Standard |
 |-----------|----------|-----|--------------|----------|
-| `--input` | `-i` | Pfad | Eingabe-Datei (.velin) | **Erforderlich** |
+| `--input` | `-i` | Pfad | Eingabe-Datei (`.velin`; `.vel` Lese-Alias) | **Erforderlich** |
 
 **Beispiele:**
 ```bash
@@ -197,12 +197,41 @@ velin new my-api
 
 ### `velin serve` - Axum-Scaffold
 
-Schreibt ein lauffähiges Axum-Gerüst nach `.velin/serve-scaffold/` (danach `cargo run`). Startet keinen eingebetteten HTTP-Server.
+Schreibt ein lauffähiges Axum-Gerüst nach `.velin/serve-scaffold/`. **Startet keinen HTTP-Server.**
 
 ```bash
 velin serve -i main.velin
 cd .velin/serve-scaffold && cargo run
 ```
+
+`--watch` ist nicht implementiert (ehrliche Meldung, kein Reload).
+
+---
+
+### `velin run` - Kompilieren und Server starten
+
+Kompiliert die Quelle nach Axum und startet den Prozess. Default-Port **8080**. `--host` wird gebunden (Standard: `127.0.0.1`).
+
+**Syntax:**
+```bash
+velin run <DATEI> [--port 8080] [--host 127.0.0.1]
+```
+
+`DATEI` ist eine `.velin`-Datei. `.vel` wird als Lese-Alias akzeptiert; die offizielle Endung bleibt `.velin`.
+
+```bash
+velin run hello.velin
+# GET http://127.0.0.1:8080/ping
+# GET http://127.0.0.1:8080/hello?name=Velin
+```
+
+`--watch` ist nicht implementiert; der Server startet einmalig.
+
+---
+
+### `velin cache` / `health` / `rollback`
+
+Nicht implementiert. Die Befehle beenden mit Fehler und täuschen keinen Erfolg vor.
 
 ---
 
@@ -219,7 +248,7 @@ velin open-api -i <input> [OPTIONS]
 
 | Parameter | Kurzform | Typ | Beschreibung | Standard |
 |-----------|----------|-----|--------------|----------|
-| `--input` | `-i` | Pfad | Eingabe-Datei (.velin) | **Erforderlich** |
+| `--input` | `-i` | Pfad | Eingabe-Datei (`.velin`; `.vel` Lese-Alias) | **Erforderlich** |
 | `--output` | `-o` | Pfad | Ausgabe-Datei (.json oder .yaml) | Auto |
 
 **Beispiele:**
@@ -483,7 +512,7 @@ export VELIN_LOG_LEVEL="debug"
 
 ### Entwicklung
 
-1. **Nutze `velin serve`** für ein Axum-Scaffold, danach `cargo run`
+1. **Nutze `velin run main.velin`** zum Starten (Port 8080). `velin serve` schreibt nur ein Scaffold.
 2. **Nutze `velin check`** vor Commits
 3. **Verwende `velin format --in-place`** für konsistente Formatierung
 
@@ -503,4 +532,4 @@ export VELIN_LOG_LEVEL="debug"
 
 ---
 
-**Version:** 3.5.0
+**Version:** 3.5.1

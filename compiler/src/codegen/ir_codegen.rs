@@ -17,6 +17,23 @@ use crate::ir::ir::*;
 use crate::codegen::traits::TargetLanguage;
 use crate::codegen::lowering;
 use anyhow::Result;
+use std::collections::HashSet;
+
+fn is_stringy(val: &IRValue) -> bool {
+    matches!(val, IRValue::Constant(IRConstant::String(_)))
+        || matches!(val.get_type(), IRType::String)
+}
+
+fn is_stringy_ctx(val: &IRValue, string_temps: &HashSet<usize>) -> bool {
+    is_stringy(val)
+        || matches!(val, IRValue::Temporary(t) if string_temps.contains(&t.0))
+}
+
+fn mark_string_temp(dest: &IRValue, string_temps: &mut HashSet<usize>) {
+    if let IRValue::Temporary(t) = dest {
+        string_temps.insert(t.0);
+    }
+}
 
 /// IR Code Generator
 pub struct IRCodeGenerator {
@@ -121,15 +138,10 @@ impl IRCodeGenerator {
             crate::parser::ast::Visibility::Private => "",
         };
         
-        output.push_str(&format!("{}struct {} {{\n", vis, s.name));
+        output.push_str(&format!("#[derive(Debug, Clone, Serialize, Deserialize)]\n{}struct {} {{\n", vis, s.name));
         
         for field in &s.fields {
-            let field_vis = match field.visibility {
-                crate::parser::ast::Visibility::Public => "pub ",
-                crate::parser::ast::Visibility::Private => "",
-            };
-            output.push_str(&format!("    {}{}: {},\n", 
-                field_vis, 
+            output.push_str(&format!("    pub {}: {},\n", 
                 field.name, 
                 self.ir_type_to_rust(&field.ty)));
         }
@@ -205,19 +217,60 @@ impl IRCodeGenerator {
         }
 
         if route.is_some() {
-            output.push_str(") -> impl IntoResponse {\n");
+            output.push_str(") -> axum::response::Response {\n");
+            if let Some(ref route) = route {
+                output.push_str(&lowering::axum_query_lets(func, route));
+            }
         } else {
             output.push_str(") -> ");
             output.push_str(&self.ir_type_to_rust(&func.return_type));
             output.push_str(" {\n");
         }
 
-        let body = self.generate_rust_block(&func.body);
+        let mut body = self.generate_rust_block(&func.body);
         if route.is_some() {
-            // Wrap last expression-style returns as IntoResponse-friendly when possible
+            if matches!(
+                func.return_type,
+                IRType::Struct(_) | IRType::List(_) | IRType::Map { .. }
+            ) {
+                body = body
+                    .lines()
+                    .map(|l| {
+                        let t = l.trim();
+                        if let Some(rest) = t.strip_prefix("return ") {
+                            let expr = rest.trim_end_matches(';');
+                            format!("    return Json({}).into_response();", expr)
+                        } else {
+                            l.to_string()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+            } else {
+                body = body
+                    .lines()
+                    .map(|l| {
+                        let t = l.trim();
+                        if let Some(rest) = t.strip_prefix("return ") {
+                            let expr = rest.trim_end_matches(';');
+                            if expr.contains("into_response()") {
+                                format!("    return {};", expr.trim_end_matches(';'))
+                            } else {
+                                format!("    return ({expr}).into_response();")
+                            }
+                        } else {
+                            l.to_string()
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n");
+            }
+            if !body.ends_with('\n') && !body.is_empty() {
+                body.push('\n');
+            }
             output.push_str(&body);
             if !body.contains("return") && body.trim().is_empty() {
-                output.push_str("    StatusCode::OK\n");
+                output.push_str("    StatusCode::OK.into_response()\n");
             }
         } else {
             output.push_str(&body);
@@ -230,22 +283,35 @@ impl IRCodeGenerator {
     /// Generiert einen Rust-Block
     fn generate_rust_block(&self, block: &IRBlock) -> String {
         let mut output = String::new();
-        
+        let mut string_temps = HashSet::new();
+
         for instruction in &block.instructions {
-            output.push_str(&self.generate_rust_instruction(instruction));
+            output.push_str(&self.generate_rust_instruction(instruction, &mut string_temps));
         }
         
         output
     }
     
     /// Generiert eine Rust-Instruction
-    fn generate_rust_instruction(&self, inst: &IRInstruction) -> String {
+    fn generate_rust_instruction(&self, inst: &IRInstruction, string_temps: &mut HashSet<usize>) -> String {
         match inst {
             IRInstruction::Add { dest, left, right } => {
-                format!("    let {} = {} + {};\n", 
-                    self.ir_value_to_rust(dest),
-                    self.ir_value_to_rust(left),
-                    self.ir_value_to_rust(right))
+                if is_stringy_ctx(left, string_temps) || is_stringy_ctx(right, string_temps) {
+                    mark_string_temp(dest, string_temps);
+                    format!(
+                        "    let {} = format!(\"{{}}{{}}\", {}, {});\n",
+                        self.ir_value_to_rust(dest),
+                        self.ir_value_to_rust(left),
+                        self.ir_value_to_rust(right)
+                    )
+                } else {
+                    format!(
+                        "    let {} = {} + {};\n",
+                        self.ir_value_to_rust(dest),
+                        self.ir_value_to_rust(left),
+                        self.ir_value_to_rust(right)
+                    )
+                }
             }
             IRInstruction::Subtract { dest, left, right } => {
                 format!("    let {} = {} - {};\n", 
@@ -295,9 +361,16 @@ impl IRCodeGenerator {
                     self.ir_value_to_rust(operand))
             }
             IRInstruction::Store { dest, value } => {
-                format!("    {} = {};\n", 
-                    self.ir_value_to_rust(dest),
-                    self.ir_value_to_rust(value))
+                let rhs = match value {
+                    IRValue::Constant(IRConstant::String(s)) => {
+                        format!(
+                            "\"{}\".to_string()",
+                            s.replace("\"", "\\\"").replace("\n", "\\n")
+                        )
+                    }
+                    _ => self.ir_value_to_rust(value),
+                };
+                format!("    {} = {};\n", self.ir_value_to_rust(dest), rhs)
             }
             IRInstruction::Alloca { dest, ty } => {
                 format!("    let mut {}: {};\n", 
@@ -775,7 +848,11 @@ impl IRCodeGenerator {
                 format!("    let {} = {};\n", self.ir_value_to_typescript(dest), self.ir_value_to_typescript(value))
             }
             IRInstruction::Add { dest, left, right } => {
-                format!("    let {} = {} + {};\n", self.ir_value_to_typescript(dest), self.ir_value_to_typescript(left), self.ir_value_to_typescript(right))
+                if is_stringy(left) || is_stringy(right) {
+                    format!("    let {} = String({}) + String({});\n", self.ir_value_to_typescript(dest), self.ir_value_to_typescript(left), self.ir_value_to_typescript(right))
+                } else {
+                    format!("    let {} = {} + {};\n", self.ir_value_to_typescript(dest), self.ir_value_to_typescript(left), self.ir_value_to_typescript(right))
+                }
             }
             IRInstruction::Subtract { dest, left, right } => {
                 format!("    let {} = {} - {};\n", self.ir_value_to_typescript(dest), self.ir_value_to_typescript(left), self.ir_value_to_typescript(right))
@@ -883,6 +960,17 @@ impl IRCodeGenerator {
                 ));
             }
             output.push_str("    return r\n}\n\n");
+        }
+
+        if output.contains("fmt.Sprintf") {
+            if output.contains("import \"github.com/gin-gonic/gin\"") {
+                output = output.replace(
+                    "import \"github.com/gin-gonic/gin\"",
+                    "import (\n    \"fmt\"\n    \"github.com/gin-gonic/gin\"\n)",
+                );
+            } else if !output.contains("\"fmt\"") {
+                output = output.replace("package main\n\n", "package main\n\nimport \"fmt\"\n\n");
+            }
         }
         
         output
@@ -1055,7 +1143,11 @@ impl IRCodeGenerator {
                 format!("    ${} = {};\n", self.ir_value_to_php(dest), self.ir_value_to_php(value))
             }
             IRInstruction::Add { dest, left, right } => {
-                format!("    ${} = {} + {};\n", self.ir_value_to_php(dest), self.ir_value_to_php(left), self.ir_value_to_php(right))
+                if is_stringy(left) || is_stringy(right) {
+                    format!("    ${} = {} . {};\n", self.ir_value_to_php(dest), self.ir_value_to_php(left), self.ir_value_to_php(right))
+                } else {
+                    format!("    ${} = {} + {};\n", self.ir_value_to_php(dest), self.ir_value_to_php(left), self.ir_value_to_php(right))
+                }
             }
             IRInstruction::Subtract { dest, left, right } => {
                 format!("    ${} = {} - {};\n", self.ir_value_to_php(dest), self.ir_value_to_php(left), self.ir_value_to_php(right))
@@ -1126,7 +1218,11 @@ impl IRCodeGenerator {
                 format!("    {} = {}\n", self.ir_value_to_python(dest), self.ir_value_to_python(value))
             }
             IRInstruction::Add { dest, left, right } => {
-                format!("    {} = {} + {}\n", self.ir_value_to_python(dest), self.ir_value_to_python(left), self.ir_value_to_python(right))
+                if is_stringy(left) || is_stringy(right) {
+                    format!("    {} = str({}) + str({})\n", self.ir_value_to_python(dest), self.ir_value_to_python(left), self.ir_value_to_python(right))
+                } else {
+                    format!("    {} = {} + {}\n", self.ir_value_to_python(dest), self.ir_value_to_python(left), self.ir_value_to_python(right))
+                }
             }
             IRInstruction::Subtract { dest, left, right } => {
                 format!("    {} = {} - {}\n", self.ir_value_to_python(dest), self.ir_value_to_python(left), self.ir_value_to_python(right))
@@ -1205,7 +1301,11 @@ impl IRCodeGenerator {
                 format!("    let {} = {};\n", self.ir_value_to_javascript(dest), self.ir_value_to_javascript(value))
             }
             IRInstruction::Add { dest, left, right } => {
-                format!("    let {} = {} + {};\n", self.ir_value_to_javascript(dest), self.ir_value_to_javascript(left), self.ir_value_to_javascript(right))
+                if is_stringy(left) || is_stringy(right) {
+                    format!("    let {} = String({}) + String({});\n", self.ir_value_to_javascript(dest), self.ir_value_to_javascript(left), self.ir_value_to_javascript(right))
+                } else {
+                    format!("    let {} = {} + {};\n", self.ir_value_to_javascript(dest), self.ir_value_to_javascript(left), self.ir_value_to_javascript(right))
+                }
             }
             IRInstruction::Subtract { dest, left, right } => {
                 format!("    let {} = {} - {};\n", self.ir_value_to_javascript(dest), self.ir_value_to_javascript(left), self.ir_value_to_javascript(right))
@@ -1284,7 +1384,11 @@ impl IRCodeGenerator {
                 format!("    {} := {}\n", self.ir_value_to_go(dest), self.ir_value_to_go(value))
             }
             IRInstruction::Add { dest, left, right } => {
-                format!("    {} := {} + {}\n", self.ir_value_to_go(dest), self.ir_value_to_go(left), self.ir_value_to_go(right))
+                if is_stringy(left) || is_stringy(right) {
+                    format!("    {} := fmt.Sprintf(\"%v%v\", {}, {})\n", self.ir_value_to_go(dest), self.ir_value_to_go(left), self.ir_value_to_go(right))
+                } else {
+                    format!("    {} := {} + {}\n", self.ir_value_to_go(dest), self.ir_value_to_go(left), self.ir_value_to_go(right))
+                }
             }
             IRInstruction::Subtract { dest, left, right } => {
                 format!("    {} := {} - {}\n", self.ir_value_to_go(dest), self.ir_value_to_go(left), self.ir_value_to_go(right))
@@ -1355,7 +1459,11 @@ impl IRCodeGenerator {
                 format!("        {} = {};\n", self.ir_value_to_java(dest), self.ir_value_to_java(value))
             }
             IRInstruction::Add { dest, left, right } => {
-                format!("        {} = {} + {};\n", self.ir_value_to_java(dest), self.ir_value_to_java(left), self.ir_value_to_java(right))
+                if is_stringy(left) || is_stringy(right) {
+                    format!("        {} = String.valueOf({}) + String.valueOf({});\n", self.ir_value_to_java(dest), self.ir_value_to_java(left), self.ir_value_to_java(right))
+                } else {
+                    format!("        {} = {} + {};\n", self.ir_value_to_java(dest), self.ir_value_to_java(left), self.ir_value_to_java(right))
+                }
             }
             IRInstruction::Subtract { dest, left, right } => {
                 format!("        {} = {} - {};\n", self.ir_value_to_java(dest), self.ir_value_to_java(left), self.ir_value_to_java(right))
@@ -1424,6 +1532,23 @@ impl IRCodeGenerator {
             }
             IRInstruction::Store { dest, value } => {
                 format!("        {} = {};\n", self.ir_value_to_csharp(dest), self.ir_value_to_csharp(value))
+            }
+            IRInstruction::Add { dest, left, right } => {
+                if is_stringy(left) || is_stringy(right) {
+                    format!(
+                        "        {} = string.Concat({}, {});\n",
+                        self.ir_value_to_csharp(dest),
+                        self.ir_value_to_csharp(left),
+                        self.ir_value_to_csharp(right)
+                    )
+                } else {
+                    format!(
+                        "        {} = {} + {};\n",
+                        self.ir_value_to_csharp(dest),
+                        self.ir_value_to_csharp(left),
+                        self.ir_value_to_csharp(right)
+                    )
+                }
             }
             _ => format!("        // {:#?}\n", inst)
         }

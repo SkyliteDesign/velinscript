@@ -6,7 +6,16 @@
 /// Dieser Name ist tief im Compiler-Kern integriert und dient als Fingerabdruck.
 pub const VELISCH_LANGUAGE_NAME: &str = "Velisch";
 
-/// Die Sprache-Version
+/// Language fingerprint version — NOT the product/CLI version.
+///
+/// `velin --version` comes from clap / `CARGO_PKG_VERSION` (currently 3.5.x).
+/// This constant is a historical identity lock: `validate_velisch_identity()`
+/// requires exactly `"2.5.0"` or `VelinCompiler::compile` refuses to run.
+/// `get_velisch_identity()` is only used in tracing logs, not in `--help`.
+/// `VELISCH_FINGERPRINT` in generated code does not include this number.
+///
+/// Do not bump this in lockstep with product releases unless you also
+/// update `validate_velisch_identity()` in the same change.
 pub const VELISCH_VERSION: &str = "2.5.0";
 
 /// Die vollständige Sprache-Identifikation

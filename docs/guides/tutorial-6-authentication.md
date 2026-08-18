@@ -4,9 +4,28 @@ Lerne, wie du Endpunkte mit `@Auth` schützt.
 
 `@Auth` schützt Routen gezielt; öffentliche Routen ohne `@Auth` bleiben ohne Auth-Middleware erreichbar.
 
-**3.5.0:** Der stabile Rust/Axum-Pfad prüft das Vorhandensein des `Authorization`-Headers (401 ohne Header). JWT-basierte Tokenvalidierung ist nicht Teil des stabilen 3.5.0-Umfangs. Die folgenden JWT-Beispiele sind erweiterte/Stdlib-Muster außerhalb dieses Stable-Defaults.
+**3.5.1:** Der stabile Rust/Axum-Pfad prüft das Vorhandensein des `Authorization`-Headers (ohne Header: **401**). `@Role("admin")` verlangt zusätzlich den Header `X-Role`; falsch oder fehlend: **403**. Unterschiedliche Rollen an verschiedenen Routen werden nicht zu einer globalen Vereinigung. JWT-Tokenvalidierung ist nicht Teil des stabilen Umfangs. Die folgenden JWT-Beispiele sind erweiterte/Stdlib-Muster außerhalb dieses Stable-Defaults.
 
-## JWT Authentication (erweitert / außerhalb Stable 3.5.0)
+```velin
+@GET("/public")
+fn public_ep(): string {
+    return "pub-ok";
+}
+
+@GET("/secure")
+@Auth
+fn secure_ep(): string {
+    return "sec-ok";
+}
+
+@GET("/admin")
+@Role("admin")
+fn admin_ep(): string {
+    return "admin-ok";
+}
+```
+
+## JWT Authentication (erweitert / außerhalb Stable 3.5.1)
 
 ### Token generieren
 

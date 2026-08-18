@@ -191,16 +191,6 @@ impl CompilerError {
         let engine = ErrorSuggestionEngine::new();
         engine.enhance_error(self)
     }
-
-    pub fn warning(message: String) -> Self {
-        CompilerError::Warning(message)
-    }
-    
-    /// Gibt eine verbesserte Fehlermeldung mit Vorschlägen zurück
-    pub fn with_suggestions(&self) -> String {
-        let engine = ErrorSuggestionEngine::new();
-        engine.enhance_error(self)
-    }
 }
 
 // Konvertierungen von Standard-Errors

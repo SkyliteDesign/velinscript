@@ -2,7 +2,7 @@
 
 VelinScript stellt eine umfangreiche Standardbibliothek bereit. Module haben unterschiedliche Reifegrade (nutzbar, partiell, experimentell, test-only). Details und Ehrlichkeit: interne Klassifikation; öffentlich keine Production-Grade-Pauschalen.
 
-**Hinweis 3.5.0:** VelinScript 3.5.0 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum. LLM/ML und viele Infra-Module sowie eine vollständige Stdlib-Runtime liegen außerhalb dieses Stable-Umfangs. HTTP/`@Auth` im Default-Pfad: Decorators + Rust/Axum; `@Auth` prüft die Präsenz des Authorization-Headers.
+**Hinweis 3.5.1:** VelinScript 3.5.1 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum. LLM/ML und viele Infra-Module sowie eine vollständige Stdlib-Runtime liegen außerhalb dieses Stable-Umfangs. HTTP/`@Auth`/`@Role` im Default-Pfad: Decorators + Rust/Axum; `@Auth` prüft die Präsenz des `Authorization`-Headers (**401**), `@Role` den Header `X-Role` (**403**).
 
 ## Table of Contents
 

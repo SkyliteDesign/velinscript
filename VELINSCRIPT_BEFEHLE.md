@@ -1,6 +1,6 @@
 # 📋 VelinScript - Alle verfügbaren Befehle
 
-Eine vollständige Übersicht aller nützlichen Befehle von VelinScript 3.1.0.
+Eine vollständige Übersicht der nutzerrelevanten Befehle von VelinScript 3.5.1. Versteckte Hilfsbefehle siehe [CLI-Referenz](docs/guides/cli-reference.md).
 
 ---
 
@@ -26,10 +26,13 @@ velin init [<projektname>] [--current-dir]
 # oder
 velin new [<projektname>] [--current-dir]
 
-# Development-Server starten
-velin serve [-i <datei>] [--port <port>] [--host <host>] [--watch]
-# oder
-velin run [-i <datei>] [--port <port>] [--host <host>] [--watch]
+# Development-Server: kompiliert nach Axum und startet (Default-Port 8080)
+velin run <datei> [--port 8080] [--host 127.0.0.1]
+# `.vel` ist nur ein Lese-Alias; offizielle Endung bleibt `.velin`
+
+# Nur Scaffold schreiben (startet keinen Server)
+velin serve -i <datei>
+# `--watch` ist nicht implementiert
 
 # OpenAPI Specification generieren
 velin open-api -i <datei> [-o <output>]
@@ -76,24 +79,15 @@ velin config validate [--file <datei>]
 velin config show [--file <datei>]
 ```
 
-### Cache-Management
+### Cache / Health / Rollback
+
+Diese CLI-Befehle sind **nicht implementiert** (Fehler, kein Fake-Erfolg). Siehe [CHANGELOG 3.5.1](CHANGELOG.md).
 
 ```bash
-# Cache-Statistiken anzeigen
+# Beenden mit Fehler:
 velin cache stats
-
-# Cache leeren
-velin cache clear [<pattern>]
-
-# Cache aufwärmen
-velin cache warm
-```
-
-### Health Check
-
-```bash
-# Health Check durchführen
-velin health [--url <endpoint>] [--verbose]
+velin health
+velin rollback list-versions
 ```
 
 ### Backup & Rollback
@@ -114,10 +108,8 @@ velin backup delete <backup-id> [--directory <verzeichnis>]
 # Backup verifizieren
 velin backup verify <backup-id> [--directory <verzeichnis>]
 
-# Transaktionen
-velin rollback begin
-velin rollback commit <transaction-id>
-velin rollback rollback <transaction-id>
+# Transaktionen / Versionen / Snapshots (`velin rollback …`)
+# nicht implementiert — Fehler, kein Fake-Erfolg
 
 # Versionen
 velin rollback create-version <beschreibung>

@@ -73,6 +73,7 @@ coverage/
 # Output files
 *.rs
 !compiler/src/**/*.rs
+!compiler/tests/**/*.rs
 !tools/**/src/**/*.rs
 
 # VS Code Extension build outputs
@@ -90,6 +91,7 @@ tools/vscode-extension/node_modules/
 # Internal/Development files
 bauplan/
 velisch.info/
+velin_dev/
 DOKUMENTATION.md
 GITHUB_SETUP.md
 PRE_COMMIT_CHECKLIST.md

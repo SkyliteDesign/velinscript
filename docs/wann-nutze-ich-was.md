@@ -782,9 +782,10 @@ velin insight -i main.velin
 **Nutzen Sie `@Auth`, wenn:**
 - ✅ Endpunkte gezielt geschützt werden sollen (nur markierte Routen)
 - ✅ Anfragen ohne Authorization-Header abgewiesen werden sollen (401)
-- ✅ Benutzer-Zugang im stabilen 3.5.0-Pfad über Header-Präsenz gesteuert wird
+- ✅ Benutzer-Zugang im stabilen 3.5.1-Pfad über Header-Präsenz gesteuert wird (`@Auth` → 401 ohne `Authorization`)
+- ✅ Rollen an der Route über `X-Role` geprüft werden (`@Role` → 403 bei falscher/fehlender Rolle)
 
-JWT-Tokenvalidierung liegt außerhalb des stabilen 3.5.0-Umfangs (siehe [security.md](guides/security.md)).
+JWT-Tokenvalidierung liegt außerhalb des stabilen 3.5.1-Umfangs (siehe [security.md](guides/security.md)).
 
 ```velin
 @GET("/api/users")

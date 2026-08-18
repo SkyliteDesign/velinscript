@@ -1,10 +1,10 @@
-# VelinScript / Velisch Quick Start (3.5.0)
+# VelinScript / Velisch Quick Start (3.5.1)
 
 In wenigen Minuten zum ersten laufenden API-Endpoint.
 
 **Velisch** ist die Sprache, **VelinScript** der Compiler (`velin`). Einstieg: [velisch.info](https://velisch.info) · Core: [GitHub velinscript](https://github.com/SkyliteDesign/velinscript).
 
-VelinScript 3.5.0 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum. Weitere Funktionen wie zusätzliche Target-Runtimes, erweiterte Authentifizierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses 3.5.0-Stable-Umfangs.
+VelinScript 3.5.1 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum. Weitere Funktionen wie zusätzliche Target-Runtimes, erweiterte Authentifizierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses Stable-Umfangs.
 
 ---
 
@@ -59,10 +59,12 @@ velin check -i main.velin
 ## Schritt 5: Starten
 
 ```bash
-cargo run
+velin run main.velin
 ```
 
-Dann: `GET http://127.0.0.1:3000/api/hello` (oder `PORT=18080 cargo run`).
+Dann: `GET http://127.0.0.1:8080/api/hello`.
+
+`velin serve` schreibt nur ein Scaffold und startet keinen Server.
 
 ---
 

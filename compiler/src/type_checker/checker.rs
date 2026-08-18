@@ -3,7 +3,7 @@ use crate::parser::ast::*;
 use crate::type_checker::environment::{Environment, FunctionSignature, ParameterInfo};
 use crate::type_checker::errors::{TypeError, TypeErrorKind};
 use crate::stdlib::rate_limit::{is_rate_limit_decorator, parse_rate_limit_config};
-use crate::compiler::language::VELISCH_LANGUAGE_NAME;
+use std::io::Write;
 
 pub struct TypeChecker {
     environment: Environment,

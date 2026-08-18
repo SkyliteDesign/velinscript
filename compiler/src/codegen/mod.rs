@@ -9,7 +9,6 @@ pub mod csharp;
 pub mod openapi;
 pub mod boilerplate;
 pub mod client;
-pub mod csharp;
 pub mod distributed;
 pub mod framework;
 pub mod autodoc;
@@ -17,7 +16,6 @@ pub mod autotest;
 pub mod system_generator;
 pub mod infrastructure;
 pub mod templates;
-pub mod distributed;
 pub mod traits;
 pub mod ir_codegen;
 pub mod lowering;
@@ -41,4 +39,7 @@ pub use infrastructure::{InfrastructureGenerator, DeploymentPlan, Infrastructure
 pub use distributed::DeploymentAnalyzer;
 pub use traits::{CodeGenerator, TargetLanguage, CodegenConfig};
 pub use ir_codegen::IRCodeGenerator;
-pub use lowering::{axum_cargo_toml, axum_main_wrapper, axum_main_wrapper_with_port, collect_routes};
+pub use lowering::{
+    axum_cargo_toml, axum_main_wrapper, axum_main_wrapper_with_bind, axum_main_wrapper_with_port,
+    collect_routes,
+};

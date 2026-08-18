@@ -7,7 +7,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "velin")]
 #[command(about = "Velisch Compiler - Eine moderne Programmiersprache für KI-APIs")]
-#[command(version = "3.5.0")]
+#[command(version)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands,
@@ -123,9 +123,9 @@ pub enum Commands {
         current_dir: bool,
     },
     
-    /// Schreibt ein Axum-Scaffold unter .velin/serve-scaffold (danach: cargo run)
+    /// Schreibt ein Axum-Scaffold unter .velin/serve-scaffold (startet den Server nicht)
     Serve {
-        /// Eingabe-Datei (.velin)
+        /// Eingabe-Datei (.velin; Lese-Alias .vel)
         #[arg(short, long)]
         input: Option<PathBuf>,
         
@@ -133,19 +133,22 @@ pub enum Commands {
         #[arg(short, long, default_value = "8080")]
         port: u16,
         
-        /// Host (Standard: localhost)
-        #[arg(long, default_value = "localhost")]
+        /// Host (Standard: 127.0.0.1)
+        #[arg(long, default_value = "127.0.0.1")]
         host: String,
         
-        /// Watch-Mode (automatisches Neuladen bei Änderungen)
+        /// Watch-Mode (nicht implementiert; ehrliche Meldung, kein Reload)
         #[arg(short, long)]
         watch: bool,
     },
     
-    /// Alias for serve (hidden until full runtime is available)
-    #[command(hide = true)]
+    /// Kompiliert die Quelle und startet den Axum-Server (Default-Port 8080)
     Run {
-        /// Eingabe-Datei (.velin)
+        /// Eingabe-Datei (.velin; Lese-Alias .vel)
+        #[arg(value_name = "FILE")]
+        file: Option<PathBuf>,
+
+        /// Eingabe-Datei (alternative zu FILE)
         #[arg(short, long)]
         input: Option<PathBuf>,
         
@@ -153,11 +156,11 @@ pub enum Commands {
         #[arg(short, long, default_value = "8080")]
         port: u16,
         
-        /// Host (Standard: localhost)
-        #[arg(long, default_value = "localhost")]
+        /// Host, an den gebunden wird (Standard: 127.0.0.1)
+        #[arg(long, default_value = "127.0.0.1")]
         host: String,
         
-        /// Watch-Mode (automatisches Neuladen bei Änderungen)
+        /// Watch-Mode (nicht implementiert; ehrliche Meldung, kein Reload)
         #[arg(short, long)]
         watch: bool,
     },

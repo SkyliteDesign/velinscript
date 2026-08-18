@@ -2,6 +2,33 @@
 
 Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
 
+## [3.5.1] - 2026-08-18
+
+Patch: `velin` baut wieder. HTTP (Query/Path/Body), `@Auth`/`@Role`, String-Interpolation und `velin run` sind im Nutzerpfad Rust/Axum nachgewiesen (Windows-E2E, Linux: CI `ubuntu-latest`).
+
+### Added
+
+- `velin run <datei>` kompiliert nach Axum und startet den Prozess. Default-Port **8080**, `--host` (Standard `127.0.0.1`) wird gebunden.
+- Lese-Alias `.vel`. Die offizielle Endung bleibt `.velin` (VS Code registriert nur `.velin`).
+- GET/DELETE-Skalare als Query (`Query<HashMap<…>>`); fehlender Pflichtparameter → **400**. GET/DELETE-Structs als `Query<T>`.
+- POST/PUT/PATCH: Structs und Skalare als JSON-Body; Path-Parameter über einen `Path`-Extractor.
+- `@Role`: Middleware **pro Route** und Rollenmenge, Header `X-Role`; falsch oder fehlend → **403**. `@Auth` ohne Rolle: nur Vorhandensein von `Authorization`, sonst **401**.
+
+### Fixed
+
+- Merge-Duplikate (E0428), durch die `velin` nicht baute.
+- Query nicht als `Query<String>`; ein Path-Extractor; Axum-Routen als `/users/:id` (nicht `{id}`).
+- Kein `public.merge(protected)` mehr: Auth-Layer sitzt an der jeweiligen Route (sonst 401 auf Path-Misses).
+- String-Interpolation in IR-Rust als `format!` (nicht `+`). Einfache Anführungszeichen ohne Interpolation; JSON-artige `"{"` / `"{}"` sind keine Format-Strings.
+- `velin cache` / `health` / `rollback` täuschen keinen Erfolg vor (Fehler, nicht implementiert).
+- Compiler-Tests unter `compiler/tests/**/*.rs` sind versionierbar (`.gitignore`-Ausnahme).
+
+### Changed
+
+- `velin serve` bleibt Scaffold-only (schreibt `.velin/serve-scaffold/`, startet keinen Server).
+- `--watch` ist nicht implementiert und sagt das ehrlich.
+- Produkt-/CLI-Version **3.5.1**. Der Sprach-Fingerabdruck `VELISCH_VERSION = "2.5.0"` in `compiler/src/compiler/language.rs` bleibt ein historischer Compile-Lock (`validate_velisch_identity`); `velin --version` kommt aus Cargo/clap und ist unabhängig.
+
 ## [3.5.0] - 2026-08-16
 
 ### Added

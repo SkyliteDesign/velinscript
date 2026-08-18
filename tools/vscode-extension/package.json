@@ -2,7 +2,7 @@
   "name": "velinscript",
   "displayName": "VelinScript",
   "description": "%velin.description%",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "publisher": "velinscript",
   "engines": {
     "vscode": "^1.60.0"

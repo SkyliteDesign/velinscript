@@ -1,6 +1,8 @@
 # 📚 VelinScript Dokumentation - Zentrale Übersicht
 
-Willkommen zur Dokumentation von VelinScript 3.5.0!
+Willkommen zur Dokumentation von VelinScript **3.5.1**.
+
+Stabiler Laufzeitpfad: Rust/Axum. Server starten mit `velin run main.velin` (Port **8080**). `velin serve` schreibt nur ein Scaffold. Offizielle Dateiendung: `.velin`.
 
 ---
 
@@ -187,5 +189,5 @@ Siehe [examples/](../../examples/) für vollständige Beispiel-Projekte:
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-30  
-**Version:** 3.5.0
+**Letzte Aktualisierung:** 2026-08-18  
+**Version:** 3.5.1

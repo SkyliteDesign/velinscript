@@ -4,7 +4,7 @@ Willkommen bei VelinScript! Diese Anleitung führt dich durch die ersten Schritt
 
 **Velisch** = Sprache / Produkt · **VelinScript** = Compiler (`velin`) · Einstieg: [velisch.info](https://velisch.info).
 
-VelinScript 3.5.0 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum. Weitere Funktionen wie zusätzliche Target-Runtimes, erweiterte Authentifizierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses 3.5.0-Stable-Umfangs.
+VelinScript 3.5.1 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum. Weitere Funktionen wie zusätzliche Target-Runtimes, erweiterte Authentifizierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses Stable-Umfangs.
 
 ## Installation
 
@@ -77,6 +77,14 @@ velin compile -i main.velin -o main.rs
 ```
 
 Dies erstellt `main.rs` mit dem kompilierten Rust-Code.
+
+### 3b. Server starten (empfohlener Nutzerpfad)
+
+```bash
+velin run main.velin
+```
+
+Startet den Axum-Server auf `http://127.0.0.1:8080`. `velin serve` schreibt nur ein Scaffold nach `.velin/serve-scaffold/` und startet keinen Prozess. Quelldateien heißen `.velin`; `.vel` ist nur ein Lese-Alias.
 
 **Optional: Andere Ziel-Sprachen**
 

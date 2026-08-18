@@ -11,11 +11,11 @@ Der Compiler (**VelinScript**, Befehl `velin`) übernimmt möglichst viel techni
 | VelinScript | Compiler / Core |
 | velisch.info | Einstieg / Docs / Showcase |
 
-## Umfang 3.5.0
+## Umfang 3.5.1
 
-VelinScript 3.5.0 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum.
+VelinScript 3.5.1 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum (`velin run`, Port 8080).
 
-Weitere Funktionen wie zusätzliche Target-Runtimes, erweiterte Authentifizierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses 3.5.0-Stable-Umfangs.
+Weitere Funktionen wie zusätzliche Target-Runtimes, JWT-Validierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses Stable-Umfangs.
 
 ## Warum Velisch?
 
@@ -33,8 +33,11 @@ fn hello(): string {
 ```
 
 ```bash
-velin compile -i main.velin -o main.rs --show-code
+velin run main.velin
+# GET http://127.0.0.1:8080/hello
 ```
+
+Oder nur Code erzeugen: `velin compile -i main.velin -o main.rs --show-code`.
 
 Erwartung: Axum-Imports, `create_router()`, Route `GET /hello`.
 
@@ -45,8 +48,8 @@ Erwartung: Axum-Imports, `create_router()`, Route `GET /hello`.
 
 ## Downloads
 
-Binary-Releases kommen aus dem **VelinScript**-Release (Tag `v3.5.0-ga`, sobald freigegeben).  
-Aktueller GitHub-Tag `v3.5.0` war nur eine Ankündigung.
+Binary-Releases kommen aus dem **VelinScript**-Release (Tag `v3.5.1`, sobald gepusht).  
+`v3.5.0-ga` bleibt der vorherige Compiler-Stand.
 
 ## GitHub
 

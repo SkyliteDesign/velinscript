@@ -487,6 +487,7 @@ impl PythonCodeGenerator {
             BinaryOperator::GtEq => ">=".to_string(),
             BinaryOperator::And => "and".to_string(),
             BinaryOperator::Or => "or".to_string(),
+            BinaryOperator::In => "in".to_string(),
         }
     }
 

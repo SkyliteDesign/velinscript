@@ -18,14 +18,10 @@ fn hello(): string {
 ## Ausführen (empfohlen)
 
 ```bash
-# Compiler bauen
-cargo build --release -p velin-compiler
-
-# Scaffold erzeugen und starten
-velin serve -i main.velin
-cd .velin/serve-scaffold
-cargo run
+velin run main.velin
 ```
+
+Die API läuft auf `http://127.0.0.1:8080`. `velin serve -i main.velin` schreibt nur ein Scaffold nach `.velin/serve-scaffold/` und startet den Server nicht.
 
 Alternativ nur den Rust-Code erzeugen:
 

@@ -13,7 +13,18 @@ fn hello(): string {
 }
 ```
 
-Dies wird zu einem Rust actix-web Endpoint kompiliert.
+Dies wird zu einem Rust/Axum-Handler kompiliert (`velin run` startet den Server auf Port 8080).
+
+Query-Parameter (GET/DELETE, Skalare) kommen aus der URL, fehlende Pflichtfelder ergeben **400**:
+
+```velin
+@GET("/hello")
+fn hello(name: string): string {
+    return "Hello {name}";
+}
+```
+
+Aufruf: `GET /hello?name=Velin` → `Hello Velin`.
 
 ### POST Endpoint
 

@@ -267,6 +267,31 @@ impl<'a> Lexer<'a> {
             column: self.column,
         })
     }
+
+    /// Double-quoted interpolation only when `{` starts an identifier/expression.
+    /// JSON-like `"{"` / `"{}"` / `"{\"a\":1}"` stay plain strings.
+    fn peek_double_quoted_is_format(&self) -> bool {
+        let mut peek_iter = self.input.clone();
+        while let Some(peek_ch) = peek_iter.next() {
+            if peek_ch == '"' {
+                break;
+            }
+            if peek_ch == '\\' {
+                peek_iter.next();
+                continue;
+            }
+            if peek_ch == '{' {
+                match peek_iter.clone().next() {
+                    Some(c) if c.is_ascii_alphabetic() || c == '_' || c.is_ascii_digit() => {
+                        return true;
+                    }
+                    Some('+' | '-' | '(') => return true,
+                    _ => continue,
+                }
+            }
+        }
+        false
+    }
     
     fn read_format_string(&mut self) -> Result<Vec<FormatStringPart>, LexerError> {
         let quote = self.current.unwrap();
@@ -650,38 +675,19 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     Token::Newline
                 }
-                '"' | '\'' => {
-                    // Check if this is a format string by peeking ahead
-                    let quote = ch;
-                    let mut peek_iter = self.input.clone();
-                    let mut is_format_string = false;
-                    
-                    // Skip the quote
-                    peek_iter.next();
-                    
-                    // Look for '{' before the closing quote
-                    while let Some(peek_ch) = peek_iter.next() {
-                        if peek_ch == quote {
-                            break;
-                        }
-                        if peek_ch == '{' {
-                            is_format_string = true;
-                            break;
-                        }
-                        if peek_ch == '\\' {
-                            // Skip escaped character
-                            peek_iter.next();
-                            continue;
-                        }
-                    }
-                    
-                    if is_format_string {
+                '"' => {
+                    if self.peek_double_quoted_is_format() {
                         let parts = self.read_format_string()?;
                         Token::FormatString(parts)
                     } else {
                         let string = self.read_string()?;
                         Token::String(string)
                     }
+                }
+                '\'' => {
+                    // Single quotes: literal, never interpolated (tutorial / JSON-like)
+                    let string = self.read_string()?;
+                    Token::String(string)
                 }
                 '0'..='9' => {
                     let num = self.read_number();
@@ -740,6 +746,36 @@ mod tests {
         let tokens = lexer.tokenize().unwrap();
 
         assert_eq!(tokens[0], Token::String("hello world".to_string()));
+    }
+
+    #[test]
+    fn test_single_quotes_not_interpolated() {
+        let mut lexer = Lexer::new("'Hello {name}'");
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens[0], Token::String("Hello {name}".to_string()));
+    }
+
+    #[test]
+    fn test_json_braces_not_format_string() {
+        let mut lexer = Lexer::new("\"{\"");
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens[0], Token::String("{".to_string()));
+
+        let mut lexer = Lexer::new("\"{}\"");
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens[0], Token::String("{}".to_string()));
+    }
+
+    #[test]
+    fn test_double_quoted_interpolation() {
+        let mut lexer = Lexer::new("\"Hello {name}\"");
+        let tokens = lexer.tokenize().unwrap();
+        match &tokens[0] {
+            Token::FormatString(parts) => {
+                assert!(parts.iter().any(|p| matches!(p, FormatStringPart::Expression(e) if e == "name")));
+            }
+            other => panic!("expected FormatString, got {:?}", other),
+        }
     }
 
     #[test]

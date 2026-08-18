@@ -106,6 +106,7 @@ impl JavaScriptCodeGenerator {
                     BinaryOperator::GtEq => ">=",
                     BinaryOperator::And => "&&",
                     BinaryOperator::Or => "||",
+                    BinaryOperator::In => "in",
                 };
                 self.write(&format!(" {} ", op_str));
                 self.generate_expression(right);

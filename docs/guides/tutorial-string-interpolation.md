@@ -1,10 +1,10 @@
 # String Interpolation in VelinScript
 
-VelinScript unterstützt String Interpolation mit Format-Strings, ähnlich wie Python oder Rust.
+VelinScript unterstützt String-Interpolation in **doppelten** Anführungszeichen. Der stabile Rust/Axum-Pfad erzeugt `format!` (nicht String-`+`).
 
 ## Syntax
 
-String Interpolation verwendet geschweifte Klammern `{}` innerhalb von String-Literalen:
+Interpolation verwendet geschweifte Klammern `{}` in Strings mit doppelten Anführungszeichen. **Einfache** Anführungszeichen interpolieren nicht. JSON-artige Literale wie `"{"` oder `"{}"` sind normale Strings, keine Format-Strings.
 
 ```velin
 let name = "John";
@@ -134,7 +134,7 @@ let sql = "
 
 ## Compilation
 
-Format-Strings werden zu Rust `format!` Macros kompiliert:
+Im IR-Pfad nach Rust werden Format-Strings zu `format!` kompiliert (3.5.1). Andere Targets erzeugen sprachübliche Konkatenation (`str()`, `String.valueOf`, `fmt.Sprintf`, …) — ohne gleichwertigen Runtime-Nachweis außer Rust/Axum.
 
 ```rust
 // VelinScript

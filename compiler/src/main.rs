@@ -4,6 +4,7 @@ use velin_compiler::codegen::{OpenAPIGenerator, BoilerplateGenerator, ClientGene
 use velin_compiler::formatter::{Formatter, FormatConfig};
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 use anyhow::{Context, Result as AnyhowResult};
 use clap::Parser as ClapParser;
 use std::str::FromStr;
@@ -32,6 +33,7 @@ fn main() -> AnyhowResult<()> {
 
     match cli.command {
         Commands::Compile { input, output, no_type_check, show_code, autofix, ai_semantic, ai_bug_detection, ai_codegen, ai_optimization, ai_provider, ai_api_key, target, framework, codegen } => {
+            let input = resolve_source_file(input)?;
             let mut config = CompilerConfig::default();
             config.enable_autofix = autofix;
             config.enable_type_check = !no_type_check;
@@ -158,6 +160,7 @@ fn main() -> AnyhowResult<()> {
             Ok(())
         }
         Commands::Check { input, autofix } => {
+            let input = resolve_source_file(input)?;
             let mut config = CompilerConfig::default();
             config.enable_autofix = autofix;
             config.enable_type_check = true;
@@ -205,10 +208,10 @@ fn main() -> AnyhowResult<()> {
             Ok(())
         }
         Commands::Format { input, in_place } => {
-            format_command(input, in_place)
+            format_command(resolve_source_file(input)?, in_place)
         }
         Commands::Info { input } => {
-            info_command(input)
+            info_command(resolve_source_file(input)?)
         }
         Commands::Init { name, current_dir } => {
             init_command(name, current_dir)
@@ -218,14 +221,13 @@ fn main() -> AnyhowResult<()> {
             init_command(name, current_dir)
         }
         Commands::Serve { input, port, host, watch } => {
-            serve_command(input.clone(), port, host.clone(), watch)
+            serve_command(input, port, host, watch)
         }
-        Commands::Run { input, port, host, watch } => {
-            // Alias für Serve
-            serve_command(input.clone(), port, host.clone(), watch)
+        Commands::Run { file, input, port, host, watch } => {
+            run_command(file.or(input), port, host, watch)
         }
         Commands::OpenAPI { input, output } => {
-            openapi_command(input, output)
+            openapi_command(resolve_source_file(input)?, output)
         }
         Commands::Generate { gen_type, name, fields, path, openapi, language, output } => {
             generate_command(gen_type, name, fields, path, openapi, language, output)
@@ -448,55 +450,46 @@ fn openapi_command(input: PathBuf, output: Option<PathBuf>) -> AnyhowResult<()> 
     Ok(())
 }
 
-fn serve_command(input: Option<PathBuf>, port: u16, host: String, watch: bool) -> AnyhowResult<()> {
-    let input_file = input.unwrap_or_else(|| {
-        let current_dir = std::env::current_dir().unwrap();
-        current_dir.join("main.velin")
-    });
-
-    if !input_file.exists() {
-        return Err(anyhow::anyhow!(
-            "❌ Datei nicht gefunden: {}\n\n💡 Tipp: Erstelle zuerst ein Projekt mit 'velin new my-project'\n📖 Hilfe: Siehe docs/guides/getting-started.md",
-            input_file.display()
-        ));
+fn resolve_source_file(input: PathBuf) -> AnyhowResult<PathBuf> {
+    if input.exists() {
+        return Ok(input);
     }
-
-    println!("🚀 Starte Development-Server...\n");
-    println!("📄 Datei: {}", input_file.display());
-    println!("🌐 Server: http://{}:{}", host, port);
-
-    if watch {
-        println!("👀 Watch-Mode: Aktiviert (automatisches Neuladen bei Änderungen)");
+    let alt = match input.extension().and_then(|e| e.to_str()) {
+        Some(ext) if ext.eq_ignore_ascii_case("velin") => Some(input.with_extension("vel")),
+        Some(ext) if ext.eq_ignore_ascii_case("vel") => Some(input.with_extension("velin")),
+        _ => {
+            let velin = if input.extension().is_some() {
+                input.with_extension("velin")
+            } else {
+                let mut p = input.clone();
+                p.set_extension("velin");
+                p
+            };
+            if velin.exists() {
+                return Ok(velin);
+            }
+            Some(input.with_extension("vel"))
+        }
+    };
+    if let Some(alt) = alt {
+        if alt.exists() {
+            return Ok(alt);
+        }
     }
-
-    println!("\n⚠️  Hinweis: Der Server-Befehl kompiliert den Code zu Rust.");
-    println!("   Für die vollständige Ausführung benötigst du:");
-    println!(
-        "   1. Kompilierung: velin compile -i {}",
-        input_file.display()
-    );
-    println!("   2. Rust-Build: cargo build --release");
-    println!("   3. Ausführung: cargo run --release");
-    println!("\n💡 Tipp: Nutze 'velin-hot-reload --server' für vollständigen Hot-Reload-Support");
-    println!("📖 Hilfe: Siehe docs/tools/hot-reload.md für Details");
-
-    Ok(())
+    Err(anyhow::anyhow!(
+        "Datei nicht gefunden: {}\nTipp: velin new my-project  (offizielle Endung: .velin; .vel wird als Lese-Alias akzeptiert)",
+        input.display()
+    ))
 }
 
-fn serve_command(input: Option<PathBuf>, port: u16, host: String, watch: bool) -> AnyhowResult<()> {
-    let input_file = input.unwrap_or_else(|| {
-        let current_dir = std::env::current_dir().unwrap();
-        current_dir.join("main.velin")
-    });
-    
-    if !input_file.exists() {
-        return Err(anyhow::anyhow!(
-            "Datei nicht gefunden: {}\nTipp: velin new my-project",
-            input_file.display()
-        ));
-    }
+fn default_source_file() -> PathBuf {
+    std::env::current_dir()
+        .map(|d| d.join("main.velin"))
+        .unwrap_or_else(|_| PathBuf::from("main.velin"))
+}
 
-    let code = fs::read_to_string(&input_file)
+fn write_axum_scaffold(input_file: &PathBuf, host: &str, port: u16) -> AnyhowResult<PathBuf> {
+    let code = fs::read_to_string(input_file)
         .with_context(|| format!("Failed to read {}", input_file.display()))?;
     let program = Parser::parse(&code)
         .map_err(|e| anyhow::anyhow!("Parse error: {}", e.message))?;
@@ -515,15 +508,45 @@ fn serve_command(input: Option<PathBuf>, port: u16, host: String, watch: bool) -
     )?;
     fs::write(
         out_dir.join("src").join("main.rs"),
-        velin_compiler::codegen::axum_main_wrapper_with_port(&body, port),
+        velin_compiler::codegen::axum_main_wrapper_with_bind(&body, host, port),
     )?;
+    Ok(out_dir)
+}
 
+fn serve_command(input: Option<PathBuf>, port: u16, host: String, watch: bool) -> AnyhowResult<()> {
+    let input_file = resolve_source_file(input.unwrap_or_else(default_source_file))?;
+    let out_dir = write_axum_scaffold(&input_file, &host, port)?;
     println!("Scaffold geschrieben nach {}", out_dir.display());
     println!("Ziel: http://{}:{}", host, port);
     if watch {
-        println!("Watch-Mode: bitte manuell neu kompilieren (kein eingebauter Watcher).");
+        println!("--watch ist nicht implementiert (kein automatisches Neuladen).");
     }
-    println!("Start:\n  cd {}\n  cargo run", out_dir.display());
+    println!("Startet keinen Server. Danach:\n  cd {}\n  cargo run", out_dir.display());
+    Ok(())
+}
+
+fn run_command(input: Option<PathBuf>, port: u16, host: String, watch: bool) -> AnyhowResult<()> {
+    let input_file = resolve_source_file(input.unwrap_or_else(default_source_file))?;
+    let out_dir = write_axum_scaffold(&input_file, &host, port)?;
+    if watch {
+        eprintln!("--watch ist nicht implementiert; starte den Server einmalig.");
+    }
+    println!("Starte http://{}:{}", host, port);
+    let status = Command::new("cargo")
+        .args(["run", "--manifest-path"])
+        .arg(out_dir.join("Cargo.toml"))
+        .env("PORT", port.to_string())
+        .env("VELIN_HOST", &host)
+        .env_remove("CARGO_TARGET_DIR")
+        .env_remove("CARGO_BUILD_TARGET_DIR")
+        .status()
+        .context("cargo run fehlgeschlagen")?;
+    if !status.success() {
+        return Err(anyhow::anyhow!(
+            "cargo run beendete mit Status {:?}",
+            status.code()
+        ));
+    }
     Ok(())
 }
 
@@ -567,16 +590,10 @@ Velisch API-Projekt.
 
 ```bash
 velin check -i main.velin
-velin compile -i main.velin -o src/main.rs
-cargo run
+velin run main.velin
 ```
 
-Oder mit Scaffold:
-
-```bash
-velin serve -i main.velin
-cd .velin/serve-scaffold && cargo run
-```
+`velin serve -i main.velin` schreibt nur ein Axum-Scaffold nach `.velin/serve-scaffold/` (kein Server-Start).
 
 Endpoint: `GET /api/hello`
 "#,
@@ -602,7 +619,7 @@ Endpoint: `GET /api/hello`
         .context("Codegen failed during init")?;
     fs::write(
         project_dir.join("src").join("main.rs"),
-        velin_compiler::codegen::axum_main_wrapper(&body),
+        velin_compiler::codegen::axum_main_wrapper_with_port(&body, 8080),
     )?;
 
     println!("Projekt erstellt: {}", project_dir.display());
@@ -612,7 +629,8 @@ Endpoint: `GET /api/hello`
     println!("\nNaechste Schritte:");
     println!("  cd {}", project_dir.display());
     println!("  cargo run");
-    println!("  # dann: GET http://127.0.0.1:3000/api/hello");
+    println!("  # oder: velin run main.velin");
+    println!("  # dann: GET http://127.0.0.1:8080/api/hello");
     
     Ok(())
 }
@@ -1030,49 +1048,27 @@ fn config_show_command(file: Option<PathBuf>) -> AnyhowResult<()> {
 }
 
 fn cache_stats_command() -> AnyhowResult<()> {
-    println!("📊 Cache-Statistiken\n");
-    println!("⚠️  Cache-Management erfordert laufende Runtime");
-    println!("   Verwende Health-Endpoint für Runtime-Statistiken");
-    println!("\n   Beispiel: velin health --url http://localhost:8080/metrics");
-    Ok(())
+    Err(anyhow::anyhow!(
+        "velin cache ist nicht implementiert (kein Cache-Prozess). Kein Erfolg vorgetäuscht."
+    ))
 }
 
-fn cache_clear_command(pattern: Option<String>) -> AnyhowResult<()> {
-    println!("🗑️  Leere Cache\n");
-    println!("⚠️  Cache-Management erfordert laufende Runtime");
-    println!("   Verwende Health-Endpoint für Cache-Operationen");
-    println!("\n   Beispiel: velin health --url http://localhost:8080/metrics");
-
-    if let Some(p) = pattern {
-        println!("   Pattern: {}", p);
-    }
-    Ok(())
+fn cache_clear_command(_pattern: Option<String>) -> AnyhowResult<()> {
+    Err(anyhow::anyhow!(
+        "velin cache clear ist nicht implementiert. Kein Erfolg vorgetäuscht."
+    ))
 }
 
 fn cache_warm_command() -> AnyhowResult<()> {
-    println!("🔥 Wärme Cache\n");
-    println!("⚠️  Cache-Management erfordert laufende Runtime");
-    println!("   Verwende Health-Endpoint für Cache-Operationen");
-    println!("\n   Beispiel: velin health --url http://localhost:8080/metrics");
-    Ok(())
+    Err(anyhow::anyhow!(
+        "velin cache warm ist nicht implementiert. Kein Erfolg vorgetäuscht."
+    ))
 }
 
-fn health_command(url: Option<String>, verbose: bool) -> AnyhowResult<()> {
-    println!("🏥 Health Check\n");
-
-    let endpoint = url.unwrap_or_else(|| "http://localhost:8080/health".to_string());
-
-    println!("📡 Prüfe Endpoint: {}", endpoint);
-    println!("⚠️  HTTP-Request erfordert zusätzliche Dependencies");
-    println!("   In Production: Verwende curl oder ähnliches Tool");
-
-    if verbose {
-        println!(
-            "\n   Detaillierte Metriken: {}/metrics",
-            endpoint.trim_end_matches("/health")
-        );
-    }
-    Ok(())
+fn health_command(_url: Option<String>, _verbose: bool) -> AnyhowResult<()> {
+    Err(anyhow::anyhow!(
+        "velin health ist nicht implementiert (kein HTTP-Client in dieser CLI). Nutze curl gegen den laufenden Server."
+    ))
 }
 
 fn backup_create_command(strategy: Option<String>, destination: Option<String>, compression: Option<String>) -> AnyhowResult<()> {
@@ -1177,63 +1173,39 @@ fn backup_verify_command(backup_id: String, directory: Option<String>) -> Anyhow
 }
 
 fn rollback_begin_command() -> AnyhowResult<()> {
-    println!("🔄 Transaktion beginnen\n");
-    println!("  ✓ Transaktion gestartet...");
-    Ok(())
+    Err(anyhow::anyhow!("velin rollback begin ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
-fn rollback_commit_command(transaction_id: String) -> AnyhowResult<()> {
-    println!("✅ Transaktion committen\n");
-    println!("  Transaktions-ID: {}", transaction_id);
-    println!("  ✓ Transaktion committed...");
-    Ok(())
+fn rollback_commit_command(_transaction_id: String) -> AnyhowResult<()> {
+    Err(anyhow::anyhow!("velin rollback commit ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
-fn rollback_rollback_command(transaction_id: String) -> AnyhowResult<()> {
-    println!("⏪ Transaktion rollback\n");
-    println!("  Transaktions-ID: {}", transaction_id);
-    println!("  ✓ Transaktion zurückgerollt...");
-    Ok(())
+fn rollback_rollback_command(_transaction_id: String) -> AnyhowResult<()> {
+    Err(anyhow::anyhow!("velin rollback rollback ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
-fn rollback_create_version_command(description: String) -> AnyhowResult<()> {
-    println!("📌 Version erstellen\n");
-    println!("  Beschreibung: {}", description);
-    println!("  ✓ Version erstellt...");
-    Ok(())
+fn rollback_create_version_command(_description: String) -> AnyhowResult<()> {
+    Err(anyhow::anyhow!("velin rollback create-version ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
-fn rollback_to_version_command(version_id: String) -> AnyhowResult<()> {
-    println!("⏮️  Rollback zu Version\n");
-    println!("  Version-ID: {}", version_id);
-    println!("  ✓ Rollback zu Version durchgeführt...");
-    Ok(())
+fn rollback_to_version_command(_version_id: String) -> AnyhowResult<()> {
+    Err(anyhow::anyhow!("velin rollback to-version ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
 fn rollback_list_versions_command() -> AnyhowResult<()> {
-    println!("📋 Versionen auflisten\n");
-    println!("  ✓ Versionen werden aufgelistet...");
-    Ok(())
+    Err(anyhow::anyhow!("velin rollback list-versions ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
-fn rollback_create_snapshot_command(description: String) -> AnyhowResult<()> {
-    println!("📸 Snapshot erstellen\n");
-    println!("  Beschreibung: {}", description);
-    println!("  ✓ Snapshot erstellt...");
-    Ok(())
+fn rollback_create_snapshot_command(_description: String) -> AnyhowResult<()> {
+    Err(anyhow::anyhow!("velin rollback create-snapshot ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
-fn rollback_to_snapshot_command(snapshot_id: String) -> AnyhowResult<()> {
-    println!("⏮️  Rollback zu Snapshot\n");
-    println!("  Snapshot-ID: {}", snapshot_id);
-    println!("  ✓ Rollback zu Snapshot durchgeführt...");
-    Ok(())
+fn rollback_to_snapshot_command(_snapshot_id: String) -> AnyhowResult<()> {
+    Err(anyhow::anyhow!("velin rollback to-snapshot ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
 fn rollback_list_snapshots_command() -> AnyhowResult<()> {
-    println!("📋 Snapshots auflisten\n");
-    println!("  ✓ Snapshots werden aufgelistet...");
-    Ok(())
+    Err(anyhow::anyhow!("velin rollback list-snapshots ist nicht implementiert. Kein Erfolg vorgetäuscht."))
 }
 
 fn serialize_json_to_yaml_command(input: PathBuf, output: Option<PathBuf>) -> AnyhowResult<()> {

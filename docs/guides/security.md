@@ -34,7 +34,7 @@ VelinScript integriert Authentifizierung direkt in das Web-Framework, um sicherz
 
 `@Auth` schützt Routen gezielt: Nur so markierte Endpunkte erhalten die Auth-Middleware. Ungeschützte Routen werden nicht versehentlich mitgeschützt.
 
-**3.5.0:** Der stabile Rust/Axum-Pfad prüft das Vorhandensein des `Authorization`-Headers (ohne Header: `401 Unauthorized`). JWT-basierte Tokenvalidierung ist nicht Teil des stabilen 3.5.0-Umfangs.
+**3.5.1:** Der stabile Rust/Axum-Pfad prüft das Vorhandensein des `Authorization`-Headers (ohne Header: `401 Unauthorized`). JWT-basierte Tokenvalidierung ist nicht Teil des stabilen Umfangs.
 
 ```velin
 @GET("/api/profile")
@@ -48,7 +48,7 @@ Ohne `Authorization`-Header: `401 Unauthorized`. Mit Header (z. B. `Bearer …`)
 
 ### `@Role` (markiert geschützt)
 
-`@Role("admin")` markiert eine Route ebenfalls als auth-pflichtig (Header-Präsenz). Anspruchsprüfung auf Rollen-Claims im Token liegt außerhalb des stabilen 3.5.0-Umfangs.
+`@Role("admin")` schützt die Route (`Authorization` erforderlich, sonst 401). Der Header `X-Role` muss zu einer der angegebenen Rollen passen, sonst **403**. Mehrere Routen mit unterschiedlichen Rollen werden nicht zu einer globalen Vereinigung zusammengelegt. JWT-Claims liegen außerhalb des Stable-Pfads.
 
 ```velin
 @GET("/api/admin")

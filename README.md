@@ -1,4 +1,4 @@
-# 🚀 VelinScript 3.5.0
+# 🚀 VelinScript 3.5.1
 
 <div align="center">
 
@@ -10,7 +10,7 @@
  ╚████╔╝ ███████╗███████╗██║██║ ╚████║    ███████║╚██████╗██║  ██║██║██║  ██║   ██║   
   ╚═══╝  ╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝    ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝   ╚═╝   
                                                                                         
-                    V E L I N S C R I P T  3.5.0
+                    V E L I N S C R I P T  3.5.1
                     Velisch - Eine moderne Programmiersprache für KI-APIs
 ```
 
@@ -18,17 +18,17 @@
 
 Schreibe kurze API-Beschreibungen mit Decorators wie `@GET` und `@Auth`. Der Compiler (`velin`) erzeugt daraus Rust-Code mit Axum-Router und Handlern.
 
-### Umfang von 3.5.0
+### Umfang von 3.5.1
 
-VelinScript 3.5.0 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum.
+VelinScript 3.5.1 konzentriert sich auf den stabilen API-Entwicklungsweg mit Rust/Axum. Starten: `velin run main.velin` (Port 8080).
 
 VelinScript 3.5 unterstützt mehrere Zielsprachen. Der stabile Laufzeitpfad in dieser Version ist Rust/Axum. Weitere Targets befinden sich im Entwicklungs- bzw. Experimentalstatus.
 
-Weitere Funktionen wie zusätzliche Target-Runtimes, erweiterte Authentifizierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses 3.5.0-Stable-Umfangs.
+Weitere Funktionen wie zusätzliche Target-Runtimes, erweiterte Authentifizierung, AI-Sandbox-Ausführung und weitere Runtime-Module befinden sich außerhalb dieses 3.5.1-Stable-Umfangs.
 
 Quick Start: [QUICK_START.md](QUICK_START.md) · Guides: [docs/guides/](docs/guides/) · Beispiele: [examples/](examples/)
 
-[![Version](https://img.shields.io/badge/version-3.5.0-blue?style=for-the-badge&logo=rust)](https://github.com/SkyliteDesign/velinscript)
+[![Version](https://img.shields.io/badge/version-3.5.1-blue?style=for-the-badge&logo=rust)](https://github.com/SkyliteDesign/velinscript)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
 [![Build](https://github.com/SkyliteDesign/velinscript/workflows/CI/badge.svg?style=for-the-badge)](https://github.com/SkyliteDesign/velinscript/actions)
@@ -65,23 +65,25 @@ Quick Start: [QUICK_START.md](QUICK_START.md) · Guides: [docs/guides/](docs/gui
 
 ---
 
-## 🎯 VelinScript 3.5.0 - Die Zukunft der KI-API-Entwicklung
+## 🎯 VelinScript 3.5.1 - API-Entwicklung mit Rust/Axum
 
 VelinScript (Velisch) ist eine moderne, speziell für KI-API-Entwicklung optimierte Programmiersprache. Sie kombiniert die Einfachheit moderner Sprachen mit der Performance von Rust und bietet eine umfassende Toolchain für professionelle API-Entwicklung.
 
-### 🆕 Neu in Version 3.5.0
+### 🆕 Neu in Version 3.5.1
 
-- ✅ **`velin`-CLI** — Compiler über den Befehl `velin` (init, check, compile, …)
-- ✅ **HTTP → Rust/Axum** — `@GET`/`@POST` und gezielt `@Auth` erzeugen Router und Handler
-- ✅ **Multi-Target Emit** — Ausgabe nach weiteren Sprachen (Experimental); stabiler Laufzeitpfad: Rust/Axum
-- ✅ **Security-Hinweise** — Erkennung hartcodierter Secrets vor der Code-Ausgabe
-- ✅ **SystemGenerator** — stabile REST/Axum-Grundgerüste; Auth/DB/AI Experimental
+- ✅ **`velin run`** — kompiliert nach Axum und startet den Server (Port **8080**)
+- ✅ **HTTP-Matrix** — GET/POST/PUT/PATCH/DELETE mit Query, Path und Body; fehlender Pflicht-Query → **400**
+- ✅ **`@Role` + `X-Role`** — 403 bei falscher/fehlender Rolle; `@Auth` weiter Header-Präsenz (**401**)
+- ✅ **Interpolation** — IR-Rust `format!`; Simple Quotes ohne Interpolation
+- ✅ **`.vel`-Lese-Alias** — offizielle Endung bleibt `.velin`
+
+3.5.0 brachte die `velin`-CLI, HTTP → Rust/Axum und gezielt `@Auth`. Details: [CHANGELOG.md](CHANGELOG.md).
 
 ### ✨ Kernpunkte
 
 <div align="center">
 
-| Feature | Beschreibung | Status 3.5.0 |
+| Feature | Beschreibung | Status 3.5.1 |
 |---------|-------------|--------------|
 | ⚡ **Rust/Axum APIs** | Stabiler Laufzeitpfad für HTTP/`@Auth` | Stable |
 | 🌐 **Weitere Targets** | Codegenerierung, Entwicklungs-/Experimentalstatus | Experimental |
@@ -95,7 +97,7 @@ VelinScript (Velisch) ist eine moderne, speziell für KI-API-Entwicklung optimie
 
 ## 🤖 KI & Machine Learning Features
 
-VelinScript 3.5.0 bietet native Unterstützung für moderne KI- und ML-Workflows:
+VelinScript 3.5.1 bietet im Stable-Pfad Rust/Axum-HTTP. Native KI-/ML-Workflows liegen außerhalb dieses Umfangs:
 
 ### LLM Integration
 
@@ -374,15 +376,16 @@ let result = "Sum: {x + y}";
 **Vollständige CLI-Referenz verfügbar:** [CLI-Referenz](docs/guides/cli-reference.md)
 
 **Hauptbefehle:**
+- `velin run` - Kompilieren nach Axum und Server starten (Default-Port 8080)
 - `velin compile` - Kompilierung mit Multi-Target Support
 - `velin check` - Code-Prüfung (Parsing & Type Checking)
 - `velin format` - Code-Formatierung
-- `velin serve` - Schreibt Axum-Scaffold unter `.velin/serve-scaffold`
+- `velin serve` - Schreibt nur ein Axum-Scaffold unter `.velin/serve-scaffold` (kein Server)
 - `velin generate` - Code-Generierung (API, CRUD, Client, system)
 - `velin test` - Parse-Check von `.velin`-Testdateien
 - `velin config` - Config-Verwaltung
 - `velin backup` - Sichert Dateien unter `.velin/backup`
-- `velin rollback` - Rollback-Management
+- `velin cache` / `health` / `rollback` - nicht implementiert (kein Fake-Erfolg)
 
 ---
 
@@ -426,7 +429,7 @@ let result = "Sum: {x + y}";
 
 ### Modulare Architektur
 
-VelinScript 3.5.0 folgt einer klaren, modularen Architektur für maximale Wartbarkeit und Skalierbarkeit:
+VelinScript 3.5.1 folgt einer klaren, modularen Architektur für maximale Wartbarkeit und Skalierbarkeit:
 
 ```
 velinscript/
@@ -727,7 +730,7 @@ $ velin compile -i main.velin --target python
 // Einfache API-Funktion
 @GET("/api/hello")
 fn hello(): string {
-    return "Hello, VelinScript 3.5.0! 🚀";
+    return "Hello, VelinScript 3.5.1!";
 }
 
 // Mit Parametern, Validation und Rate Limiting
@@ -807,7 +810,7 @@ match (result) {
 
 ### 🎯 [Ultimate Showcase](examples/05-ultimate-showcase/) - Alle Features
 
-Das ultimative Beispiel, das alle Features von VelinScript 3.5.0 demonstriert:
+Das ultimative Beispiel, das Features aus der VelinScript-3.5-Linie demonstriert:
 
 - **📚 VelinAutoDoc**: Automatische Dokumentationsgenerierung
 - **⚡ VelinPipeline**: Automatische Parallelisierung
@@ -832,18 +835,20 @@ Production-ready Beispiel für ein intelligentes Recommendation System:
 
 ## ⚠️ Reifegrad & Status
 
-**Aktueller Status: 3.5.0 (Rust/Axum-HTTP-Pfad getestet)**
+**Aktueller Status: 3.5.1 (Rust/Axum-HTTP-Pfad getestet)**
 
-VelinScript 3.5.0: Der Compiler-Kern und der Default-Pfad IR → Rust/Axum (Hello/Auth) sind nachweisbar nutzbar. Weitere Targets und viele Stdlib-Module sind experimentell oder partiell — siehe Standard-Library-Doku.
+VelinScript 3.5.1: Der Compiler-Kern und der Default-Pfad IR → Rust/Axum (Hello, Query, Auth/Role, `velin run`) sind nachweisbar nutzbar. Weitere Targets und viele Stdlib-Module sind experimentell oder partiell — siehe Standard-Library-Doku.
 
 ### Was zuverlässig getestet ist
 
 - Parser für grundlegende Syntax (Funktionen, Structs, Decorators)
 - Type Checker für typische Hello/API-Fälle
-- Rust/Axum HTTP + `@Auth` Header-Prüfung (401 ohne Header)
-- CLI: `compile`, `check`, `format`, `init`/`new`, `generate system` (Scaffold)
+- Rust/Axum HTTP GET/POST/PUT/PATCH/DELETE inkl. Query/Path/Body; fehlender Pflicht-Query → 400
+- `@Auth` Header-Präsenz (401 ohne Header); `@Role` + `X-Role` (403 bei falscher/fehlender Rolle)
+- String-Interpolation (`format!` in Rust); Simple Quotes ohne Interpolation
+- CLI: `run` (Prozess + Port + HTTP), `compile`, `check`, `format`, `init`/`new`, `generate system` (Scaffold)
 - Multi-Target: Code-Emit (kein gleichwertiger Runtime-Pfad außer Rust)
-- VS Code compile-args; LSP Parse- und Type/Security-Diagnostics
+- VS Code: Sprache `.velin`; LSP Parse- und Type/Security-Diagnostics
 
 **Beta-Status empfohlen.** Stdlib nicht pauschal als „Production-Grade“ behandeln.
 
@@ -906,7 +911,7 @@ Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe [LICENSE](LICENSE) f�
 
 <div align="center">
 
-**VelinScript 3.5.0 wird von der Community entwickelt und verbessert. Vielen Dank an alle Contributors!**
+**VelinScript 3.5.1 wird von der Community entwickelt und verbessert. Vielen Dank an alle Contributors!**
 
 [![Contributors](https://img.shields.io/github/contributors/SkyliteDesign/velinscript?style=for-the-badge&logo=github)](https://github.com/SkyliteDesign/velinscript/graphs/contributors)
 

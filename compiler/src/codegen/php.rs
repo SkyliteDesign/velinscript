@@ -590,6 +590,7 @@ impl PhpCodeGenerator {
             BinaryOperator::GtEq => ">=".to_string(),
             BinaryOperator::And => "&&".to_string(),
             BinaryOperator::Or => "||".to_string(),
+            BinaryOperator::In => "in".to_string(),
         }
     }
 

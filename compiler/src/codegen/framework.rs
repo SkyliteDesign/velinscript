@@ -238,21 +238,17 @@ impl FrameworkSelector {
 
         // Axum Extractors
         let mut extractors = Vec::new();
+        let mut path_parts: Vec<String> = Vec::new();
+        let mut has_query = false;
         for param in params {
-            match param.param_type {
+            match &param.param_type {
                 Type::String | Type::Number | Type::Boolean => {
-                    // Path parameter
-                    extractors.push(format!(
-                        "Path({}): Path<{}>",
-                        param.name,
-                        Self::velin_to_rust_type(&param.param_type)
-                    ));
+                    has_query = true;
                 }
                 Type::Named(ref name) if name == "HttpRequest" => {
                     extractors.push("request: HttpRequest".to_string());
                 }
                 _ => {
-                    // JSON Body
                     extractors.push(format!(
                         "Json(payload): Json<{}>",
                         Self::velin_to_rust_type(&param.param_type)
@@ -260,6 +256,12 @@ impl FrameworkSelector {
                 }
             }
         }
+        if has_query {
+            path_parts.push(
+                "Query(q): Query<std::collections::HashMap<String, String>>".to_string(),
+            );
+        }
+        extractors.splice(0..0, path_parts);
 
         sig.push_str(&extractors.join(", "));
         sig.push_str(") -> impl IntoResponse");
@@ -345,8 +347,12 @@ impl FrameworkSelector {
     pub fn extract_path_params(path: &str) -> Vec<String> {
         let mut params = Vec::new();
         for segment in path.split('/') {
-            if segment.starts_with(':') {
-                params.push(segment[1..].to_string());
+            if let Some(name) = segment.strip_prefix(':') {
+                if !name.is_empty() {
+                    params.push(name.to_string());
+                }
+            } else if segment.starts_with('{') && segment.ends_with('}') && segment.len() > 2 {
+                params.push(segment[1..segment.len() - 1].to_string());
             }
         }
         params
@@ -407,8 +413,9 @@ let cors = Cors::default()
 
         let mut extractors = Vec::new();
 
-        // Path parameters
-        for path_param in &path_params {
+        // Path parameters — one Path extractor (tuple if several)
+        if path_params.len() == 1 {
+            let path_param = &path_params[0];
             if let Some(param) = params.iter().find(|p| p.name == *path_param) {
                 extractors.push(format!(
                     "Path({}): Path<{}>",
@@ -416,9 +423,26 @@ let cors = Cors::default()
                     Self::velin_to_rust_type(&param.param_type)
                 ));
             }
+        } else if path_params.len() > 1 {
+            let mut names = Vec::new();
+            let mut tys = Vec::new();
+            for path_param in &path_params {
+                if let Some(param) = params.iter().find(|p| p.name == *path_param) {
+                    names.push(path_param.clone());
+                    tys.push(Self::velin_to_rust_type(&param.param_type));
+                }
+            }
+            if !names.is_empty() {
+                extractors.push(format!(
+                    "Path(({})): Path<({})>",
+                    names.join(", "),
+                    tys.join(", ")
+                ));
+            }
         }
 
-        // Query parameters
+        // Query parameters (scalars via HashMap — not Query<String>)
+        let mut has_scalar_query = false;
         for param in params {
             if !path_params.contains(&param.name)
                 && matches!(
@@ -426,12 +450,13 @@ let cors = Cors::default()
                     Type::String | Type::Number | Type::Boolean
                 )
             {
-                extractors.push(format!(
-                    "Query({}): Query<{}>",
-                    param.name,
-                    Self::velin_to_rust_type(&param.param_type)
-                ));
+                has_scalar_query = true;
             }
+        }
+        if has_scalar_query {
+            extractors.push(
+                "Query(q): Query<std::collections::HashMap<String, String>>".to_string(),
+            );
         }
 
         // Body parameters

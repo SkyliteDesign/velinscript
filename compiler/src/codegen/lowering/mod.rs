@@ -42,10 +42,11 @@ pub fn route_from_function(func: &IRFunction) -> Option<HttpRoute> {
                 requires_auth = true;
             }
             "Role" => {
-                if let Some(role) = first_string_arg(&attr.args) {
-                    roles.push(role);
-                } else {
+                let found = all_string_args(&attr.args);
+                if found.is_empty() {
                     roles.push("user".to_string());
+                } else {
+                    roles.extend(found);
                 }
                 requires_auth = true;
             }
@@ -63,18 +64,23 @@ pub fn route_from_function(func: &IRFunction) -> Option<HttpRoute> {
 }
 
 fn first_string_arg(args: &[IRAttributeArg]) -> Option<String> {
+    all_string_args(args).into_iter().next()
+}
+
+fn all_string_args(args: &[IRAttributeArg]) -> Vec<String> {
+    let mut out = Vec::new();
     for arg in args {
         match arg {
-            IRAttributeArg::String(s) => return Some(s.clone()),
+            IRAttributeArg::String(s) => out.push(s.clone()),
             IRAttributeArg::Named { value, .. } => {
                 if let IRAttributeArg::String(s) = value.as_ref() {
-                    return Some(s.clone());
+                    out.push(s.clone());
                 }
             }
             _ => {}
         }
     }
-    None
+    out
 }
 
 /// Whether the module needs Axum HTTP scaffolding
@@ -86,7 +92,7 @@ pub fn needs_axum(module: &IRModule) -> bool {
 pub fn axum_imports() -> &'static str {
     "use axum::{\n\
      \x20   Router,\n\
-     \x20   extract::{Path, Json},\n\
+     \x20   extract::{Path, Json, Query},\n\
      \x20   routing::{get, post, put, delete, patch},\n\
      \x20   response::IntoResponse,\n\
      \x20   http::StatusCode,\n\
@@ -97,65 +103,57 @@ pub fn axum_imports() -> &'static str {
 }
 
 /// Emit `create_router()` for collected routes.
-/// Auth middleware applies only to routes with `@Auth` / `@Role` (merged with public routes).
+/// Auth/Role use per-route `MethodRouter::layer` so unmatched paths are 404, not 401.
 pub fn generate_axum_router(routes: &[HttpRoute]) -> String {
-    let public: Vec<&HttpRoute> = routes.iter().filter(|r| !r.requires_auth).collect();
-    let protected: Vec<&HttpRoute> = routes.iter().filter(|r| r.requires_auth).collect();
+    if routes.is_empty() {
+        return String::from("pub fn create_router() -> Router {\n    Router::new()\n}\n\n");
+    }
 
-    let mut code = String::from("pub fn create_router() -> Router {\n");
+    let mut groups: std::collections::BTreeMap<(String, bool, Vec<String>), Vec<&HttpRoute>> =
+        std::collections::BTreeMap::new();
+    for r in routes {
+        let mut roles = r.roles.clone();
+        roles.sort();
+        roles.dedup();
+        groups
+            .entry((normalize_path(&r.path), r.requires_auth, roles))
+            .or_default()
+            .push(r);
+    }
 
-    if protected.is_empty() {
-        code.push_str("    let mut router = Router::new()\n");
-        for route in &public {
-            append_axum_route(&mut code, route);
+    let mut code = String::from("pub fn create_router() -> Router {\n    Router::new()\n");
+    for ((path, requires_auth, roles), group) in &groups {
+        let mut method_router = String::new();
+        for (i, route) in group.iter().enumerate() {
+            let method_fn = match route.method.to_uppercase().as_str() {
+                "GET" => "get",
+                "POST" => "post",
+                "PUT" => "put",
+                "DELETE" => "delete",
+                "PATCH" => "patch",
+                _ => "get",
+            };
+            if i == 0 {
+                method_router = format!("{}({})", method_fn, route.handler);
+            } else {
+                method_router.push_str(&format!(".{}({})", method_fn, route.handler));
+            }
         }
-        code.push_str("        ;\n");
-        code.push_str("    router\n}\n\n");
-        return code;
-    }
-
-    if public.is_empty() {
-        code.push_str("    let mut router = Router::new()\n");
-        for route in &protected {
-            append_axum_route(&mut code, route);
+        if *requires_auth {
+            let mw = if roles.is_empty() {
+                "velin_auth_middleware".to_string()
+            } else {
+                role_mw_ident(roles)
+            };
+            method_router.push_str(&format!(".layer(middleware::from_fn({mw}))"));
         }
-        code.push_str("        ;\n");
-        code.push_str(
-            "    router = router.layer(middleware::from_fn(velin_auth_middleware));\n",
-        );
-        code.push_str("    router\n}\n\n");
-        return code;
+        code.push_str(&format!(
+            "        .route(\"{}\", {method_router})\n",
+            path.replace('{', ":").replace('}', "")
+        ));
     }
-
-    // Split: public routes stay open; protected nest gets auth layer
-    code.push_str("    let public = Router::new()\n");
-    for route in &public {
-        append_axum_route(&mut code, route);
-    }
-    code.push_str("        ;\n");
-    code.push_str("    let protected = Router::new()\n");
-    for route in &protected {
-        append_axum_route(&mut code, route);
-    }
-    code.push_str("        .layer(middleware::from_fn(velin_auth_middleware));\n");
-    code.push_str("    public.merge(protected)\n}\n\n");
+    code.push_str("}\n\n");
     code
-}
-
-fn append_axum_route(code: &mut String, route: &HttpRoute) {
-    let method_fn = match route.method.to_uppercase().as_str() {
-        "GET" => "get",
-        "POST" => "post",
-        "PUT" => "put",
-        "DELETE" => "delete",
-        "PATCH" => "patch",
-        _ => "get",
-    };
-    let path = normalize_path(&route.path);
-    code.push_str(&format!(
-        "        .route(\"{}\", {}({}))\n",
-        path, method_fn, route.handler
-    ));
 }
 
 /// Actix-Web imports for HTTP APIs
@@ -220,46 +218,62 @@ pub fn is_actix_framework(framework: &str) -> bool {
     )
 }
 
-/// Auth middleware from `@Auth` / `@Role` — requires `Authorization` header
+/// Auth middleware from `@Auth` / `@Role` — requires `Authorization` header.
+/// Role sets get their own middleware so missing/wrong `X-Role` is 403 per route.
 pub fn generate_auth_middleware(routes: &[HttpRoute]) -> String {
     if !routes.iter().any(|r| r.requires_auth) {
         return String::new();
     }
 
-    let roles: Vec<String> = routes
-        .iter()
-        .flat_map(|r| r.roles.clone())
-        .collect::<std::collections::BTreeSet<_>>()
-        .into_iter()
-        .collect();
-
-    let role_check = if roles.is_empty() {
-        String::new()
-    } else {
-        format!(
-            "\n    let roles: &[&str] = &[{}];\n    if let Some(role_hdr) = req.headers().get(\"X-Role\").and_then(|v| v.to_str().ok()) {{\n        if !roles.iter().any(|r| *r == role_hdr) {{\n            return (StatusCode::FORBIDDEN, \"Forbidden\").into_response();\n        }}\n    }}\n",
-            roles
-                .iter()
-                .map(|r| format!("\"{}\"", r))
-                .collect::<Vec<_>>()
-                .join(", ")
-        )
-    };
-
-    format!(
+    let mut out = String::from(
         "/// Requires `Authorization` header (from `@Auth` / `@Role`).\n\
          async fn velin_auth_middleware(\n\
          \x20   req: axum::extract::Request,\n\
          \x20   next: middleware::Next,\n\
-         ) -> axum::response::Response {{\n\
-         \x20   if req.headers().get(axum::http::header::AUTHORIZATION).is_none() {{\n\
+         ) -> axum::response::Response {\n\
+         \x20   if req.headers().get(axum::http::header::AUTHORIZATION).is_none() {\n\
          \x20       return (StatusCode::UNAUTHORIZED, \"Unauthorized\").into_response();\n\
-         \x20   }}\n\
-         {}\
+         \x20   }\n\
          \x20   next.run(req).await\n\
-         }}\n\n",
-        role_check
-    )
+         }\n\n",
+    );
+
+    let mut seen: std::collections::BTreeSet<Vec<String>> = std::collections::BTreeSet::new();
+    for r in routes.iter().filter(|r| r.requires_auth && !r.roles.is_empty()) {
+        let mut roles = r.roles.clone();
+        roles.sort();
+        roles.dedup();
+        if !seen.insert(roles.clone()) {
+            continue;
+        }
+        let ident = role_mw_ident(&roles);
+        let list = roles
+            .iter()
+            .map(|s| format!("\"{}\"", s))
+            .collect::<Vec<_>>()
+            .join(", ");
+        out.push_str(&format!(
+            "async fn {ident}(\n\
+             \x20   req: axum::extract::Request,\n\
+             \x20   next: middleware::Next,\n\
+             ) -> axum::response::Response {{\n\
+             \x20   if req.headers().get(axum::http::header::AUTHORIZATION).is_none() {{\n\
+             \x20       return (StatusCode::UNAUTHORIZED, \"Unauthorized\").into_response();\n\
+             \x20   }}\n\
+             \x20   let roles: &[&str] = &[{list}];\n\
+             \x20   match req.headers().get(\"X-Role\").and_then(|v| v.to_str().ok()) {{\n\
+             \x20       Some(role_hdr) if roles.iter().any(|r| *r == role_hdr) => {{}}\n\
+             \x20       _ => return (StatusCode::FORBIDDEN, \"Forbidden\").into_response(),\n\
+             \x20   }}\n\
+             \x20   next.run(req).await\n\
+             }}\n\n"
+        ));
+    }
+    out
+}
+
+fn role_mw_ident(roles: &[String]) -> String {
+    format!("velin_role_{}", roles.join("_").replace('-', "_"))
 }
 
 /// Minimal Cargo.toml for a generated Axum project
@@ -288,6 +302,12 @@ pub fn axum_main_wrapper(generated_body: &str) -> String {
 
 /// Same as [`axum_main_wrapper`], with explicit listen port (or `PORT` env at runtime).
 pub fn axum_main_wrapper_with_port(generated_body: &str, port: u16) -> String {
+    axum_main_wrapper_with_bind(generated_body, "0.0.0.0", port)
+}
+
+/// Bind host + port. `VELIN_HOST` / `PORT` override the compiled defaults at runtime.
+pub fn axum_main_wrapper_with_bind(generated_body: &str, host: &str, port: u16) -> String {
+    let host = host.replace('\\', "\\\\").replace('"', "\\\"");
     format!(
         "{}\n\
          #[tokio::main]\n\
@@ -296,13 +316,17 @@ pub fn axum_main_wrapper_with_port(generated_body: &str, port: u16) -> String {
          \x20       .ok()\n\
          \x20       .and_then(|s| s.parse().ok())\n\
          \x20       .unwrap_or({});\n\
-         \x20   let addr = format!(\"0.0.0.0:{{}}\", port);\n\
+         \x20   let host = std::env::var(\"VELIN_HOST\")\n\
+         \x20       .ok()\n\
+         \x20       .filter(|s| !s.is_empty())\n\
+         \x20       .unwrap_or_else(|| \"{}\".to_string());\n\
+         \x20   let addr = format!(\"{{}}:{{}}\", host, port);\n\
          \x20   let app = create_router();\n\
          \x20   let listener = tokio::net::TcpListener::bind(&addr).await.expect(\"bind\");\n\
          \x20   println!(\"listening on http://{{}}\" , addr);\n\
          \x20   axum::serve(listener, app).await.expect(\"serve\");\n\
          }}\n",
-        generated_body, port
+        generated_body, port, host
     )
 }
 
@@ -348,38 +372,168 @@ pub fn to_snake_case(name: &str) -> String {
     result
 }
 
+fn path_has_exact_segment(path: &str, name: &str) -> bool {
+    let needle = format!("{{{}}}", name);
+    if let Some(idx) = path.find(&needle) {
+        let after = idx + needle.len();
+        let ok_after = after >= path.len() || !path[after..].chars().next().map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+        return ok_after;
+    }
+    false
+}
+
+fn is_path_param(func_param_name: &str, path: &str) -> bool {
+    let snake = to_snake_case(func_param_name);
+    path_has_exact_segment(path, func_param_name) || path_has_exact_segment(path, &snake)
+}
+
+fn is_body_param(method: &str, ty: &IRType, is_path: bool) -> bool {
+    matches!(method, "POST" | "PUT" | "PATCH")
+        && matches!(
+            ty,
+            IRType::Struct(_) | IRType::List(_) | IRType::Map { .. } | IRType::Any
+        )
+        && !is_path
+}
+
+fn is_query_param(func_param_name: &str, ty: &IRType, route: &HttpRoute) -> bool {
+    let path = normalize_path(&route.path);
+    let method = route.method.to_uppercase();
+    if is_path_param(func_param_name, &path) {
+        return false;
+    }
+    if is_body_param(&method, ty, false) {
+        return false;
+    }
+    matches!(method.as_str(), "GET" | "DELETE" | "HEAD")
+        && matches!(ty, IRType::String | IRType::Int | IRType::Float | IRType::Bool | IRType::Optional(_))
+}
+
 /// Build Axum-style parameter list for a route handler
 pub fn axum_params(func: &IRFunction, route: &HttpRoute) -> String {
     let path = normalize_path(&route.path);
     let method = route.method.to_uppercase();
-    let mut parts = Vec::new();
+    let mut path_parts: Vec<String> = Vec::new();
+    let mut other: Vec<String> = Vec::new();
+    let mut has_query = false;
 
     for p in &func.params {
         let snake = to_snake_case(&p.name);
         let ty = ir_type_to_rust_simple(&p.ty);
-        let is_path = path.contains(&format!("{{{}}}", p.name))
-            || path.contains(&format!("{{{}}}", snake));
-        let is_body = matches!(method.as_str(), "POST" | "PUT" | "PATCH")
-            && matches!(
-                p.ty,
-                IRType::Struct(_) | IRType::List(_) | IRType::Map { .. } | IRType::Any
-            )
-            && !is_path;
+        let is_path = is_path_param(&p.name, &path);
+        let is_body = is_body_param(&method, &p.ty, is_path);
 
         if is_path {
-            parts.push(format!("Path({}): Path<{}>", snake, ty));
+            path_parts.push(format!("{}: {}", snake, ty));
         } else if is_body {
-            parts.push(format!("Json({}): Json<{}>", snake, ty));
-        } else if matches!(p.ty, IRType::String | IRType::Int | IRType::Float | IRType::Bool)
-            && path.contains('{')
+            other.push(format!("Json({}): Json<{}>", snake, ty));
+        } else if is_query_param(&p.name, &p.ty, route) {
+            has_query = true;
+        } else if matches!(method.as_str(), "GET" | "DELETE" | "HEAD")
+            && matches!(p.ty, IRType::Struct(_) | IRType::Map { .. })
+            && !is_path
         {
-            parts.push(format!("Path({}): Path<{}>", snake, ty));
+            other.push(format!("Query({}): Query<{}>", snake, ty));
+        } else if matches!(method.as_str(), "POST" | "PUT" | "PATCH")
+            && matches!(p.ty, IRType::String | IRType::Int | IRType::Float | IRType::Bool)
+        {
+            other.push(format!("Json({}): Json<{}>", snake, ty));
         } else {
-            parts.push(format!("{}: {}", snake, ty));
+            other.push(format!("{}: {}", snake, ty));
         }
     }
 
+    let mut parts = Vec::new();
+    if path_parts.len() == 1 {
+        let name_ty = &path_parts[0];
+        let name = name_ty.split(':').next().unwrap().trim();
+        let ty = name_ty.split(':').nth(1).unwrap().trim();
+        parts.push(format!("Path({}): Path<{}>", name, ty));
+    } else if path_parts.len() > 1 {
+        let names: Vec<&str> = path_parts
+            .iter()
+            .map(|s| s.split(':').next().unwrap().trim())
+            .collect();
+        let tys: Vec<&str> = path_parts
+            .iter()
+            .map(|s| s.split(':').nth(1).unwrap().trim())
+            .collect();
+        parts.push(format!(
+            "Path(({})): Path<({})>",
+            names.join(", "),
+            tys.join(", ")
+        ));
+    }
+    if has_query {
+        parts.push("Query(q): Query<std::collections::HashMap<String, String>>".to_string());
+    }
+    parts.extend(other);
     parts.join(", ")
+}
+
+/// Bindings for GET/DELETE query parameters
+pub fn axum_query_lets(func: &IRFunction, route: &HttpRoute) -> String {
+    let mut out = String::new();
+    for p in &func.params {
+        if !is_query_param(&p.name, &p.ty, route) {
+            continue;
+        }
+        let snake = to_snake_case(&p.name);
+        let optional = matches!(&p.ty, IRType::Optional(_));
+        if optional {
+            out.push_str(&format!(
+                "    let {snake} = q.get(\"{name}\").cloned().or_else(|| q.get(\"{snake}\").cloned()).unwrap_or_default();\n",
+                snake = snake,
+                name = p.name
+            ));
+        } else {
+            out.push_str(&format!(
+                "    let {snake} = match q.get(\"{name}\").cloned().or_else(|| q.get(\"{snake}\").cloned()) {{\n\
+                 \x20       Some(v) if !v.is_empty() => v,\n\
+                 \x20       _ => return (StatusCode::BAD_REQUEST, \"missing query parameter: {name}\").into_response(),\n\
+                 \x20   }};\n",
+                snake = snake,
+                name = p.name
+            ));
+        }
+        match &p.ty {
+            IRType::Int => out.push_str(&format!(
+                "    let {snake}: i64 = match {snake}.parse() {{\n\
+                 \x20       Ok(v) => v,\n\
+                 \x20       Err(_) => return (StatusCode::BAD_REQUEST, \"invalid query parameter: {name}\").into_response(),\n\
+                 \x20   }};\n",
+                snake = snake,
+                name = p.name
+            )),
+            IRType::Float => out.push_str(&format!(
+                "    let {snake}: f64 = match {snake}.parse() {{\n\
+                 \x20       Ok(v) => v,\n\
+                 \x20       Err(_) => return (StatusCode::BAD_REQUEST, \"invalid query parameter: {name}\").into_response(),\n\
+                 \x20   }};\n",
+                snake = snake,
+                name = p.name
+            )),
+            IRType::Bool => out.push_str(&format!(
+                "    let {snake}: bool = match {snake}.parse() {{\n\
+                 \x20       Ok(v) => v,\n\
+                 \x20       Err(_) => return (StatusCode::BAD_REQUEST, \"invalid query parameter: {name}\").into_response(),\n\
+                 \x20   }};\n",
+                snake = snake,
+                name = p.name
+            )),
+            IRType::Optional(inner) if matches!(inner.as_ref(), IRType::Int) => out.push_str(&format!(
+                "    let {snake}: i64 = {snake}.parse().unwrap_or(0);\n"
+            )),
+            IRType::Optional(inner) if matches!(inner.as_ref(), IRType::Float) => out.push_str(&format!(
+                "    let {snake}: f64 = {snake}.parse().unwrap_or(0.0);\n"
+            )),
+            IRType::Optional(inner) if matches!(inner.as_ref(), IRType::Bool) => out.push_str(&format!(
+                "    let {snake}: bool = {snake}.parse().unwrap_or(false);\n"
+            )),
+            _ => {}
+        }
+    }
+    out
 }
 
 fn ir_type_to_rust_simple(ty: &IRType) -> String {

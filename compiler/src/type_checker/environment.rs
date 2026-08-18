@@ -1,5 +1,6 @@
 use crate::parser::ast::{Type, Struct, Enum};
 use std::collections::HashMap;
+use std::io::Write;
 
 #[derive(Debug, Clone)]
 pub struct Environment {

@@ -124,12 +124,15 @@ impl IRBuilder {
     fn build_block(&mut self, block: &Block) -> IRBlock {
         let block_id = self.current_block;
         let mut ir_block = IRBlock::new(block_id);
-        
+
         for stmt in &block.statements {
             let stmt_instructions = self.build_statement(stmt);
+            if let Some(side) = self.blocks.get_mut(&block_id) {
+                ir_block.instructions.append(&mut side.instructions);
+            }
             ir_block.instructions.extend(stmt_instructions);
         }
-        
+
         ir_block
     }
     
@@ -557,6 +560,16 @@ impl IRBuilder {
                 left: left_val,
                 right: right_val,
             },
+            BinaryOperator::In => IRInstruction::Call {
+                dest: Some(IRValue::Temporary(dest.clone())),
+                func: IRValue::Variable(IRVariable {
+                    id: VarId::new(0),
+                    name: "contains".to_string(),
+                    ty: IRType::Bool,
+                    ownership: Ownership::Owned,
+                }),
+                args: vec![right_val, left_val],
+            },
         };
         
         // Instruction zum aktuellen Block hinzufügen
@@ -937,10 +950,12 @@ impl IRBuilder {
             Type::Void => IRType::Void,
             Type::Null => IRType::Null,
             Type::Any => IRType::Any,
-            Type::Named(name) => {
-                // Struct oder Enum
-                IRType::Struct(name.clone())
-            }
+            Type::Named(name) => match name.as_str() {
+                "int" | "i32" | "i64" => IRType::Int,
+                "float" | "f32" | "f64" => IRType::Float,
+                "bool" => IRType::Bool,
+                _ => IRType::Struct(name.clone()),
+            },
             Type::Generic { name, params } => {
                 match name.as_str() {
                     "List" => {
